@@ -207,6 +207,13 @@
             <span><strong>ClaimShield Guarantee:</strong> Not sure? You can switch to another ClaimShield contractor at no cost up to 3 days before installation.</span>
           </div>
 
+          <!-- RCV Disclaimer -->
+          <div id="rcvDisclaimer" style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: none;">
+              <p style="color: #1E40AF; font-size: 0.9rem; margin: 0;">
+                  <strong>About Your RCV Policy:</strong> Your contractor may submit a supplement to your insurance company to ensure all necessary work is covered. This may increase the insurance payout but will not increase your out-of-pocket cost. Your deductible remains the same regardless of supplements.
+              </p>
+          </div>
+
           <!-- Waiting Indicator -->
           <div id="waitingIndicator" class="waiting-indicator" style="display:none;">
             <div class="waiting-dots"><span></span><span></span><span></span></div>
@@ -372,7 +379,8 @@
         property_address: '1234 Maple Street, Indianapolis, IN 46201',
         description: 'Storm damage to roof - hail damage affecting approximately 40% of roof surface',
         claim_status: 'bidding_open',
-        created_at: '2026-03-15T14:22:00Z'
+        created_at: '2026-03-15T14:22:00Z',
+        jobType: 'insurance_rcv'
       };
 
       // Demo contractors
@@ -523,6 +531,8 @@
           product_line: 'Timberline HDZ',
           workmanship_warranty_years: 10,
           manufacturer_warranty_years: 30,
+          deckingPricePerSheet: 75,
+          fullRedeckPrice: 3500,
           contractor_message: 'We can start within 10 days and will complete your roof with top-quality materials and craftsmanship. Let us know if you have any questions!',
           status: 'pending',
           created_at: '2026-03-16T08:00:00Z',
@@ -539,6 +549,8 @@
           product_line: 'Landmark',
           workmanship_warranty_years: 5,
           manufacturer_warranty_years: 25,
+          deckingPricePerSheet: 75,
+          fullRedeckPrice: 3500,
           contractor_message: 'Best value for your budget. Our team is ready to start early next week.',
           status: 'pending',
           created_at: '2026-03-16T10:30:00Z',
@@ -555,6 +567,8 @@
           product_line: 'Timberline HDZ',
           workmanship_warranty_years: 15,
           manufacturer_warranty_years: 30,
+          deckingPricePerSheet: 75,
+          fullRedeckPrice: 3500,
           contractor_message: 'Fast turnaround is our specialty. We can begin immediately upon approval.',
           status: 'pending',
           created_at: '2026-03-16T14:15:00Z',
@@ -571,6 +585,8 @@
           product_line: 'Duration',
           workmanship_warranty_years: 20,
           manufacturer_warranty_years: 30,
+          deckingPricePerSheet: 75,
+          fullRedeckPrice: 3500,
           contractor_message: 'Premium installation with our extended warranty coverage. Your roof will be built to last.',
           status: 'pending',
           created_at: '2026-03-16T16:45:00Z',
@@ -598,6 +614,13 @@
         renderBids();
       }
 
+      // Show RCV disclaimer if this is an RCV job
+      if (currentClaim && currentClaim.jobType === 'insurance_rcv') {
+        document.getElementById('rcvDisclaimer').style.display = 'block';
+      } else {
+        document.getElementById('rcvDisclaimer').style.display = 'none';
+      }
+
       // Update status
       const bidCount = bids.length;
       const statusText = document.getElementById('statusText');
@@ -618,8 +641,23 @@
           ? `<img src="${c.owner_photo_url}" alt="${c.company_name}">`
           : initials;
 
+        // Determine job type badge color and label
+        const jobTypeColor = currentClaim.jobType === 'insurance_rcv' ? 'var(--blue)' :
+                            currentClaim.jobType === 'insurance_acv' ? 'var(--purple)' :
+                            currentClaim.jobType === 'retail' ? 'var(--green)' :
+                            currentClaim.jobType === 'repair' ? 'var(--orange)' : 'var(--slate)';
+        const jobTypeLabel = currentClaim.jobType === 'insurance_rcv' ? 'RCV' :
+                            currentClaim.jobType === 'insurance_acv' ? 'ACV' :
+                            currentClaim.jobType === 'retail' ? 'Retail' :
+                            currentClaim.jobType === 'repair' ? 'Repair' : 'Project';
+
         return `
           <div class="bid-card ${isLowest ? 'lowest-price' : ''}" style="animation-delay:${idx * 0.1}s">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: ${jobTypeColor}; color: white; padding: 4px 10px; border-radius: var(--radius-full);">${jobTypeLabel}</span>
+              ${isLowest ? '' : '<span></span>'}
+            </div>
+
             <div class="bid-card-header">
               <div class="bid-card-avatar">${avatarHTML}</div>
               <div>
@@ -648,6 +686,12 @@
                 <span class="bid-metric-label">Warranty</span>
                 <span class="bid-metric-value">${formatWarranty(bid)}</span>
               </div>
+              ${bid.deckingPricePerSheet ? `
+              <div class="bid-metric">
+                <span class="bid-metric-label">Decking Contingency</span>
+                <span class="bid-metric-value" style="font-size: 0.9rem;">$${bid.deckingPricePerSheet}/sheet | $${(bid.fullRedeckPrice || 0).toLocaleString()} full</span>
+              </div>
+              ` : ''}
               <div class="bid-metric">
                 <span class="bid-metric-label">Brand</span>
                 <span class="bid-metric-value">${esc(bid.brand || 'TBD')}</span>

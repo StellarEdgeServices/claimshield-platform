@@ -89,13 +89,13 @@
       margin-bottom: var(--sp-2);
     }
 
-    .lead-id {
+    .project-id {
       font-size: 0.875rem;
       color: var(--slate);
       font-weight: 500;
     }
 
-    .lead-summary {
+    .project-summary {
       background: var(--white);
       border: 1px solid #CBD5E1;
       border-radius: var(--radius-lg);
@@ -103,7 +103,7 @@
       margin-bottom: var(--sp-8);
     }
 
-    .lead-summary-title {
+    .project-summary-title {
       font-family: var(--font-heading);
       font-size: 1.125rem;
       font-weight: 600;
@@ -215,6 +215,50 @@
       font-size: 0.8rem;
       color: var(--slate);
       margin-top: var(--sp-2);
+    }
+
+    .input-prefix {
+      display: flex;
+      align-items: center;
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .input-prefix span {
+      padding: var(--sp-3) var(--sp-4);
+      background: #F8FAFC;
+      color: var(--navy);
+      font-weight: 600;
+      border-right: 1px solid #CBD5E1;
+    }
+
+    .input-prefix input {
+      border: none !important;
+      padding: var(--sp-3) var(--sp-4) !important;
+      flex: 1;
+    }
+
+    .input-prefix input:focus {
+      box-shadow: none !important;
+    }
+
+    .form-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--navy);
+      margin-bottom: var(--sp-2);
+      display: block;
+    }
+
+    .form-label.required::after {
+      content: ' *';
+      color: #DC2626;
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
     }
 
     .fee-calculator {
@@ -404,12 +448,12 @@
   <main>
     <div class="page-header">
       <h1>Submit Your Bid</h1>
-      <div class="lead-id">Lead ID: <strong>CS-2026-0001</strong></div>
+      <div class="project-id">Project ID: <strong>CS-2026-0001</strong></div>
     </div>
 
-    <!-- Lead Summary -->
-    <div class="lead-summary">
-      <div class="lead-summary-title">Lead Summary</div>
+    <!-- Project Summary -->
+    <div class="project-summary">
+      <div class="project-summary-title">Project Summary</div>
       <div class="summary-grid">
         <div class="summary-item">
           <div class="summary-label">Location</div>
@@ -478,6 +522,42 @@
           <label for="warrantySummary">Warranty Summary *</label>
           <input type="text" id="warrantySummary" name="warrantySummary" placeholder="e.g., Lifetime architectural shingle warranty + 10-year workmanship" value="Lifetime architectural shingle warranty + 10-year workmanship" required>
           <div class="form-help">Summarize the complete warranty coverage you're offering</div>
+        </div>
+
+        <!-- Decking Contingency (Required) -->
+        <div class="form-section" style="grid-column: 1 / -1;">
+          <h3 style="font-size: 1.1rem; margin-bottom: var(--sp-2);">Decking Contingency *</h3>
+          <p style="font-size: 0.85rem; color: #6B7280; margin-bottom: var(--sp-4);">
+            Damaged roof decking cannot be identified until existing shingles are removed. Building code requires replacement of any damaged decking before new roofing is installed. These prices will be shown to the homeowner.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--sp-6);">
+            <div class="form-group">
+              <label class="form-label required" for="deckingPricePerSheet">Price Per Sheet (4' x 8')</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="deckingPricePerSheet" name="deckingPricePerSheet" step="0.01" min="0" required placeholder="e.g. 75">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label required" for="fullRedeckPrice">Full Re-Deck Price</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="fullRedeckPrice" name="fullRedeckPrice" step="0.01" min="0" required placeholder="e.g. 3500">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RCV Supplement Acknowledgment -->
+        <div class="form-section" style="grid-column: 1 / -1;">
+          <div style="background: #DBEAFE; border: 1px solid #93C5FD; border-radius: var(--radius-md); padding: var(--sp-4);">
+            <label style="display: flex; align-items: flex-start; gap: var(--sp-3); cursor: pointer;">
+              <input type="checkbox" name="supplementAcknowledged" id="supplementAcknowledged" style="margin-top: 4px;">
+              <span style="font-size: 0.9rem; color: #1E3A5F;">
+                <strong>Supplement Notice (RCV Jobs):</strong> I understand that I may submit a supplement to the insurance company to ensure all necessary work is covered. This may increase the insurance payout but will not increase the homeowner's out-of-pocket cost.
+              </span>
+            </label>
+          </div>
         </div>
 
         <div class="form-group" style="grid-column: 1 / -1;">

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Opportunities — ClaimShield Contractor</title>
+
+    <!-- GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-JNQ6XR3LX2');
+    </script>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <!-- Design System & Navigation -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/nav.css">
+
+    <style>
+        main { padding: var(--sp-8) var(--sp-4); max-width: 1400px; margin: 0 auto; }
+
+        .sales-banner {
+            background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03));
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: var(--radius-lg);
+            padding: var(--sp-4) var(--sp-6);
+            margin-bottom: var(--sp-8);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+        }
+        .sales-banner-icon { font-size: 1.5rem; }
+        .sales-banner p { font-family: var(--font-body); font-size: 0.95rem; color: var(--navy); margin: 0; }
+        .sales-banner strong { color: var(--amber); }
+
+        .page-header { margin-bottom: var(--sp-8); }
+        .page-header h1 { font-family: var(--font-heading); font-size: 2.5rem; font-weight: 700; color: var(--navy); margin-bottom: var(--sp-2); line-height: 1.1; }
+        .page-header p { font-family: var(--font-body); font-size: 1.125rem; color: var(--slate); margin: 0; }
+
+        .filter-section {
+            background: var(--white); border: 1px solid #E5E7EB; border-radius: var(--radius-lg);
+            padding: var(--sp-6); margin-bottom: var(--sp-8);
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--sp-4);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: var(--sp-2); }
+        .filter-label { font-family: var(--font-body); font-size: 0.875rem; font-weight: 600; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; }
+        .filter-select { padding: var(--sp-3) var(--sp-4); border: 1px solid #D1D5DB; border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.95rem; color: var(--navy); background: var(--white); cursor: pointer; transition: border-color 0.2s ease; }
+        .filter-select:hover, .filter-select:focus { border-color: var(--amber); outline: none; }
+
+        .opportunity-card { background: var(--white); border: 1px solid #E5E7EB; border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6); transition: all 0.2s ease; position: relative; }
+        .opportunity-card:hover { border-color: var(--amber); box-shadow: 0 8px 24px rgba(245,158,11,0.1); }
+        .opportunity-card.urgent-card { border-left: 4px solid #EF4444; }
+
+        .opportunity-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); gap: var(--sp-4); }
+        .opportunity-id { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: var(--navy); margin: 0; }
+        .opportunity-location { font-family: var(--font-body); font-size: 0.95rem; color: var(--slate); margin: var(--sp-1) 0 0 0; }
+        .header-badges { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+
+        .opportunity-main-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6); padding-bottom: var(--sp-6); border-bottom: 1px solid #E5E7EB; }
+        .info-block { display: flex; flex-direction: column; gap: var(--sp-1); }
+        .info-label { font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-value { font-family: var(--font-body); font-size: 1rem; font-weight: 500; color: var(--navy); }
+
+        .badge-group { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-6); }
+        .badge { display: inline-block; padding: var(--sp-2) var(--sp-4); background: #F3F4F6; color: var(--navy); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+        .badge-available { background: #DCFCE7; color: #15803D; }
+        .badge-pending { background: #FEF3C7; color: #92400E; }
+        .badge-rcv { background: #DBEAFE; color: #1D4ED8; }
+        .badge-acv { background: #E9D5FF; color: #7C3AED; }
+        .badge-retail { background: #D1FAE5; color: #065F46; }
+        .badge-repair { background: #FED7AA; color: #9A3412; }
+        .badge-urgent { background: #FEE2E2; color: #DC2626; animation: pulse-urgent 2s ease-in-out infinite; }
+        @keyframes pulse-urgent { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+        .homeowner-notes { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-6); font-family: var(--font-body); font-size: 0.9rem; color: #0C4A6E; }
+        .homeowner-notes strong { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: var(--sp-1); color: #0369A1; }
+
+        .fee-breakdown { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: var(--radius-md); padding: var(--sp-4); margin-bottom: var(--sp-6); }
+        .fee-breakdown-title { font-family: var(--font-body); font-size: 0.875rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-3); display: block; }
+        .fee-item { display: flex; justify-content: space-between; align-items: center; padding: var(--sp-2) 0; font-family: var(--font-body); font-size: 0.9rem; color: #374151; }
+        .fee-item-label { font-weight: 500; }
+        .fee-item-amount { color: var(--navy); font-weight: 600; }
+        .fee-total { padding-top: var(--sp-3); border-top: 2px solid #D1D5DB; font-weight: 700; color: var(--navy); }
+
+        .actions-row { display: flex; gap: var(--sp-4); justify-content: flex-end; }
+        .btn { display: inline-block; padding: var(--sp-3) var(--sp-6); border: none; border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
+        .btn-primary { background: var(--amber); color: var(--white); }
+        .btn-primary:hover { background: #D97706; }
+        .btn-secondary { background: #F3F4F6; color: var(--navy); border: 1px solid #D1D5DB; }
+        .btn-secondary:hover { background: #E5E7EB; }
+
+        .empty-state { text-align: center; padding: var(--sp-12); color: var(--slate); }
+        .empty-state-icon { font-size: 3rem; margin-bottom: var(--sp-4); display: block; }
+        .empty-state-title { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: var(--navy); margin-bottom: var(--sp-2); }
+        .empty-state-text { font-family: var(--font-body); font-size: 1rem; color: var(--slate); margin-bottom: var(--sp-6); }
+        .results-count { font-family: var(--font-body); font-size: 0.95rem; color: var(--slate); margin-bottom: var(--sp-6); }
+
+        @media (max-width: 768px) {
+            main { padding: var(--sp-4) var(--sp-3); }
+            .page-header h1 { font-size: 1.75rem; }
+            .filter-section { grid-template-columns: 1fr; }
+            .opportunity-header { flex-direction: column; align-items: flex-start; }
+            .opportunity-main-info { grid-template-columns: 1fr; }
+            .actions-row { flex-direction: column; }
+            .btn { width: 100%; text-align: center; }
+            .sales-banner { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header id="site-header" data-auth="false"></header>
+
+    <main>
+        <div class="sales-banner">
+            <span class="sales-banner-icon">&#x1F4BC;</span>
+            <p><strong>Fully executed, ready-to-install contracts.</strong> Not leads &mdash; we're your sales team that doesn't need a truck, a manager, or an advance.</p>
+        </div>
+
+        <div class="page-header">
+            <h1>Available Opportunities</h1>
+            <p>Contract-ready projects in your service area</p>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label class="filter-label">Job Type</label>
+                <select class="filter-select" id="jobTypeFilter">
+                    <option value="">All Types</option>
+                    <option value="insurance_rcv">Insurance (RCV)</option>
+                    <option value="insurance_acv">Insurance (ACV)</option>
+                    <option value="retail">Retail / Cash</option>
+                    <option value="repair">Repair</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Damage Type</label>
+                <select class="filter-select" id="damageTypeFilter">
+                    <option value="">All Types</option>
+                    <option value="roof">Roof</option>
+                    <option value="siding">Siding</option>
+                    <option value="gutters">Gutters</option>
+                    <option value="windows">Windows</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Material</label>
+                <select class="filter-select" id="materialFilter">
+                    <option value="">All Materials</option>
+                    <option value="architectural">Architectural Shingle</option>
+                    <option value="designer">Designer Shingle</option>
+                    <option value="metal-seam">Metal Standing Seam</option>
+                    <option value="metal-fastener">Metal Exposed Fastener</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Distance</label>
+                <select class="filter-select" id="distanceFilter">
+                    <option value="">All Distances</option>
+                    <option value="10">Within 10 mi</option>
+                    <option value="25">Within 25 mi</option>
+                    <option value="50">Within 50 mi</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Sort By</label>
+                <select class="filter-select" id="sortFilter">
+                    <option value="newest">Newest First</option>
+                    <option value="value-high">Highest Value</option>
+                    <option value="closest">Closest Distance</option>
+                    <option value="urgent-first">Urgent First</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="results-count" id="resultsCount">5 opportunities available</div>
+        <div id="opportunitiesContainer"></div>
+    </main>
+
+    <footer id="site-footer"></footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/nav.js"></script>
+
+    <script>
+        const demoOpportunities = [
+            {
+                id: 'CS-2026-0048', location: 'Indianapolis', zip: '46220', jobType: 'insurance_rcv',
+                damageType: 'Roof', damageDetail: 'Hail & Wind', insuranceCarrier: 'State Farm',
+                material: 'GAF Architectural — Class 4 Impact Resistant', estimatedValue: 22000,
+                roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-15',
+                distance: 5, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
+                homeownerNotes: null
+            },
+            {
+                id: 'CS-2026-0047', location: 'Carmel', zip: '46032', jobType: 'insurance_acv',
+                damageType: 'Roof', damageDetail: 'Wind', insuranceCarrier: 'Allstate',
+                material: 'OC Duration', estimatedValue: 17000, acvPayout: 11200, deductible: 2500,
+                roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-14',
+                distance: 18, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
+                homeownerNotes: 'Two-story home. Ladder access on south side only.'
+            },
+            {
+                id: 'CS-2026-0046', location: 'Fishers', zip: '46037', jobType: 'retail',
+                damageType: 'Roof', damageDetail: 'Age / Wear', insuranceCarrier: null,
+                material: 'GAF Timberline HDZ', estimatedValue: null,
+                roofSquares: 28, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: false, measurementsAvailable: true, claimFiledDate: '2026-03-13',
+                distance: 22, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
+                homeownerNotes: null
+            },
+            {
+                id: 'CS-2026-0045', location: 'Noblesville', zip: '46060', jobType: 'repair',
+                damageType: 'Roof', damageDetail: 'Wind — Partial', insuranceCarrier: 'Erie Insurance',
+                material: null, existingShingle: 'GAF Timberline HD — Charcoal',
+                estimatedValue: null, roofSquares: null, repairSquares: 1.5, totalSquares: 25,
+                estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-12',
+                distance: 25, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
+                homeownerNotes: 'Damage on north-facing slope near chimney. Have leftover shingles in garage — confirmed GAF Timberline HD Charcoal.'
+            },
+            {
+                id: 'CS-2026-0044', location: 'Greenwood', zip: '46142', jobType: 'insurance_rcv',
+                damageType: 'Roof + Gutters', damageDetail: 'Hail', insuranceCarrier: 'Liberty Mutual',
+                material: 'CertainTeed Landmark', estimatedValue: 26000,
+                roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-10',
+                distance: 15, urgency: 'asap', urgencyDeadline: '2026-04-15',
+                urgencyReason: 'Real estate closing April 15',
+                homeownerNotes: 'House is under contract. Must have roof complete before closing on April 15. Buyer inspection passed contingent on roof.'
+            }
+        ];
+
+        function getJobTypeBadge(jobType) {
+            const map = {
+                insurance_rcv: '<span class="badge badge-rcv">Insurance (RCV)</span>',
+                insurance_acv: '<span class="badge badge-acv">Insurance (ACV)</span>',
+                retail: '<span class="badge badge-retail">Retail</span>',
+                repair: '<span class="badge badge-repair">Repair</span>'
+            };
+            return map[jobType] || '';
+        }
+
+        function getUrgentBadge(opp) {
+            if (opp.urgency !== 'asap') return '';
+            const dl = opp.urgencyDeadline ? new Date(opp.urgencyDeadline).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+            return '<span class="badge badge-urgent">URGENT' + (dl ? ' — ' + dl : '') + '</span>';
+        }
+
+        function getValueDisplay(opp) {
+            if (opp.jobType === 'retail') return { label: 'Roof Size', value: opp.roofSquares ? opp.roofSquares + ' squares' : 'Pending measurement' };
+            if (opp.jobType === 'repair') return { label: 'Repair Scope', value: (opp.repairSquares && opp.totalSquares) ? opp.repairSquares + ' sq of ' + opp.totalSquares + ' sq total' : 'See estimate' };
+            return { label: 'Est. Value', value: opp.estimatedValue ? fmt(opp.estimatedValue) : 'See estimate' };
+        }
+
+        function calcFees(opp) {
+            let base = opp.estimatedValue || (opp.roofSquares ? opp.roofSquares * 700 : null);
+            if (!base) return null;
+            return { baseFee: fmt(base*0.05), colorFee: fmt(base*0.03), deductibleFee: fmt(base*0.05), total: fmt(base*0.13) };
+        }
+
+        function fmt(v) { return v.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0}); }
+
+        function render(opps) {
+            const el = document.getElementById('opportunitiesContainer');
+            if (!opps.length) {
+                el.innerHTML = '<div class="empty-state"><span class="empty-state-icon">&#x1F4ED;</span><h2 class="empty-state-title">No opportunities found</h2><p class="empty-state-text">Try adjusting your filters to see more available projects.</p></div>';
+                return;
+            }
+            el.innerHTML = opps.map(o => {
+                const fees = calcFees(o);
+                const vd = getValueDisplay(o);
+                const isUrgent = o.urgency === 'asap';
+
+                let sourceBlock = o.jobType === 'retail'
+                    ? '<div class="info-block"><span class="info-label">Job Type</span><span class="info-value">Retail / Cash</span></div>'
+                    : '<div class="info-block"><span class="info-label">Insurance Carrier</span><span class="info-value">' + (o.insuranceCarrier||'N/A') + '</span></div>';
+
+                let matBlock = '';
+                if (o.jobType === 'repair' && o.existingShingle)
+                    matBlock = '<div class="info-block"><span class="info-label">Existing Shingle (must match)</span><span class="info-value">' + o.existingShingle + '</span></div>';
+                else if (o.material)
+                    matBlock = '<div class="info-block"><span class="info-label">Material Selected</span><span class="info-value">' + o.material + '</span></div>';
+
+                let notes = '';
+                if (o.homeownerNotes) {
+                    const t = o.homeownerNotes.length > 150 ? o.homeownerNotes.substring(0,150)+'...' : o.homeownerNotes;
+                    notes = '<div class="homeowner-notes"><strong>Homeowner Notes</strong>' + t + '</div>';
+                }
+
+                let feeHtml = '';
+                if (fees) {
+                    feeHtml = '<div class="fee-breakdown"><span class="fee-breakdown-title">Estimated Platform Fees</span>'
+                        + '<div class="fee-item"><span class="fee-item-label">Contract Signing (5%)</span><span class="fee-item-amount">' + fees.baseFee + '</span></div>'
+                        + '<div class="fee-item"><span class="fee-item-label">Color Selection Service (3%)</span><span class="fee-item-amount">' + fees.colorFee + '</span></div>'
+                        + '<div class="fee-item"><span class="fee-item-label">Deductible Collection (5%)</span><span class="fee-item-amount">' + fees.deductibleFee + '</span></div>'
+                        + '<div class="fee-item fee-total"><span>Total Platform Fees</span><span>' + fees.total + '</span></div></div>';
+                }
+
+                return '<div class="opportunity-card' + (isUrgent?' urgent-card':'') + '">'
+                    + '<div class="opportunity-header"><div>'
+                    + '<h2 class="opportunity-id">' + o.id + '</h2>'
+                    + '<p class="opportunity-location">' + o.location + ', ' + o.zip + ' &mdash; ' + o.distance + ' mi away</p>'
+                    + '</div><div class="header-badges">' + getJobTypeBadge(o.jobType) + getUrgentBadge(o) + '</div></div>'
+                    + '<div class="opportunity-main-info">'
+                    + '<div class="info-block"><span class="info-label">Damage Type</span><span class="info-value">' + o.damageType + ' &mdash; ' + o.damageDetail + '</span></div>'
+                    + sourceBlock + matBlock
+                    + '<div class="info-block"><span class="info-label">' + vd.label + '</span><span class="info-value">' + vd.value + '</span></div>'
+                    + '</div>'
+                    + '<div class="badge-group">'
+                    + (o.estimateAvailable ? '<span class="badge badge-available">Insurance Estimate &#x2713;</span>' : '')
+                    + (o.measurementsAvailable ? '<span class="badge badge-available">Measurements &#x2713;</span>' : '<span class="badge badge-pending">Measurements Pending</span>')
+                    + '</div>'
+                    + notes
+                    + '<div class="info-block" style="margin-bottom:var(--sp-6)"><span class="info-label">Submitted</span><span class="info-value">' + new Date(o.claimFiledDate).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + '</span></div>'
+                    + feeHtml
+                    + '<div class="actions-row"><button class="btn btn-secondary">Details</button><a href="contractor-bid-form.html?project=' + o.id + '" class="btn btn-primary">Submit Bid</a></div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function applyFilters() {
+            let f = [...demoOpportunities];
+            const jt = document.getElementById('jobTypeFilter').value;
+            if (jt) f = f.filter(o => o.jobType === jt);
+            const dt = document.getElementById('damageTypeFilter').value;
+            if (dt) f = f.filter(o => o.damageType.toLowerCase().includes(dt));
+            const mt = document.getElementById('materialFilter').value;
+            if (mt) f = f.filter(o => { const m=(o.material||'').toLowerCase(); if(mt==='architectural')return m.includes('architectural'); if(mt==='designer')return m.includes('designer'); if(mt==='metal-seam')return m.includes('standing seam'); if(mt==='metal-fastener')return m.includes('exposed fastener'); return true; });
+            const dist = document.getElementById('distanceFilter').value;
+            if (dist) f = f.filter(o => o.distance <= parseInt(dist));
+            const sort = document.getElementById('sortFilter').value;
+            if (sort==='value-high') f.sort((a,b)=>(b.estimatedValue||0)-(a.estimatedValue||0));
+            else if (sort==='closest') f.sort((a,b)=>a.distance-b.distance);
+            else if (sort==='urgent-first') f.sort((a,b)=>{ if(a.urgency==='asap'&&b.urgency!=='asap')return -1; if(b.urgency==='asap'&&a.urgency!=='asap')return 1; return 0; });
+            document.getElementById('resultsCount').textContent = f.length + ' opportunit' + (f.length!==1?'ies':'y') + ' available';
+            render(f);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyFilters();
+            ['jobTypeFilter','damageTypeFilter','materialFilter','distanceFilter','sortFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFilters);
+            });
+        });
+    </script>
+</body>
+</html>

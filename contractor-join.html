@@ -538,22 +538,55 @@
                     <fieldset class="form-fieldset">
                         <h3><span></span>Licensing & Insurance</h3>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="licenseNumber" class="form-label required">Contractor License Number</label>
-                                <input type="text" id="licenseNumber" name="licenseNumber" class="form-input" required>
+                        <div class="form-group">
+                            <label class="form-label">Municipal Contractor Licenses</label>
+                            <p style="font-size: 0.85rem; color: #6B7280; margin-bottom: var(--sp-3);">
+                                Indiana does not require a state-level contractor license. Licensing is at the city/county level and is not mandatory in all municipalities. Add each license you hold.
+                            </p>
+                            <div id="licensesContainer">
+                                <div class="license-entry" data-index="0">
+                                    <div class="form-row" style="align-items: flex-end;">
+                                        <div class="form-group">
+                                            <label class="form-label">Municipality (City/County)</label>
+                                            <input type="text" name="licenseMunicipality_0" class="form-input" placeholder="e.g. Indianapolis, Hamilton County">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">License Number</label>
+                                            <input type="text" name="licenseNumber_0" class="form-input" placeholder="License #">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Expiration</label>
+                                            <input type="date" name="licenseExpDate_0" class="form-input">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="file-upload">
+                                            <input type="file" id="licenseDoc_0" name="licenseDoc_0" accept=".pdf,.jpg,.jpeg,.png">
+                                            <label for="licenseDoc_0" class="file-upload-label">Upload license document</label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="licenseState" class="form-label required">License State</label>
-                                <select id="licenseState" name="licenseState" class="form-select" required>
-                                    <option value="">Select state</option>
-                                    <option value="IN">Indiana</option>
-                                    <option value="AL">Alabama</option>
-                                    <option value="AK">Alaska</option>
-                                    <option value="AZ">Arizona</option>
-                                    <option value="AR">Arkansas</option>
-                                    <option value="CA">California</option>
-                                    <option value="CO">Colorado</option>
+                            <button type="button" id="addLicenseBtn" onclick="addLicenseEntry()" style="background:none; border:1px dashed #D1D5DB; border-radius:var(--radius-md); padding:var(--sp-3) var(--sp-4); color:var(--amber); font-weight:600; cursor:pointer; width:100%; margin-top:var(--sp-3); font-family:var(--font-body);">+ Add Another License</button>
+                            <div style="margin-top: var(--sp-4);">
+                                <label style="display:flex; align-items:center; gap:var(--sp-2); cursor:pointer;">
+                                    <input type="checkbox" name="noLicenseRequired" id="noLicenseRequired" onchange="toggleLicenseFields()">
+                                    <span style="font-size:0.9rem; color:#374151;">I operate in municipalities that do not require a contractor license</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Remove old state dropdown, keep WC/GL below -->
+                        <div class="form-group" style="display:none;">
+                            <select id="licenseState" name="licenseState" class="form-select">
+                                <option value="">Select state</option>
+                                <option value="IN">Indiana</option>
+                                <option value="AL">Alabama</option>
+                                <option value="AK">Alaska</option>
+                                <option value="AZ">Arizona</option>
+                                <option value="AR">Arkansas</option>
+                                <option value="CA">California</option>
+                                <option value="CO">Colorado</option>
                                     <option value="CT">Connecticut</option>
                                     <option value="DE">Delaware</option>
                                     <option value="FL">Florida</option>
@@ -599,17 +632,7 @@
                                     <option value="WY">Wyoming</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="licenseDoc" class="form-label required">License Document</label>
-                            <div class="file-upload">
-                                <input type="file" id="licenseDoc" name="licenseDoc" accept=".pdf,.jpg,.jpeg,.png" required>
-                                <label for="licenseDoc" class="file-upload-label">
-                                    📎 Click to upload or drag and drop
-                                </label>
-                            </div>
-                        </div>
+                        </div><!-- end hidden old license fields -->
 
                         <div class="form-group">
                             <label class="form-label required">Workers Compensation Insurance</label>
@@ -1150,8 +1173,12 @@
                 websiteUrl: formData.get('websiteUrl'),
                 yearsInBusiness: parseInt(formData.get('yearsInBusiness')),
                 numEmployees: parseInt(formData.get('numEmployees')),
-                licenseNumber: formData.get('licenseNumber'),
-                licenseState: formData.get('licenseState'),
+                licenses: Array.from(document.querySelectorAll('.license-entry')).map(entry => ({
+                    municipality: formData.get('licenseMunicipality_' + entry.dataset.index),
+                    number: formData.get('licenseNumber_' + entry.dataset.index),
+                    expDate: formData.get('licenseExpDate_' + entry.dataset.index)
+                })).filter(l => l.municipality || l.number),
+                noLicenseRequired: formData.get('noLicenseRequired') === 'on',
                 wcCarrier: formData.get('wcCarrier'),
                 wcPolicyNumber: formData.get('wcPolicyNumber'),
                 wcExpDate: formData.get('wcExpDate'),
@@ -1194,9 +1221,45 @@
             input.addEventListener('change', function() {
                 const label = this.nextElementSibling;
                 const fileName = this.files[0]?.name || 'File selected';
-                label.textContent = '✓ ' + fileName;
+                label.textContent = '\u2713 ' + fileName;
             });
         });
+
+        // Multi-license support
+        let licenseCount = 1;
+        function addLicenseEntry() {
+            const container = document.getElementById('licensesContainer');
+            const idx = licenseCount++;
+            const entry = document.createElement('div');
+            entry.className = 'license-entry';
+            entry.dataset.index = idx;
+            entry.style.borderTop = '1px solid #E5E7EB';
+            entry.style.paddingTop = '1rem';
+            entry.style.marginTop = '1rem';
+            entry.innerHTML = '<div class="form-row" style="align-items:flex-end;">'
+                + '<div class="form-group"><label class="form-label">Municipality (City/County)</label>'
+                + '<input type="text" name="licenseMunicipality_' + idx + '" class="form-input" placeholder="e.g. Indianapolis, Hamilton County"></div>'
+                + '<div class="form-group"><label class="form-label">License Number</label>'
+                + '<input type="text" name="licenseNumber_' + idx + '" class="form-input" placeholder="License #"></div>'
+                + '<div class="form-group"><label class="form-label">Expiration</label>'
+                + '<input type="date" name="licenseExpDate_' + idx + '" class="form-input"></div>'
+                + '</div>'
+                + '<div class="form-row" style="align-items:center;">'
+                + '<div class="form-group" style="flex:1;"><div class="file-upload">'
+                + '<input type="file" id="licenseDoc_' + idx + '" name="licenseDoc_' + idx + '" accept=".pdf,.jpg,.jpeg,.png">'
+                + '<label for="licenseDoc_' + idx + '" class="file-upload-label">Upload license document</label>'
+                + '</div></div>'
+                + '<button type="button" onclick="this.closest(\'.license-entry\').remove()" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:1.2rem;padding:0.5rem;" title="Remove">\u2716</button>'
+                + '</div>';
+            container.appendChild(entry);
+        }
+
+        function toggleLicenseFields() {
+            const checked = document.getElementById('noLicenseRequired').checked;
+            document.getElementById('licensesContainer').style.opacity = checked ? '0.4' : '1';
+            document.getElementById('licensesContainer').style.pointerEvents = checked ? 'none' : 'auto';
+            document.getElementById('addLicenseBtn').style.display = checked ? 'none' : 'block';
+        }
     </script>
 </body>
 </html>

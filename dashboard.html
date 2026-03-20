@@ -409,6 +409,36 @@
       cursor: pointer;
     }
 
+    .job-type-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sp-3);
+    }
+    .job-type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--sp-4);
+      background: var(--navy-3);
+      border: 2px solid transparent;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      color: var(--white);
+    }
+    .job-type-btn:hover { border-color: var(--amber); }
+    .job-type-btn.selected { border-color: var(--amber); background: rgba(245,158,11,0.1); }
+    .job-type-btn strong { font-size: 0.95rem; margin-bottom: var(--sp-1); }
+    .job-type-btn span { font-size: 0.8rem; color: var(--slate); }
+    .conditional-section { animation: fadeUp 0.3s ease both; }
+    .callout-warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius-md); padding: var(--sp-4); color: var(--amber); font-size: 0.9rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--sp-6); }
+    .char-count { font-size: 0.8rem; color: var(--slate); float: right; margin-top: var(--sp-2); }
+    .file-upload { padding: var(--sp-4); background: rgba(255,255,255,0.03); border: 2px dashed rgba(255,255,255,0.2); border-radius: var(--radius-md); text-align: center; cursor: pointer; }
+    .file-upload input[type="file"] { display: none; }
+    .file-upload label { cursor: pointer; color: var(--amber); }
+
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-main {
@@ -457,6 +487,10 @@
 
       .submit-section {
         padding: var(--sp-6);
+      }
+
+      .job-type-selector {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -527,6 +561,137 @@
           <form id="claim-edit-form" class="claim-form" style="display: none;">
             <!-- Populated by JS -->
           </form>
+
+          <!-- Job Type Section (inserted after form population) -->
+          <div id="job-type-section" style="display: none; margin-top: var(--sp-6);">
+            <div class="form-group">
+              <label>How is this job being paid for? *</label>
+              <div class="job-type-selector" id="jobTypeSelector">
+                <button type="button" class="job-type-btn" data-type="insurance_rcv" onclick="selectJobType('insurance_rcv')">
+                  <strong>Insurance (RCV)</strong>
+                  <span>Full replacement cost policy</span>
+                </button>
+                <button type="button" class="job-type-btn" data-type="insurance_acv" onclick="selectJobType('insurance_acv')">
+                  <strong>Insurance (ACV)</strong>
+                  <span>Actual cash value / depreciated</span>
+                </button>
+                <button type="button" class="job-type-btn" data-type="retail" onclick="selectJobType('retail')">
+                  <strong>Retail / Cash</strong>
+                  <span>No insurance involvement</span>
+                </button>
+                <button type="button" class="job-type-btn" data-type="repair" onclick="selectJobType('repair')">
+                  <strong>Repair Only</strong>
+                  <span>Partial roof repair from estimate</span>
+                </button>
+              </div>
+              <div id="jobTypeHelp" class="help-link" style="display:none; margin-top: var(--sp-3);">
+                <a href="#" onclick="showJobTypeHelp(); return false;">Not sure? Help me figure this out</a>
+              </div>
+            </div>
+
+            <!-- Repair fields -->
+            <div id="repairFields" class="conditional-section" style="display:none;">
+              <div class="callout callout-warning" style="margin-bottom: var(--sp-4);">
+                <strong>Important:</strong> Repair jobs are significantly harder to diagnose and quote than full replacements.
+                We cannot process your repair without knowing what shingle is currently on your roof.
+                The more information you provide, the better pricing and faster service you'll receive.
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Squares Being Repaired (from estimate)</label>
+                  <input type="number" step="0.1" name="repairSquares" class="form-input" placeholder="e.g. 1.5">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Total Roof Size (squares)</label>
+                  <input type="number" step="0.1" name="totalRoofSquares" class="form-input" placeholder="e.g. 25">
+                </div>
+              </div>
+              <h4 style="margin: var(--sp-4) 0 var(--sp-2); color: var(--white);">Existing Shingle Information *</h4>
+              <p style="color: var(--slate); font-size: 0.9rem; margin-bottom: var(--sp-3);">
+                Check your prior roofer's invoice or warranty paperwork, or look for leftover bundles in your garage or attic (read the label).
+              </p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Shingle Brand</label>
+                  <input type="text" name="existingShingleBrand" class="form-input" placeholder="e.g. GAF, Owens Corning">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Shingle Product Line</label>
+                  <input type="text" name="existingShingleProduct" class="form-input" placeholder="e.g. Timberline HDZ">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Shingle Color</label>
+                <input type="text" name="existingShingleColor" class="form-input" placeholder="e.g. Charcoal, Weathered Wood">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Photos of Damaged Area</label>
+                <div class="file-upload">
+                  <input type="file" id="repairPhotos" accept="image/*" multiple>
+                  <label for="repairPhotos">Click to upload photos of the damage</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Photo of Existing Shingle (if you can't identify it)</label>
+                <div class="file-upload">
+                  <input type="file" id="shinglePhoto" accept="image/*">
+                  <label for="shinglePhoto">Upload a close-up photo for contractor identification</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACV fields -->
+            <div id="acvFields" class="conditional-section" style="display:none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">ACV Payout Amount</label>
+                  <input type="number" step="0.01" name="acvAmount" class="form-input" placeholder="Amount insurance is paying you">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">RCV Amount (from estimate)</label>
+                  <input type="number" step="0.01" name="rcvAmount" class="form-input" placeholder="Full replacement cost on estimate">
+                </div>
+              </div>
+            </div>
+
+            <!-- Retail fields -->
+            <div id="retailFields" class="conditional-section" style="display:none;">
+              <div class="form-group">
+                <label class="form-label">Roof Size (squares)</label>
+                <input type="number" step="0.1" name="roofSquares" class="form-input" placeholder="If known — Hover measurement will provide this">
+              </div>
+            </div>
+
+            <!-- Urgency field -->
+            <div class="form-group">
+              <label class="form-label">When do you need this completed?</label>
+              <select name="urgency" class="form-input">
+                <option value="flexible">No rush — flexible timeline</option>
+                <option value="30_days">Within 30 days</option>
+                <option value="2_weeks">Within 2 weeks</option>
+                <option value="asap">ASAP — urgent</option>
+              </select>
+            </div>
+            <div id="urgencyDetails" class="conditional-section" style="display:none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Deadline Date</label>
+                  <input type="date" name="urgencyDeadline" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Reason</label>
+                  <input type="text" name="urgencyReason" class="form-input" placeholder="e.g. Real estate closing, temporary repairs failing">
+                </div>
+              </div>
+            </div>
+
+            <!-- Homeowner notes -->
+            <div class="form-group">
+              <label class="form-label">Notes for Contractors (optional)</label>
+              <textarea name="homeownerNotes" class="form-input" rows="3" maxlength="500" placeholder="Anything contractors should know — tree fell on north side, specific concerns, access instructions, etc."></textarea>
+              <span class="char-count">0 / 500</span>
+            </div>
+          </div>
 
           <div id="claim-form-actions" class="claim-form-actions" style="display: none;">
             <button type="button" class="btn btn-primary" id="claim-save-btn">Save Changes</button>
@@ -982,6 +1147,7 @@
           isEditingClaim = !isEditingClaim;
           document.getElementById('claim-display').style.display = isEditingClaim ? 'none' : 'grid';
           document.getElementById('claim-edit-form').style.display = isEditingClaim ? 'grid' : 'none';
+          document.getElementById('job-type-section').style.display = isEditingClaim ? 'block' : 'none';
           document.getElementById('claim-form-actions').style.display = isEditingClaim ? 'flex' : 'none';
           document.getElementById('toggle-claim-edit').textContent = isEditingClaim ? 'View' : 'Edit';
         });
@@ -996,6 +1162,7 @@
           isEditingClaim = false;
           document.getElementById('claim-display').style.display = 'grid';
           document.getElementById('claim-edit-form').style.display = 'none';
+          document.getElementById('job-type-section').style.display = 'none';
           document.getElementById('claim-form-actions').style.display = 'none';
           document.getElementById('toggle-claim-edit').textContent = 'Edit';
           renderClaimInfo(); // Reset form values
@@ -1015,6 +1182,22 @@
             e.target.value = '';
           }
         });
+
+        // Urgency conditional display
+        const urgencySelect = document.querySelector('[name="urgency"]');
+        if (urgencySelect) {
+          urgencySelect.addEventListener('change', function() {
+            document.getElementById('urgencyDetails').style.display = this.value === 'asap' ? 'block' : 'none';
+          });
+        }
+
+        // Homeowner notes character count
+        const notesField = document.querySelector('[name="homeownerNotes"]');
+        if (notesField) {
+          notesField.addEventListener('input', function() {
+            this.nextElementSibling.textContent = this.value.length + ' / 500';
+          });
+        }
       }
 
       // ── Claim Editing ──
@@ -1202,6 +1385,46 @@
           content.innerHTML = info.html;
           modal.classList.add('active');
         }
+      };
+
+      // ── Job Type Selection ──
+      window.selectJobType = function(type) {
+        document.querySelectorAll('.job-type-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+
+        // Hide all conditional sections
+        document.getElementById('repairFields').style.display = 'none';
+        document.getElementById('acvFields').style.display = 'none';
+        document.getElementById('retailFields').style.display = 'none';
+
+        // Show relevant section
+        if (type === 'repair') document.getElementById('repairFields').style.display = 'block';
+        if (type === 'insurance_acv') document.getElementById('acvFields').style.display = 'block';
+        if (type === 'retail') document.getElementById('retailFields').style.display = 'block';
+
+        // Store selection
+        window.selectedJobType = type;
+      };
+
+      window.showJobTypeHelp = function() {
+        const modal = document.getElementById('help-modal');
+        const title = document.getElementById('help-modal-title');
+        const content = document.getElementById('help-modal-content');
+
+        title.textContent = 'Job Type Help';
+        content.innerHTML = `
+          <div class="help-text">
+            <p><strong>How do I know which option to choose?</strong></p>
+            <ul style="margin-left: var(--sp-6); color: var(--slate); line-height: 1.8;">
+              <li><strong>Insurance (RCV)</strong> — Your policy covers the full replacement cost. The insurance company will pay the contractor directly or reimburse you for the full amount.</li>
+              <li><strong>Insurance (ACV)</strong> — Your policy pays actual cash value, which accounts for depreciation. You may have a difference between what insurance pays and the full replacement cost.</li>
+              <li><strong>Retail / Cash</strong> — You're paying out-of-pocket with no insurance involvement. This might be for aesthetic improvements or damage not covered by insurance.</li>
+              <li><strong>Repair Only</strong> — You're having a partial roof repair, not a full replacement. This is more complex because we need to match your existing shingles.</li>
+            </ul>
+            <p style="margin-top: var(--sp-6);">If you're unsure, check your insurance policy documents or contact your insurance agent.</p>
+          </div>
+        `;
+        modal.classList.add('active');
       };
 
       // ── Submit for Bids ──
