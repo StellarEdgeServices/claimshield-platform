@@ -315,78 +315,94 @@ const Services = {
   },
 
 
+
   // ================================================================
   // HOVER — Measurement Orders (D-036, D-047)
   // ================================================================
 
   /**
    * Create a Hover measurement order and get the photo capture link.
+   * Uses OAuth-authenticated capture-requests API (v2).
    *
    * @param {Object} params
    * @param {string} params.claim_id
    * @param {string} params.user_id
-   * @param {string} params.address
+   * @param {string} params.address_line_1 — Street address
+   * @param {string} params.address_city — City
+   * @param {string} params.address_state — 2-char state code
+   * @param {string} params.address_zip — ZIP/postal code
+   * @param {string} params.homeowner_name — Full name
+   * @param {string} params.homeowner_email — Email for capture invite
+   * @param {string} params.homeowner_phone — Phone for SMS (optional)
    * @param {number} params.amount_charged — In dollars
-   * @returns {Object} { hover_link, order_id }
+   * @param {number} params.deliverable_type_id — 2=Roof Only, 3=Complete (default: 2)
+   * @returns {Object} { capture_link, order_id, capture_request_id }
    */
   async createHoverOrder(params) {
-    const { claim_id, user_id, address, amount_charged } = params;
+    const {
+      claim_id, user_id,
+      address_line_1, address_city, address_state, address_zip,
+      homeowner_name, homeowner_email, homeowner_phone,
+      amount_charged, deliverable_type_id = 2,
+    } = params;
 
-    // Save order to database
+    // Save order to database first
     const { data: order, error } = await sb
       .from('hover_orders')
       .insert({
         claim_id,
         user_id,
+        address: address_line_1,
         status: 'pending',
         amount_charged,
+        deliverable_type_id,
+        capturing_user_email: homeowner_email,
+        capturing_user_phone: homeowner_phone || null,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Call Edge Function to create Hover job via API
+    // Call Edge Function to create Hover capture request via OAuth API
     try {
       const { data: hoverData, error: hoverError } = await sb.functions.invoke('create-hover-order', {
         body: {
           order_id: order.id,
-          address,
           claim_id,
+          address_line_1,
+          address_city,
+          address_state,
+          address_zip,
+          homeowner_name,
+          homeowner_email,
+          homeowner_phone,
+          deliverable_type_id,
         }
       });
 
       if (hoverError) {
-        console.warn('Hover Edge function not deployed:', hoverError);
+        console.warn('Hover order creation failed:', hoverError);
         return {
           order_id: order.id,
-          hover_link: null,
+          capture_link: null,
           placeholder: true,
-          message: 'Hover API integration pending. Order saved.',
+          message: 'Hover order creation failed. Please try again.',
         };
       }
 
-      // Update order with Hover job ID and link
-      await sb
-        .from('hover_orders')
-        .update({
-          hover_job_id: hoverData.job_id,
-          hover_link: hoverData.capture_link,
-          status: 'photos_submitted',
-        })
-        .eq('id', order.id);
-
       return {
         order_id: order.id,
-        hover_link: hoverData.capture_link,
-        hover_job_id: hoverData.job_id,
+        capture_link: hoverData.capture_link,
+        capture_request_id: hoverData.capture_request_id,
+        identifier: hoverData.identifier,
+        pending_job_id: hoverData.pending_job_id,
       };
     } catch (err) {
       console.warn('Hover API call failed:', err);
-      return { order_id: order.id, hover_link: null, placeholder: true };
+      return { order_id: order.id, capture_link: null, placeholder: true };
     }
   },
-
 
   // ================================================================
   // UTILITY
