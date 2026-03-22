@@ -847,12 +847,23 @@
                     showMessage('Payment processing is not yet configured. Your order has been recorded.', 'success');
                 }
 
-                // Create Hover order
+                // Create Hover order with full address + homeowner details
+                const homeownerName = currentProfile?.full_name
+                    || `${currentProfile?.first_name || ''} ${currentProfile?.last_name || ''}`.trim()
+                    || 'Homeowner';
                 const hoverResult = await Services.createHoverOrder({
                     claim_id: currentClaim?.id,
                     user_id: currentUser?.id,
-                    address: currentProfile?.address || '',
+                    address_line_1: currentProfile?.address_line1
+                        || currentClaim?.property_address?.split(',')[0]?.trim() || '',
+                    address_city: currentProfile?.address_city || '',
+                    address_state: currentProfile?.address_state || '',
+                    address_zip: currentProfile?.address_zip || '',
+                    homeowner_name: homeownerName,
+                    homeowner_email: currentUser?.email || '',
+                    homeowner_phone: currentProfile?.phone || '',
                     amount_charged: 79.00,
+                    deliverable_type_id: 2, // Roof Only
                 });
 
                 // Show success
