@@ -489,6 +489,132 @@
             opacity: 0.6;
         }
 
+        /* Designer Product Selection */
+        .designer-products-section .section-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .manufacturer-group {
+            margin-bottom: 2rem;
+        }
+
+        .manufacturer-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #001f4d;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e0e0e0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-card {
+            background-color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover {
+            border-color: #b8860b;
+            box-shadow: 0 2px 8px rgba(184, 134, 11, 0.15);
+        }
+
+        .product-card.selected {
+            border-color: #b8860b;
+            background: linear-gradient(135deg, rgba(184, 134, 11, 0.05) 0%, rgba(0, 31, 77, 0.05) 100%);
+            box-shadow: 0 0 15px rgba(184, 134, 11, 0.25);
+        }
+
+        .product-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #001f4d;
+        }
+
+        .product-badges {
+            display: flex;
+            gap: 0.35rem;
+            flex-shrink: 0;
+        }
+
+        .product-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .product-badge.impact4 {
+            background-color: #2d5016;
+            color: white;
+        }
+
+        .product-badge.impact3 {
+            background-color: #5a7a3a;
+            color: white;
+        }
+
+        .product-badge.tier-mid {
+            background-color: #b8860b;
+            color: white;
+        }
+
+        .product-badge.tier-premium {
+            background-color: #8b6914;
+            color: white;
+        }
+
+        .product-description {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-links {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .product-link {
+            font-size: 0.8rem;
+            color: #b8860b;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .product-link:hover {
+            color: #001f4d;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* Hidden Sections */
         .hidden {
             display: none !important;
@@ -741,7 +867,18 @@
                 </div>
 
                 <div id="designerNote" class="info-note hidden">
-                    <strong>Next Step:</strong> After selecting a contractor, you'll choose a specific designer product and color from the manufacturer's catalog.
+                    <strong>Note:</strong> Impact class is determined by the specific designer product you choose in the next step.
+                </div>
+            </div>
+
+            <!-- Step 3b: Designer Product Selection -->
+            <div id="designerProductSection" class="step-section designer-products-section hidden">
+                <div class="section-header">
+                    <h2 class="section-title">Choose Your Designer Shingle</h2>
+                    <p class="section-description">Select the specific product you want. Contractors need this to provide accurate bids. Click "View Colors" to see options on the manufacturer's site.</p>
+                </div>
+                <div id="designerProductList">
+                    <p style="color: #666; text-align: center; padding: 2rem;">Loading designer products...</p>
                 </div>
             </div>
 
@@ -827,8 +964,13 @@
             shingleType: null,
             metalType: null,
             impactClass: null,
-            metalMaterial: null
+            metalMaterial: null,
+            designerProduct: null,        // specific product name from catalog
+            designerManufacturer: null,    // manufacturer name
+            designerCatalogId: null        // UUID from material_catalog
         };
+
+        let designerProducts = []; // loaded from Supabase
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -913,13 +1055,15 @@
                 showPricing();
                 showConfirmation();
                 updateProgress(4);
+            } else if (type === 'designer') {
+                // Designer: show product selection (loads from catalog)
+                loadDesignerProducts();
+                document.getElementById('designerProductSection').classList.remove('hidden');
+                updateProgress(3);
             } else {
+                // Architectural: show impact class selection
                 document.getElementById('impactClassSection').classList.remove('hidden');
-                if (type === 'designer') {
-                    document.getElementById('designerNote').classList.remove('hidden');
-                } else {
-                    document.getElementById('designerNote').classList.add('hidden');
-                }
+                document.getElementById('designerNote').classList.add('hidden');
                 updateProgress(3);
             }
         }
@@ -970,6 +1114,110 @@
             updateProgress(4);
         }
 
+        // Load Designer Products from Supabase
+        async function loadDesignerProducts() {
+            const container = document.getElementById('designerProductList');
+            if (designerProducts.length > 0) {
+                // Already loaded
+                renderDesignerProducts(container);
+                return;
+            }
+
+            try {
+                const { data, error } = await sb
+                    .from('material_catalog')
+                    .select('*')
+                    .eq('subcategory', 'designer')
+                    .eq('active', true)
+                    .order('sort_order');
+
+                if (error) throw error;
+                designerProducts = data || [];
+                renderDesignerProducts(container);
+            } catch (err) {
+                console.error('Error loading designer products:', err);
+                container.innerHTML = '<p style="color: #721c24; text-align: center; padding: 2rem;">Error loading products. Please refresh the page.</p>';
+            }
+        }
+
+        function renderDesignerProducts(container) {
+            if (designerProducts.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 2rem;">No designer products available yet.</p>';
+                return;
+            }
+
+            // Group by manufacturer
+            const groups = {};
+            designerProducts.forEach(p => {
+                const mfr = p.manufacturer || 'Other';
+                if (!groups[mfr]) groups[mfr] = [];
+                groups[mfr].push(p);
+            });
+
+            let html = '';
+            for (const [manufacturer, products] of Object.entries(groups)) {
+                html += `<div class="manufacturer-group">`;
+                html += `<div class="manufacturer-name">${manufacturer}</div>`;
+                html += `<div class="product-grid">`;
+
+                for (const p of products) {
+                    const impactBadge = p.impact_class === 'class4'
+                        ? '<span class="product-badge impact4">Class 4</span>'
+                        : p.impact_class === 'class3'
+                        ? '<span class="product-badge impact3">Class 3</span>'
+                        : '';
+                    const tierBadge = p.price_tier === 'premium'
+                        ? '<span class="product-badge tier-premium">Premium</span>'
+                        : '<span class="product-badge tier-mid">Moderate</span>';
+                    const visualizerLink = p.visualizer_url
+                        ? `<a href="${p.visualizer_url}" target="_blank" class="product-link" onclick="event.stopPropagation();">View Colors &rarr;</a>`
+                        : '';
+
+                    // Truncate description for display
+                    const desc = p.description && p.description.length > 160
+                        ? p.description.substring(0, 157) + '...'
+                        : (p.description || '');
+
+                    html += `
+                        <div class="product-card" data-product-id="${p.id}" onclick="selectDesignerProduct('${p.id}')">
+                            <div class="product-card-header">
+                                <span class="product-name">${p.product_name}</span>
+                                <div class="product-badges">${impactBadge}${tierBadge}</div>
+                            </div>
+                            <div class="product-description">${desc}</div>
+                            <div class="product-links">${visualizerLink}</div>
+                        </div>`;
+                }
+
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Designer Product Selection
+        function selectDesignerProduct(productId) {
+            const product = designerProducts.find(p => p.id === productId);
+            if (!product) return;
+
+            state.designerProduct = product.product_name;
+            state.designerManufacturer = product.manufacturer;
+            state.designerCatalogId = product.id;
+            // Auto-set impact class from product
+            state.impactClass = product.impact_class || 'none';
+
+            // Update UI
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-product-id="${productId}"]`).classList.add('selected');
+
+            // Hide product section, show pricing + confirmation
+            showPricing();
+            showConfirmation();
+            updateProgress(4);
+        }
+
         // Show Pricing Section
         function showPricing() {
             const pricingSection = document.getElementById('pricingSection');
@@ -1010,23 +1258,32 @@
             confirmCategory.textContent = state.category === 'shingles' ? 'Shingles' : 'Metal Roofing';
 
             if (state.category === 'shingles') {
-                const shingleNames = {
-                    'architectural': 'Architectural Shingle',
-                    'designer': 'Designer Shingle',
-                    '3-tab': '3-Tab Shingle'
-                };
-                confirmType.textContent = shingleNames[state.shingleType];
-
-                if (state.impactClass) {
-                    const impactNames = {
-                        'none': 'No Impact Class',
-                        'class-3': 'Class 3 Hail Resistance',
-                        'class-4': 'Class 4 Hail Resistance (Recommended)'
-                    };
-                    confirmDetails.textContent = impactNames[state.impactClass];
+                if (state.shingleType === 'designer' && state.designerProduct) {
+                    confirmType.textContent = state.designerManufacturer + ' ' + state.designerProduct;
+                    const impactLabel = state.impactClass === 'class4' ? 'Class 4 Impact Resistant'
+                        : state.impactClass === 'class3' ? 'Class 3 Impact Resistant'
+                        : 'Standard (no impact rating)';
+                    confirmDetails.textContent = impactLabel;
                     confirmDetailsItem.classList.remove('hidden');
                 } else {
-                    confirmDetailsItem.classList.add('hidden');
+                    const shingleNames = {
+                        'architectural': 'Architectural Shingle',
+                        'designer': 'Designer Shingle',
+                        '3-tab': '3-Tab Shingle'
+                    };
+                    confirmType.textContent = shingleNames[state.shingleType];
+
+                    if (state.impactClass) {
+                        const impactNames = {
+                            'none': 'No Impact Class',
+                            'class-3': 'Class 3 Hail Resistance',
+                            'class-4': 'Class 4 Hail Resistance (Recommended)'
+                        };
+                        confirmDetails.textContent = impactNames[state.impactClass];
+                        confirmDetailsItem.classList.remove('hidden');
+                    } else {
+                        confirmDetailsItem.classList.add('hidden');
+                    }
                 }
             } else {
                 const metalNames = {
@@ -1074,6 +1331,10 @@
                     updateData.shingle_type = state.shingleType;
                     if (state.impactClass) {
                         updateData.impact_class = state.impactClass;
+                    }
+                    if (state.designerProduct) {
+                        updateData.designer_product = state.designerProduct;
+                        updateData.designer_manufacturer = state.designerManufacturer;
                     }
                 } else {
                     updateData.metal_type = state.metalType;
