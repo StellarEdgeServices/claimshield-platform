@@ -1282,15 +1282,7 @@
     window.location.href = '/partner-dashboard.html';
   });
 
-  // Check if user is already logged in
-  Auth.getUser().then(async user => {
-    if (user) {
-      await Auth.redirectToDashboard();
-    }
-  });
-
-  // Set up auth state listener
-  Auth.onAuthStateChangeListener();
+  // Partner pages are public — do NOT redirect logged-in users to dashboard
 })();
 </script>
 
