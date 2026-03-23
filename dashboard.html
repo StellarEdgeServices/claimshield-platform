@@ -938,8 +938,13 @@
       }
 
       async function loadClaimData() {
-        if (CONFIG.DEMO_MODE || !sb || !currentUser) return;
+        if (CONFIG.DEMO_MODE || !sb || !currentUser) {
+          console.log('[Dashboard] loadClaimData skipped:', { demo: CONFIG.DEMO_MODE, sb: !!sb, user: !!currentUser });
+          return;
+        }
         try {
+          console.log('[Dashboard] Loading claim for user:', currentUser.id);
+
           // Fetch user's most recent claim
           const { data, error } = await sb
             .from('claims')
@@ -949,16 +954,22 @@
             .limit(1)
             .single();
 
+          console.log('[Dashboard] Claim query result:', { data: !!data, error: error?.message || null, errorCode: error?.code || null });
+
           if (error && error.code !== 'PGRST116') {
-            // PGRST116 = no rows found
-            console.error('Error loading claim:', error);
-            return;
+            // PGRST116 = no rows found — that's OK, we'll create one
+            console.error('[Dashboard] Error loading claim:', error);
+            // Don't return — fall through to create a new claim
           }
 
           if (data) {
             currentClaim = data;
-          } else {
+            console.log('[Dashboard] Loaded existing claim:', { id: data.id, status: data.status, has_estimate: data.has_estimate, has_material_selection: data.has_material_selection });
+          }
+
+          if (!currentClaim) {
             // Create new claim if doesn't exist
+            console.log('[Dashboard] No claim found, creating new draft...');
             const { data: newClaim, error: createError } = await sb
               .from('claims')
               .insert({
@@ -969,9 +980,27 @@
               .select()
               .single();
 
+            if (createError) {
+              console.error('[Dashboard] Error creating claim:', createError);
+            }
+
             if (!createError && newClaim) {
               currentClaim = newClaim;
+              console.log('[Dashboard] Created new claim:', newClaim.id);
             }
+          }
+
+          // If we STILL don't have a claim, create a local default so the UI renders
+          if (!currentClaim) {
+            console.warn('[Dashboard] Using local default claim — Supabase query/insert both failed');
+            currentClaim = {
+              id: null,
+              status: 'draft',
+              has_estimate: false,
+              has_measurements: false,
+              has_material_selection: false,
+              ready_for_bids: false,
+            };
           }
 
           // Show submitted state if applicable
@@ -981,14 +1010,31 @@
             document.getElementById('submit-ready-section').style.display = 'none';
           }
         } catch (err) {
-          console.error('Error loading/creating claim:', err);
+          console.error('[Dashboard] Uncaught error in loadClaimData:', err);
+          // Create local default so UI still renders
+          currentClaim = {
+            id: null,
+            status: 'draft',
+            has_estimate: false,
+            has_measurements: false,
+            has_material_selection: false,
+            ready_for_bids: false,
+          };
         }
       }
 
       // ── UI Rendering ──
       function renderWelcome() {
-        document.getElementById('user-first-name').textContent = currentProfile?.first_name || 'there';
-        document.getElementById('user-address').textContent = currentProfile?.address || 'Address not set';
+        // Profile uses full_name (not first_name/last_name) and address_street/city/state/zip (not address)
+        const firstName = currentProfile?.full_name?.split(' ')[0]
+          || currentProfile?.first_name
+          || 'there';
+        document.getElementById('user-first-name').textContent = firstName;
+
+        const address = currentProfile?.address_street
+          ? [currentProfile.address_street, currentProfile.address_city, currentProfile.address_state, currentProfile.address_zip].filter(Boolean).join(', ')
+          : currentProfile?.address || 'Address not set';
+        document.getElementById('user-address').textContent = address;
       }
 
       function renderClaimInfo() {
@@ -1097,11 +1143,11 @@
             id: 'material',
             title: 'Material Selection',
             required: true,
-            status: currentClaim.selected_material ? 'selected' : 'pending',
-            filename: currentClaim.selected_material,
+            status: currentClaim.has_material_selection ? 'selected' : 'pending',
+            filename: currentClaim.material_type || currentClaim.selected_material || null,
             description: 'Choose the roofing material and specifications for your project.',
             buttons: [
-              currentClaim.selected_material
+              currentClaim.has_material_selection
                 ? { label: 'Change Material', action: 'navigate', data: 'help-materials.html' }
                 : { label: 'Choose Material', action: 'navigate', data: 'help-materials.html' }
             ],
@@ -1172,7 +1218,7 @@
 
         if (currentClaim?.has_estimate) completed++;
         if (currentClaim?.has_measurements) completed++;
-        if (currentClaim?.selected_material) completed++;
+        if (currentClaim?.has_material_selection) completed++;
 
         const percent = Math.round((completed / total) * 100);
         document.getElementById('progress-percent').textContent = percent;
@@ -1184,7 +1230,7 @@
         const hint = document.getElementById('submit-hint');
 
         const hasEstimate = currentClaim?.has_estimate;
-        const hasMaterial = currentClaim?.selected_material;
+        const hasMaterial = currentClaim?.has_material_selection;
         const isReady = hasEstimate && hasMaterial;
 
         btn.disabled = !isReady;
