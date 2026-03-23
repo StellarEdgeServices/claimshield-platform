@@ -909,16 +909,26 @@
 
         currentProfile = await Auth.getProfile();
         if (!currentProfile) {
-          // Create default profile if doesn't exist
+          // Create default profile if doesn't exist — use actual DB column names
           const signupData = JSON.parse(sessionStorage.getItem('cs_signup') || '{}');
+          const firstName = signupData.first_name || currentUser.user_metadata?.full_name?.split(' ')[0] || '';
+          const lastName = signupData.last_name || currentUser.user_metadata?.full_name?.split(' ')[1] || '';
           currentProfile = {
             id: currentUser.id,
-            first_name: signupData.first_name || currentUser.user_metadata?.full_name?.split(' ')[0] || 'there',
-            last_name: signupData.last_name || currentUser.user_metadata?.full_name?.split(' ')[1] || '',
-            phone: signupData.phone || '',
-            address: signupData.address || '',
+            full_name: (firstName + ' ' + lastName).trim() || currentUser.email?.split('@')[0] || 'there',
+            phone: signupData.phone || null,
+            address_street: signupData.address_street || signupData.address || null,
+            address_city: signupData.address_city || null,
+            address_state: signupData.address_state || null,
+            address_zip: signupData.address_zip || null,
+            role: 'homeowner',
           };
-          await Auth.updateProfile(currentProfile);
+          try {
+            await Auth.updateProfile(currentProfile);
+          } catch (err) {
+            console.error('[Dashboard] Error creating profile:', err);
+            // Continue with local profile so UI still renders
+          }
         }
       }
 
