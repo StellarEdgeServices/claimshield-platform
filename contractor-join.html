@@ -295,6 +295,57 @@
             background-color: rgba(20, 184, 166, 0.05);
         }
 
+        .file-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            background: var(--navy);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            color: var(--white);
+        }
+
+        .file-list-item .file-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-item .file-name .checkmark {
+            color: var(--amber);
+            font-weight: 700;
+        }
+
+        .file-list-item .remove-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 0.25rem;
+            line-height: 1;
+        }
+
+        .file-list-item .remove-btn:hover {
+            color: #EF4444;
+        }
+
+        .file-count-badge {
+            display: inline-block;
+            background: var(--amber);
+            color: var(--navy);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            margin-left: 0.5rem;
+        }
+
         .info-box {
             background-color: rgba(11, 25, 41, 0.05);
             border-left: 4px solid var(--amber);
@@ -680,12 +731,14 @@
 
                         <div class="form-group">
                             <label for="insuranceCerts" class="form-label required">Insurance Certificates</label>
-                            <div class="file-upload">
-                                <input type="file" id="insuranceCerts" name="insuranceCerts" accept=".pdf,.jpg,.jpeg,.png" required>
-                                <label for="insuranceCerts" class="file-upload-label">
+                            <div class="file-upload" id="insuranceCertsUpload">
+                                <input type="file" id="insuranceCerts" name="insuranceCerts" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                <label for="insuranceCerts" class="file-upload-label" id="insuranceCertsLabel">
                                     📎 Click to upload or drag and drop
                                 </label>
                             </div>
+                            <div id="insuranceCertsFileList" style="margin-top: 0.5rem;"></div>
+                            <p style="font-size: 0.8rem; color: var(--slate); margin-top: 0.25rem;">You can upload multiple files. Accepted formats: PDF, JPG, PNG.</p>
                         </div>
                     </fieldset>
 
@@ -1265,8 +1318,54 @@
             }
         });
 
-        // Handle file upload label clicks
-        document.querySelectorAll('.file-upload input[type="file"]').forEach(input => {
+        // ── Insurance Certificates: Multi-file upload manager ──
+        const insuranceCertsFiles = []; // Accumulated file list
+
+        document.getElementById('insuranceCerts').addEventListener('change', function() {
+            // Add new files to accumulated list (don't replace)
+            for (const file of this.files) {
+                // Avoid exact duplicates by name+size
+                const isDuplicate = insuranceCertsFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!isDuplicate) {
+                    insuranceCertsFiles.push(file);
+                }
+            }
+            renderInsuranceCertsFileList();
+            // Update the label to show count
+            const label = document.getElementById('insuranceCertsLabel');
+            label.innerHTML = '📎 Add more files';
+        });
+
+        function renderInsuranceCertsFileList() {
+            const container = document.getElementById('insuranceCertsFileList');
+            if (insuranceCertsFiles.length === 0) {
+                container.innerHTML = '';
+                // Reset label
+                document.getElementById('insuranceCertsLabel').innerHTML = '📎 Click to upload or drag and drop';
+                return;
+            }
+            let html = '<div style="margin-bottom:0.25rem;font-size:0.85rem;font-weight:600;color:var(--navy);">'
+                + insuranceCertsFiles.length + ' file' + (insuranceCertsFiles.length > 1 ? 's' : '') + ' uploaded</div>';
+            insuranceCertsFiles.forEach((file, idx) => {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                html += '<div class="file-list-item">'
+                    + '<span class="file-name"><span class="checkmark">\u2713</span> ' + file.name + ' <span style="color:var(--slate);font-size:0.75rem;">(' + sizeMB + ' MB)</span></span>'
+                    + '<button type="button" class="remove-btn" onclick="removeInsuranceCertFile(' + idx + ')" title="Remove">\u2716</button>'
+                    + '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function removeInsuranceCertFile(idx) {
+            insuranceCertsFiles.splice(idx, 1);
+            renderInsuranceCertsFileList();
+            if (insuranceCertsFiles.length === 0) {
+                document.getElementById('insuranceCertsLabel').innerHTML = '📎 Click to upload or drag and drop';
+            }
+        }
+
+        // ── License document uploads: single file per license, simple label update ──
+        document.querySelectorAll('.license-entry .file-upload input[type="file"]').forEach(input => {
             input.addEventListener('change', function() {
                 const label = this.nextElementSibling;
                 const fileName = this.files[0]?.name || 'File selected';
@@ -1309,6 +1408,34 @@
             document.getElementById('licensesContainer').style.pointerEvents = checked ? 'none' : 'auto';
             document.getElementById('addLicenseBtn').style.display = checked ? 'none' : 'block';
         }
+
+        // ── Drag-and-drop support for insurance certificates ──
+        const dropTarget = document.getElementById('insuranceCertsUpload');
+        dropTarget.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropTarget.querySelector('.file-upload-label').style.borderColor = 'var(--amber)';
+            dropTarget.querySelector('.file-upload-label').style.backgroundColor = 'rgba(245, 158, 11, 0.05)';
+        });
+        dropTarget.addEventListener('dragleave', () => {
+            dropTarget.querySelector('.file-upload-label').style.borderColor = '';
+            dropTarget.querySelector('.file-upload-label').style.backgroundColor = '';
+        });
+        dropTarget.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropTarget.querySelector('.file-upload-label').style.borderColor = '';
+            dropTarget.querySelector('.file-upload-label').style.backgroundColor = '';
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+            for (const file of e.dataTransfer.files) {
+                if (validTypes.includes(file.type)) {
+                    const isDuplicate = insuranceCertsFiles.some(f => f.name === file.name && f.size === file.size);
+                    if (!isDuplicate) insuranceCertsFiles.push(file);
+                }
+            }
+            renderInsuranceCertsFileList();
+            if (insuranceCertsFiles.length > 0) {
+                document.getElementById('insuranceCertsLabel').innerHTML = '📎 Add more files';
+            }
+        });
 
         // Set up auth state listener for post-auth profile creation
         if (window.Auth && window.Auth.onAuthStateChangeListener) {

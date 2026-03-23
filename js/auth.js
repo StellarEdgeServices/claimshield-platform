@@ -4,7 +4,7 @@
  * Role-based routing: homeowner vs contractor
  */
 
-const Auth = {
+window.Auth = {
   /** Get current session */
   async getSession() {
     if (!sb) return null;
