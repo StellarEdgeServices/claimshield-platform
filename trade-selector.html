@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+  <title>Trade Selection — OtterQuote</title>
+  <meta name="description" content="Select how you're funding your project and which trades you need.">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/nav.css">
+
+  <style>
+    /* Page layout */
+    .trade-page-layout {
+      min-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .trade-page-main {
+      flex: 1;
+      padding: var(--sp-12) 0;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: var(--sp-6);
+      margin-bottom: var(--sp-12);
+      animation: fadeUp 0.6s var(--ease);
+    }
+
+    .step-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all var(--duration) var(--ease);
+      border: 2px solid var(--amber);
+      color: var(--amber);
+    }
+
+    .step-dot.filled {
+      background: var(--amber);
+      color: var(--navy);
+    }
+
+    .step-dot.active {
+      background: var(--amber);
+      color: var(--navy);
+      box-shadow: 0 0 16px rgba(20, 184, 166, 0.3);
+    }
+
+    .step-connector {
+      width: 40px;
+      height: 2px;
+      background: rgba(20, 184, 166, 0.2);
+      transition: all var(--duration) var(--ease);
+    }
+
+    .step-connector.filled {
+      background: var(--amber);
+    }
+
+    @media (max-width: 640px) {
+      .step-connector {
+        width: 20px;
+      }
+
+      .step-dot {
+        width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Header section */
+    .trade-header {
+      margin-bottom: var(--sp-12);
+      animation: fadeUp 0.6s var(--ease) 0.1s both;
+    }
+
+    .trade-header h1 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      margin-bottom: var(--sp-2);
+    }
+
+    .trade-header-subtitle {
+      color: var(--slate);
+      font-size: 1.1rem;
+      max-width: 600px;
+    }
+
+    /* Step container with slide animation */
+    .step-container {
+      opacity: 1;
+      transition: opacity 0.4s var(--ease);
+      animation: fadeUp 0.6s var(--ease) 0.2s both;
+    }
+
+    .step-container.hidden {
+      opacity: 0;
+      display: none;
+    }
+
+    /* Funding options */
+    .funding-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--sp-8);
+      margin-bottom: var(--sp-12);
+    }
+
+    .funding-card {
+      background: var(--navy-2);
+      border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-6);
+      text-align: center;
+    }
+
+    .funding-card:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .funding-card.selected {
+      border-color: var(--amber);
+      background: rgba(20, 184, 166, 0.08);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.15);
+    }
+
+    .funding-icon {
+      font-size: 3rem;
+    }
+
+    .funding-card h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .funding-subtitle {
+      color: var(--slate);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    /* Trade selection grid */
+    .trade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--sp-6);
+      margin-bottom: var(--sp-12);
+    }
+
+    .trade-card {
+      background: var(--navy-2);
+      border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-4);
+      text-align: center;
+      position: relative;
+    }
+
+    .trade-card:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .trade-card.selected {
+      border-color: var(--amber);
+      background: rgba(20, 184, 166, 0.08);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.15);
+    }
+
+    .trade-checkbox {
+      position: absolute;
+      top: var(--sp-4);
+      right: var(--sp-4);
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--amber);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity var(--duration) var(--ease);
+    }
+
+    .trade-card.selected .trade-checkbox {
+      opacity: 1;
+    }
+
+    .trade-icon {
+      font-size: 2.5rem;
+    }
+
+    .trade-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    /* Repair/Replace toggle section */
+    .repair-replace-section {
+      margin-bottom: var(--sp-12);
+    }
+
+    .repair-replace-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--sp-8);
+      margin-bottom: var(--sp-12);
+    }
+
+    .repair-replace-card {
+      background: var(--navy-2);
+      border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .repair-replace-card:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .repair-replace-card.selected {
+      border-color: var(--amber);
+      background: rgba(20, 184, 166, 0.08);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.15);
+    }
+
+    .repair-replace-icon {
+      font-size: 2.5rem;
+    }
+
+    .repair-replace-card h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .repair-replace-subtitle {
+      color: var(--slate);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    /* Multi-trade repair/replace table */
+    .repair-replace-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: var(--sp-12);
+    }
+
+    .repair-replace-table th,
+    .repair-replace-table td {
+      padding: var(--sp-4);
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .repair-replace-table th {
+      font-weight: 600;
+      color: var(--slate);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .repair-replace-table tr:hover {
+      background: rgba(20, 184, 166, 0.05);
+    }
+
+    .trade-toggle-wrapper {
+      display: flex;
+      gap: var(--sp-3);
+      align-items: center;
+    }
+
+    .toggle-btn {
+      padding: var(--sp-2) var(--sp-4);
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: var(--white);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .toggle-btn.active {
+      background: var(--amber);
+      color: var(--navy);
+      border-color: var(--amber);
+    }
+
+    .toggle-btn:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    /* Action buttons */
+    .action-buttons {
+      display: flex;
+      justify-content: center;
+      gap: var(--sp-4);
+      margin-top: var(--sp-12);
+    }
+
+    .btn {
+      padding: var(--sp-4) var(--sp-8);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      font-family: var(--font-body);
+    }
+
+    .btn-primary {
+      background: var(--amber);
+      color: var(--navy);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--amber-2);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    @media (max-width: 640px) {
+      .funding-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .repair-replace-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .trade-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .action-buttons {
+        flex-direction: column;
+        gap: var(--sp-3);
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Loading and error states */
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-left: 4px solid var(--red);
+      color: #FECACA;
+      padding: var(--sp-4);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--sp-6);
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: var(--sp-12);
+      color: var(--slate);
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(20, 184, 166, 0.2);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="site-header" data-active="dashboard" data-auth="true"></header>
+
+  <div class="trade-page-layout">
+    <div class="trade-page-main">
+      <div class="container">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+          <div class="step-dot filled active" id="step-1-dot">1</div>
+          <div class="step-connector" id="connector-1-2"></div>
+          <div class="step-dot" id="step-2-dot">2</div>
+          <div class="step-connector" id="connector-2-3"></div>
+          <div class="step-dot" id="step-3-dot">3</div>
+        </div>
+
+        <!-- Error Message (hidden by default) -->
+        <div id="error-message" class="error-message" style="display: none;"></div>
+
+        <!-- STEP 1: Funding Type -->
+        <div id="step-1" class="step-container">
+          <div class="trade-header">
+            <h1>How is this job being funded?</h1>
+            <p class="trade-header-subtitle">Let us know how you're planning to pay for your project so we can match you with the right contractors.</p>
+          </div>
+
+          <div class="funding-grid">
+            <div class="funding-card" id="funding-insurance">
+              <div class="funding-icon">📋</div>
+              <h3>Insurance Claim</h3>
+              <p class="funding-subtitle">I have an insurance claim for storm damage</p>
+            </div>
+
+            <div class="funding-card" id="funding-cash">
+              <div class="funding-icon">💰</div>
+              <h3>Out of Pocket</h3>
+              <p class="funding-subtitle">I'm paying for this myself (retail/cash)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Trade Selection -->
+        <div id="step-2" class="step-container hidden">
+          <div class="trade-header">
+            <h1>What do you need done?</h1>
+            <p class="trade-header-subtitle">Select all the trades you need work on. You can choose more than one.</p>
+          </div>
+
+          <div class="trade-grid">
+            <div class="trade-card" id="trade-roofing">
+              <div class="trade-checkbox">✓</div>
+              <div class="trade-icon">🏠</div>
+              <h3>Roofing</h3>
+            </div>
+
+            <div class="trade-card" id="trade-siding">
+              <div class="trade-checkbox">✓</div>
+              <div class="trade-icon">🧱</div>
+              <h3>Siding</h3>
+            </div>
+
+            <div class="trade-card" id="trade-gutters">
+              <div class="trade-checkbox">✓</div>
+              <div class="trade-icon">💧</div>
+              <h3>Gutters</h3>
+            </div>
+
+            <div class="trade-card" id="trade-windows">
+              <div class="trade-checkbox">✓</div>
+              <div class="trade-icon">🪟</div>
+              <h3>Windows</h3>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn btn-secondary" id="step-2-back">← Back</button>
+            <button class="btn btn-primary" id="step-2-continue" disabled>Continue →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Repair or Replace -->
+        <div id="step-3" class="step-container hidden">
+          <div class="repair-replace-section">
+            <div class="trade-header">
+              <h1 id="step-3-title">Repair or Replace?</h1>
+              <p class="trade-header-subtitle" id="step-3-subtitle">Let us know what you'd like to do with your selected trades.</p>
+            </div>
+
+            <!-- Single Trade Version (hidden by default) -->
+            <div id="single-trade-version" style="display: none;">
+              <div class="repair-replace-grid">
+                <div class="repair-replace-card" id="repair-option">
+                  <div class="repair-replace-icon">🔧</div>
+                  <h3>Repair</h3>
+                  <p class="repair-replace-subtitle">Fix specific damage or issues</p>
+                </div>
+
+                <div class="repair-replace-card" id="replace-option">
+                  <div class="repair-replace-icon">✨</div>
+                  <h3>Replace</h3>
+                  <p class="repair-replace-subtitle" id="replace-subtitle">Full replacement of existing roof</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Multi-Trade Version (hidden by default) -->
+            <div id="multi-trade-version" style="display: none;">
+              <table class="repair-replace-table">
+                <thead>
+                  <tr>
+                    <th>Trade</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody id="repair-replace-tbody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="action-buttons">
+              <button class="btn btn-secondary" id="step-3-back">← Back</button>
+              <button class="btn btn-primary" id="step-3-continue">Continue →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <!-- Configuration and Auth -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/nav.js"></script>
+
+  <script>
+    /**
+     * Trade Selector Logic
+     * Three-step funnel for funding type → trades → repair/replace
+     */
+
+    // State management
+    let state = {
+      fundingType: null,
+      trades: [],
+      repairReplace: {}
+    };
+
+    const TRADES = ['roofing', 'siding', 'gutters', 'windows'];
+
+    // ── Step 1: Funding Type ──
+    document.getElementById('funding-insurance').addEventListener('click', () => {
+      selectFunding('insurance');
+    });
+
+    document.getElementById('funding-cash').addEventListener('click', () => {
+      selectFunding('cash');
+    });
+
+    function selectFunding(type) {
+      state.fundingType = type;
+      document.querySelectorAll('.funding-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.getElementById(`funding-${type}`).classList.add('selected');
+
+      // Move to step 2
+      setTimeout(() => {
+        goToStep(2);
+      }, 300);
+    }
+
+    // ── Step 2: Trade Selection ──
+    TRADES.forEach(trade => {
+      const card = document.getElementById(`trade-${trade}`);
+      card.addEventListener('click', () => {
+        toggleTrade(trade, card);
+      });
+    });
+
+    function toggleTrade(trade, card) {
+      if (state.trades.includes(trade)) {
+        state.trades = state.trades.filter(t => t !== trade);
+        card.classList.remove('selected');
+      } else {
+        state.trades.push(trade);
+        card.classList.add('selected');
+      }
+
+      // Update continue button state
+      updateStep2ContinueButton();
+    }
+
+    function updateStep2ContinueButton() {
+      const continueBtn = document.getElementById('step-2-continue');
+      continueBtn.disabled = state.trades.length === 0;
+    }
+
+    document.getElementById('step-2-back').addEventListener('click', () => {
+      goToStep(1);
+    });
+
+    document.getElementById('step-2-continue').addEventListener('click', () => {
+      initializeStep3();
+      goToStep(3);
+    });
+
+    // ── Step 3: Repair or Replace ──
+    document.getElementById('step-3-back').addEventListener('click', () => {
+      goToStep(2);
+    });
+
+    document.getElementById('step-3-continue').addEventListener('click', () => {
+      completeSelection();
+    });
+
+    function initializeStep3() {
+      state.repairReplace = {};
+
+      // Initialize repair/replace for each selected trade
+      state.trades.forEach(trade => {
+        state.repairReplace[trade] = 'replace';
+      });
+
+      if (state.trades.length === 1) {
+        showSingleTradeVersion();
+      } else {
+        showMultiTradeVersion();
+      }
+    }
+
+    function showSingleTradeVersion() {
+      const trade = state.trades[0];
+      const tradeDisplay = trade.charAt(0).toUpperCase() + trade.slice(1);
+
+      document.getElementById('single-trade-version').style.display = 'block';
+      document.getElementById('multi-trade-version').style.display = 'none';
+      document.getElementById('replace-subtitle').textContent = `Full replacement of existing ${tradeDisplay.toLowerCase()}`;
+
+      // Clear previous selections
+      document.querySelectorAll('.repair-replace-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+
+      // Set default to 'replace'
+      document.getElementById('replace-option').classList.add('selected');
+
+      document.getElementById('repair-option').addEventListener('click', () => {
+        state.repairReplace[trade] = 'repair';
+        document.getElementById('repair-option').classList.add('selected');
+        document.getElementById('replace-option').classList.remove('selected');
+      }, { once: true });
+
+      document.getElementById('replace-option').addEventListener('click', () => {
+        state.repairReplace[trade] = 'replace';
+        document.getElementById('replace-option').classList.add('selected');
+        document.getElementById('repair-option').classList.remove('selected');
+      }, { once: true });
+
+      // Reattach listeners
+      document.getElementById('repair-option').addEventListener('click', () => {
+        state.repairReplace[trade] = 'repair';
+        document.getElementById('repair-option').classList.add('selected');
+        document.getElementById('replace-option').classList.remove('selected');
+      });
+
+      document.getElementById('replace-option').addEventListener('click', () => {
+        state.repairReplace[trade] = 'replace';
+        document.getElementById('replace-option').classList.add('selected');
+        document.getElementById('repair-option').classList.remove('selected');
+      });
+    }
+
+    function showMultiTradeVersion() {
+      document.getElementById('single-trade-version').style.display = 'none';
+      document.getElementById('multi-trade-version').style.display = 'block';
+
+      const tbody = document.getElementById('repair-replace-tbody');
+      tbody.innerHTML = '';
+
+      state.trades.forEach(trade => {
+        const row = document.createElement('tr');
+        const tradeDisplay = trade.charAt(0).toUpperCase() + trade.slice(1);
+
+        row.innerHTML = `
+          <td>${tradeDisplay}</td>
+          <td>
+            <div class="trade-toggle-wrapper">
+              <button class="toggle-btn active" data-trade="${trade}" data-type="repair">Repair</button>
+              <button class="toggle-btn" data-trade="${trade}" data-type="replace">Replace</button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(row);
+
+        // Attach toggle listeners
+        row.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tradeId = btn.dataset.trade;
+            const type = btn.dataset.type;
+
+            state.repairReplace[tradeId] = type;
+
+            // Update button states
+            row.querySelectorAll('.toggle-btn').forEach(b => {
+              b.classList.remove('active');
+            });
+            btn.classList.add('active');
+          });
+        });
+      });
+    }
+
+    // ── Navigation between steps ──
+    function goToStep(step) {
+      // Update step containers
+      document.querySelectorAll('.step-container').forEach(container => {
+        container.classList.add('hidden');
+      });
+      document.getElementById(`step-${step}`).classList.remove('hidden');
+
+      // Update step indicator
+      document.querySelectorAll('.step-dot').forEach((dot, index) => {
+        const dotStep = index + 1;
+        dot.classList.remove('active', 'filled');
+
+        if (dotStep < step) {
+          dot.classList.add('filled');
+        } else if (dotStep === step) {
+          dot.classList.add('active');
+        }
+      });
+
+      // Update connectors
+      document.querySelectorAll('.step-connector').forEach((connector, index) => {
+        connector.classList.remove('filled');
+        if (index + 1 < step) {
+          connector.classList.add('filled');
+        }
+      });
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Completion ──
+    async function completeSelection() {
+      try {
+        const continueBtn = document.getElementById('step-3-continue');
+        continueBtn.disabled = true;
+
+        // Prepare selection data
+        const selections = {
+          funding_type: state.fundingType,
+          trades: state.trades.map(trade => ({
+            trade: trade,
+            intent: state.repairReplace[trade] || 'replace'
+          }))
+        };
+
+        // Save to sessionStorage
+        sessionStorage.setItem('oq_trade_selections', JSON.stringify(selections));
+
+        // Try to save to Supabase if authenticated
+        const user = await Auth.getUser();
+        if (user && window.sb) {
+          try {
+            // Determine job type
+            let jobType = null;
+            const hasRepair = selections.trades.some(t => t.intent === 'repair');
+            const hasReplace = selections.trades.some(t => t.intent === 'replace');
+
+            if (state.fundingType === 'insurance') {
+              jobType = hasRepair ? 'repair' : 'replacement';
+            } else {
+              jobType = 'retail';
+            }
+
+            // Update or create claim
+            const { data: existingClaim } = await window.sb
+              .from('claims')
+              .select('id')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            const claimData = {
+              funding_type: state.fundingType,
+              trades: selections.trades.map(t => t.trade),
+              job_type: jobType,
+              updated_at: new Date().toISOString()
+            };
+
+            if (existingClaim) {
+              await window.sb
+                .from('claims')
+                .update(claimData)
+                .eq('id', existingClaim.id);
+            } else {
+              await window.sb
+                .from('claims')
+                .insert({
+                  user_id: user.id,
+                  ...claimData,
+                  created_at: new Date().toISOString()
+                });
+            }
+          } catch (supabaseError) {
+            console.warn('Supabase save failed:', supabaseError);
+            // Continue regardless of Supabase error
+          }
+        }
+
+        // Determine redirect based on selections
+        const hasRepair = selections.trades.some(t => t.intent === 'repair');
+        const redirectUrl = hasRepair ? '/repair-intake.html' : '/dashboard.html';
+
+        // Redirect
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 500);
+      } catch (error) {
+        console.error('Error completing selection:', error);
+        showError('Something went wrong. Please try again.');
+        document.getElementById('step-3-continue').disabled = false;
+      }
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('error-message');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => {
+        errorEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // ── Init on page load ──
+    async function initPage() {
+      try {
+        // Require authentication
+        const user = await Auth.requireAuth('homeowner');
+        if (!user && !CONFIG?.DEMO_MODE) {
+          return; // Auth module will handle redirect
+        }
+      } catch (error) {
+        console.error('Auth error:', error);
+      }
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+      initPage();
+    }
+  </script>
+</body>
+</html>

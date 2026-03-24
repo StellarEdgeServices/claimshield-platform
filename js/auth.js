@@ -28,7 +28,7 @@ window.Auth = {
     // Redirect URL depends on role — auth callback page handles final routing
     const redirectPage = role === 'contractor'
       ? '/contractor-dashboard.html'
-      : '/dashboard.html';
+      : '/trade-selector.html';
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: {
@@ -121,7 +121,13 @@ window.Auth = {
     if (role === 'contractor') {
       window.location.href = '/contractor-dashboard.html';
     } else {
-      window.location.href = '/dashboard.html';
+      // Route homeowners to trade selector if they haven't made selections yet
+      const tradeSelections = sessionStorage.getItem('oq_trade_selections');
+      if (!tradeSelections) {
+        window.location.href = '/trade-selector.html';
+      } else {
+        window.location.href = '/dashboard.html';
+      }
     }
   },
 

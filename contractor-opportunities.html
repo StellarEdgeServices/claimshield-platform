@@ -142,13 +142,14 @@
                 </select>
             </div>
             <div class="filter-group">
-                <label class="filter-label">Damage Type</label>
-                <select class="filter-select" id="damageTypeFilter">
-                    <option value="">All Types</option>
-                    <option value="roof">Roof</option>
+                <label class="filter-label">Trade</label>
+                <select class="filter-select" id="tradeFilter">
+                    <option value="">All Trades</option>
+                    <option value="roofing">Roofing</option>
                     <option value="siding">Siding</option>
                     <option value="gutters">Gutters</option>
                     <option value="windows">Windows</option>
+                    <option value="multi">Multi-Trade</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -267,50 +268,62 @@
 
         const demoOpportunities = [
             {
-                id: 'CS-2026-0048', location: 'Indianapolis', zip: '46220', jobType: 'insurance_rcv',
-                damageType: 'Roof', damageDetail: 'Hail & Wind', insuranceCarrier: 'State Farm',
+                id: 'OQ-2026-0048', location: 'Indianapolis', zip: '46220', jobType: 'insurance_rcv',
+                trades: ['roofing'], damageType: 'Roof', damageDetail: 'Hail & Wind', insuranceCarrier: 'State Farm',
                 material: 'GAF Architectural — Class 4 Impact Resistant', estimatedValue: 22000,
                 roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-15',
                 distance: 5, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: null
+                homeownerNotes: null, fundingType: 'insurance'
             },
             {
-                id: 'CS-2026-0047', location: 'Carmel', zip: '46032', jobType: 'insurance_acv',
-                damageType: 'Roof', damageDetail: 'Wind', insuranceCarrier: 'Allstate',
+                id: 'OQ-2026-0047', location: 'Carmel', zip: '46032', jobType: 'insurance_acv',
+                trades: ['roofing'], damageType: 'Roof', damageDetail: 'Wind', insuranceCarrier: 'Allstate',
                 material: 'OC Duration', estimatedValue: 17000, acvPayout: 11200, deductible: 2500,
                 roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-14',
                 distance: 18, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: 'Two-story home. Ladder access on south side only.'
+                homeownerNotes: 'Two-story home. Ladder access on south side only.', fundingType: 'insurance'
             },
             {
-                id: 'CS-2026-0046', location: 'Fishers', zip: '46037', jobType: 'retail',
-                damageType: 'Roof', damageDetail: 'Age / Wear', insuranceCarrier: null,
+                id: 'OQ-2026-0046', location: 'Fishers', zip: '46037', jobType: 'retail',
+                trades: ['roofing'], damageType: 'Roof', damageDetail: 'Age / Wear', insuranceCarrier: null,
                 material: 'GAF Timberline HDZ', estimatedValue: null,
                 roofSquares: 28, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: false, measurementsAvailable: true, claimFiledDate: '2026-03-13',
                 distance: 22, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: null
+                homeownerNotes: null, fundingType: 'cash'
             },
             {
-                id: 'CS-2026-0045', location: 'Noblesville', zip: '46060', jobType: 'repair',
-                damageType: 'Roof', damageDetail: 'Wind — Partial', insuranceCarrier: 'Erie Insurance',
+                id: 'OQ-2026-0045', location: 'Noblesville', zip: '46060', jobType: 'repair',
+                trades: ['roofing'], damageType: 'Roof', damageDetail: 'Wind — Partial', insuranceCarrier: 'Erie Insurance',
                 material: null, existingShingle: 'GAF Timberline HD — Charcoal',
                 estimatedValue: null, roofSquares: null, repairSquares: 1.5, totalSquares: 25,
                 estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-12',
                 distance: 25, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: 'Damage on north-facing slope near chimney. Have leftover shingles in garage — confirmed GAF Timberline HD Charcoal.'
+                homeownerNotes: 'Damage on north-facing slope near chimney. Have leftover shingles in garage — confirmed GAF Timberline HD Charcoal.',
+                fundingType: 'insurance', repairType: 'blown_off'
             },
             {
-                id: 'CS-2026-0044', location: 'Greenwood', zip: '46142', jobType: 'insurance_rcv',
-                damageType: 'Roof + Gutters', damageDetail: 'Hail', insuranceCarrier: 'Liberty Mutual',
+                id: 'OQ-2026-0044', location: 'Greenwood', zip: '46142', jobType: 'insurance_rcv',
+                trades: ['roofing', 'gutters'], damageType: 'Roof + Gutters', damageDetail: 'Hail', insuranceCarrier: 'Liberty Mutual',
                 material: 'CertainTeed Landmark', estimatedValue: 26000,
                 roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-10',
                 distance: 15, urgency: 'asap', urgencyDeadline: '2026-04-15',
                 urgencyReason: 'Real estate closing April 15',
-                homeownerNotes: 'House is under contract. Must have roof complete before closing on April 15. Buyer inspection passed contingent on roof.'
+                homeownerNotes: 'House is under contract. Must have roof complete before closing on April 15. Buyer inspection passed contingent on roof.',
+                fundingType: 'insurance'
+            },
+            {
+                id: 'OQ-2026-0043', location: 'Zionsville', zip: '46077', jobType: 'insurance_rcv',
+                trades: ['roofing', 'siding', 'gutters'], damageType: 'Roof + Siding + Gutters', damageDetail: 'Hail & Wind', insuranceCarrier: 'State Farm',
+                material: 'OC Duration STORM — Class 4', estimatedValue: 38000,
+                roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-08',
+                distance: 8, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
+                homeownerNotes: 'Full exterior claim. Siding on north and west sides only. Gutters all around.',
+                fundingType: 'insurance'
             }
         ];
 
@@ -322,6 +335,18 @@
                 repair: '<span class="badge badge-repair">Repair</span>'
             };
             return map[jobType] || '';
+        }
+
+        function getTradeBadges(trades) {
+            if (!trades || !trades.length) return '';
+            const icons = { roofing: '🏠', siding: '🧱', gutters: '🌧️', windows: '🪟' };
+            const labels = { roofing: 'Roofing', siding: 'Siding', gutters: 'Gutters', windows: 'Windows' };
+            return trades.map(t => '<span class="badge" style="background:#E0F2FE;color:#0369A1;">' + (icons[t]||'') + ' ' + (labels[t]||t) + '</span>').join('');
+        }
+
+        function getMultiTradeBadge(trades) {
+            if (!trades || trades.length <= 1) return '';
+            return '<span class="badge" style="background:#FEF3C7;color:#92400E;font-weight:700;">📦 MULTI-TRADE (' + trades.length + ')</span>';
         }
 
         function getUrgentBadge(opp) {
@@ -384,7 +409,8 @@
                     + '<div class="opportunity-header"><div>'
                     + '<h2 class="opportunity-id">' + o.id + '</h2>'
                     + '<p class="opportunity-location">' + o.location + ', ' + o.zip + ' &mdash; ' + o.distance + ' mi away</p>'
-                    + '</div><div class="header-badges">' + getJobTypeBadge(o.jobType) + getUrgentBadge(o) + '</div></div>'
+                    + '</div><div class="header-badges">' + getJobTypeBadge(o.jobType) + getMultiTradeBadge(o.trades) + getUrgentBadge(o) + '</div></div>'
+                    + '<div class="badge-group" style="margin-bottom:var(--sp-4)">' + getTradeBadges(o.trades) + '</div>'
                     + '<div class="opportunity-main-info">'
                     + '<div class="info-block"><span class="info-label">Damage Type</span><span class="info-value">' + o.damageType + ' &mdash; ' + o.damageDetail + '</span></div>'
                     + sourceBlock + matBlock
@@ -406,8 +432,9 @@
             let f = [...allOpportunities];
             const jt = document.getElementById('jobTypeFilter').value;
             if (jt) f = f.filter(o => o.jobType === jt);
-            const dt = document.getElementById('damageTypeFilter').value;
-            if (dt) f = f.filter(o => o.damageType.toLowerCase().includes(dt));
+            const tr = document.getElementById('tradeFilter').value;
+            if (tr === 'multi') f = f.filter(o => o.trades && o.trades.length > 1);
+            else if (tr) f = f.filter(o => o.trades && o.trades.includes(tr));
             const mt = document.getElementById('materialFilter').value;
             if (mt) f = f.filter(o => { const m=(o.material||'').toLowerCase(); if(mt==='architectural')return m.includes('architectural'); if(mt==='designer')return m.includes('designer'); if(mt==='metal-seam')return m.includes('standing seam'); if(mt==='metal-fastener')return m.includes('exposed fastener'); return true; });
             const dist = document.getElementById('distanceFilter').value;
@@ -422,7 +449,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             init().then(() => {
-              ['jobTypeFilter','damageTypeFilter','materialFilter','distanceFilter','sortFilter'].forEach(id => {
+              ['jobTypeFilter','tradeFilter','materialFilter','distanceFilter','sortFilter'].forEach(id => {
                   document.getElementById(id).addEventListener('change', applyFilters);
               });
             });

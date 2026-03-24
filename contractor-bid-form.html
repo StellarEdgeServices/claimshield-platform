@@ -478,10 +478,39 @@
       </div>
     </div>
 
+    <!-- Trade Selection (for multi-trade projects) -->
+    <div class="form-card" id="tradeSelectionCard" style="display:none;">
+      <div class="form-card-title">What Are You Bidding On?</div>
+      <p style="font-size:0.9rem;color:var(--slate);margin-bottom:var(--sp-6);">This project includes multiple trades. Select which trade(s) you want to bid on.</p>
+      <div id="tradeCheckboxes" style="display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:var(--sp-6);"></div>
+      <div id="bundledBidOption" style="display:none;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-4);">
+        <label style="display:flex;align-items:flex-start;gap:var(--sp-3);cursor:pointer;">
+          <input type="checkbox" id="isBundledBid" style="margin-top:4px;">
+          <span style="font-size:0.9rem;color:#0C4A6E;">
+            <strong>Submit a bundled bid for all selected trades?</strong><br>
+            <span style="font-size:0.85rem;">Offer a discount for doing all the work. You'll enter a single total price plus a per-trade breakdown.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Per-Trade Breakdown (for bundled bids) -->
+    <div class="form-card" id="perTradeBreakdown" style="display:none;">
+      <div class="form-card-title">Per-Trade Price Breakdown</div>
+      <p style="font-size:0.9rem;color:var(--slate);margin-bottom:var(--sp-6);">Enter the price for each trade so the homeowner can compare individual vs. bundled pricing.</p>
+      <div id="tradeBreakdownFields"></div>
+    </div>
+
     <!-- Bid Form -->
     <div class="form-card">
       <div class="form-card-title">Your Bid Details</div>
       <form id="bidForm" class="form-grid">
+        <!-- Hidden fields for trade data -->
+        <input type="hidden" id="selectedTradeType" name="tradeType" value="roofing">
+        <input type="hidden" id="isBundledBidHidden" name="isBundledBid" value="false">
+        <input type="hidden" id="bundledTradesHidden" name="bundledTrades" value="[]">
+        <input type="hidden" id="perTradeBreakdownHidden" name="perTradeBreakdown" value="{}">
+
         <div class="form-group" style="grid-column: 1 / -1;">
           <label for="totalPrice">Total Bid Price *</label>
           <input type="number" id="totalPrice" name="totalPrice" placeholder="Enter your total bid price" value="19850" required min="500" step="0.01">
@@ -824,6 +853,10 @@
             decking_price_per_sheet: parseFloat(formData.get('deckingPricePerSheet')),
             full_redeck_price: parseFloat(formData.get('fullRedeckPrice')),
             supplement_acknowledged: formData.get('supplementAcknowledged') === 'on',
+            trade_type: formData.get('tradeType') || 'roofing',
+            is_bundled_bid: formData.get('isBundledBid') === 'true',
+            bundled_trades: JSON.parse(formData.get('bundledTrades') || '[]'),
+            per_trade_breakdown: JSON.parse(formData.get('perTradeBreakdown') || '{}'),
           };
 
           const { error } = await sb
@@ -849,6 +882,80 @@
       }
     });
 
+    // ── Multi-Trade & Bundled Bid Logic ──
+    function initTradeSelection(trades) {
+      if (!trades || trades.length <= 1) return;
+
+      const card = document.getElementById('tradeSelectionCard');
+      const checkboxContainer = document.getElementById('tradeCheckboxes');
+      const bundledOption = document.getElementById('bundledBidOption');
+      const breakdownCard = document.getElementById('perTradeBreakdown');
+      const breakdownFields = document.getElementById('tradeBreakdownFields');
+      card.style.display = 'block';
+
+      const icons = { roofing: '🏠', siding: '🧱', gutters: '🌧️', windows: '🪟' };
+      const labels = { roofing: 'Roofing', siding: 'Siding', gutters: 'Gutters', windows: 'Windows' };
+
+      checkboxContainer.innerHTML = trades.map(t =>
+        '<label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);background:var(--white);border:2px solid #E5E7EB;border-radius:var(--radius-md);cursor:pointer;transition:all 0.2s;">'
+        + '<input type="checkbox" class="trade-check" value="' + t + '" checked>'
+        + '<span style="font-size:1.1rem;">' + (icons[t]||'') + '</span>'
+        + '<span style="font-weight:600;color:var(--navy);">' + (labels[t]||t) + '</span></label>'
+      ).join('');
+
+      const tradeChecks = document.querySelectorAll('.trade-check');
+      const bundledCheck = document.getElementById('isBundledBid');
+
+      function updateTradeState() {
+        const selected = [...tradeChecks].filter(c => c.checked).map(c => c.value);
+        document.getElementById('selectedTradeType').value = selected[0] || 'roofing';
+        document.getElementById('bundledTradesHidden').value = JSON.stringify(selected);
+
+        // Show bundled option when 2+ trades selected
+        bundledOption.style.display = selected.length >= 2 ? 'block' : 'none';
+        if (selected.length < 2) {
+          bundledCheck.checked = false;
+          breakdownCard.style.display = 'none';
+        }
+        updateBundledState();
+      }
+
+      function updateBundledState() {
+        const isBundled = bundledCheck.checked;
+        const selected = [...tradeChecks].filter(c => c.checked).map(c => c.value);
+        document.getElementById('isBundledBidHidden').value = isBundled ? 'true' : 'false';
+
+        if (isBundled && selected.length >= 2) {
+          breakdownCard.style.display = 'block';
+          breakdownFields.innerHTML = selected.map(t =>
+            '<div style="display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);">'
+            + '<span style="min-width:100px;font-weight:600;color:var(--navy);">' + (icons[t]||'') + ' ' + (labels[t]||t) + '</span>'
+            + '<div class="input-prefix" style="flex:1;">'
+            + '<span>$</span>'
+            + '<input type="number" class="trade-price" data-trade="' + t + '" step="0.01" min="0" placeholder="Price for ' + (labels[t]||t).toLowerCase() + '">'
+            + '</div></div>'
+          ).join('');
+
+          // Update hidden field when prices change
+          breakdownFields.querySelectorAll('.trade-price').forEach(inp => {
+            inp.addEventListener('input', () => {
+              const breakdown = {};
+              breakdownFields.querySelectorAll('.trade-price').forEach(p => {
+                if (p.value) breakdown[p.dataset.trade] = parseFloat(p.value);
+              });
+              document.getElementById('perTradeBreakdownHidden').value = JSON.stringify(breakdown);
+            });
+          });
+        } else {
+          breakdownCard.style.display = 'none';
+        }
+      }
+
+      tradeChecks.forEach(c => c.addEventListener('change', updateTradeState));
+      bundledCheck.addEventListener('change', updateBundledState);
+      updateTradeState();
+    }
+
     // Initialize page
     (async () => {
       await init();
@@ -857,6 +964,15 @@
       // Set default start date to today
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('startDate').value = today;
+
+      // Check if this is a multi-trade project (from URL or claim data)
+      const urlParams = new URLSearchParams(window.location.search);
+      const tradesParam = urlParams.get('trades');
+      if (tradesParam) {
+        try { initTradeSelection(JSON.parse(tradesParam)); } catch(e) {}
+      } else if (currentClaim && currentClaim.trades && currentClaim.trades.length > 1) {
+        initTradeSelection(currentClaim.trades);
+      }
     })();
   </script>
 </body>

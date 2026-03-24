@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair Diagnostic — OtterQuote</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🦦</text></svg>">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/nav.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
+
+    <style>
+        :root {
+            --navy: #0A1E2C;
+            --amber: #14B8A6;
+            --orange: #FB923C;
+            --light-gray: #F8FAFC;
+            --border-gray: #E2E8F0;
+            --text-dark: #1E293B;
+            --text-light: #64748B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--navy);
+            color: var(--text-dark);
+            font-family: 'DM Sans', sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1rem 150px 1rem;
+        }
+
+        /* Disclaimer Banner */
+        .disclaimer-banner {
+            background: linear-gradient(135deg, var(--orange) 0%, #F97316 100%);
+            border-left: 6px solid #D97706;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .disclaimer-banner h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            color: white;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .disclaimer-banner .otter-emoji {
+            font-size: 2rem;
+        }
+
+        .disclaimer-banner .subtext {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .disclaimer-banner p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* Section Container */
+        .section-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-container h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-container .subtitle {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Repair Type Cards */
+        .repair-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .repair-card {
+            border: 2px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .repair-card:hover {
+            border-color: var(--amber);
+            box-shadow: 0 2px 8px rgba(20, 184, 166, 0.15);
+        }
+
+        .repair-card.selected {
+            border-color: var(--amber);
+            background: rgba(20, 184, 166, 0.08);
+            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+        }
+
+        .repair-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .repair-card .title {
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+        }
+
+        .repair-card .description {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        /* Text Area */
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        }
+
+        /* Photo Upload */
+        .photo-upload-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .photo-instructions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .photo-instruction {
+            padding: 0.75rem;
+            background: var(--light-gray);
+            border-left: 3px solid var(--amber);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-gray);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--light-gray);
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--amber);
+            background: rgba(20, 184, 166, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--amber);
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .upload-zone p {
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .photo-thumbnails {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .photo-thumbnail {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            overflow: hidden;
+            background: var(--light-gray);
+        }
+
+        .photo-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-thumbnail .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-thumbnail .remove-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Material Identification */
+        .material-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .accordion-item {
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            background: var(--light-gray);
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--navy);
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+        }
+
+        .accordion-header:hover {
+            background: #EEEEEE;
+        }
+
+        .accordion-header.open {
+            background: rgba(20, 184, 166, 0.08);
+            border-bottom: 2px solid var(--amber);
+        }
+
+        .accordion-toggle {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-header.open .accordion-toggle {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-gray);
+        }
+
+        .accordion-content.open {
+            display: block;
+        }
+
+        .accordion-content p {
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .material-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .material-fields label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--navy);
+            margin-bottom: 0.4rem;
+        }
+
+        .material-identification-success {
+            background: #ECFDF5;
+            border: 1px solid #86EFAC;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #22C55E;
+            font-weight: 500;
+        }
+
+        .material-identification-success .checkmark {
+            font-size: 1.5rem;
+        }
+
+        .tier-price {
+            display: inline-block;
+            background: rgba(20, 184, 166, 0.1);
+            color: var(--amber);
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .tier-description {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .tier-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .tier-option {
+            padding: 0.75rem;
+            background: var(--light-gray);
+            border-left: 3px solid var(--amber);
+            border-radius: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--amber);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0D9488;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--amber);
+            border: 2px solid var(--amber);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(20, 184, 166, 0.08);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* Floating CTA */
+        .floating-cta {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 999;
+        }
+
+        .floating-cta .btn-floating {
+            background: var(--amber);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(20, 184, 166, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .floating-cta .subtext {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 0.25rem;
+            text-align: center;
+        }
+
+        /* Submit Section */
+        .submit-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 6rem;
+        }
+
+        .submit-summary {
+            background: var(--light-gray);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--amber);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .summary-item .label {
+            font-weight: 600;
+            color: var(--navy);
+        }
+
+        .summary-item .value {
+            color: var(--text-light);
+        }
+
+        .summary-item.complete .value {
+            color: #22C55E;
+            font-weight: 600;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            main {
+                padding-bottom: 200px;
+            }
+
+            .floating-cta {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                z-index: 999;
+            }
+
+            .floating-cta .btn-floating {
+                width: 100%;
+                justify-content: center;
+                border-radius: 0;
+                margin: 0;
+                animation: none;
+            }
+
+            .repair-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .material-fields {
+                grid-template-columns: 1fr;
+            }
+
+            .section-container, .material-section, .submit-section {
+                padding: 1.5rem;
+            }
+
+            .disclaimer-banner {
+                padding: 1.5rem;
+            }
+
+            .disclaimer-banner h2 {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* Hidden Elements */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header id="site-header" data-active="dashboard" data-auth="true"></header>
+
+    <main>
+        <!-- Disclaimer Banner -->
+        <div class="disclaimer-banner">
+            <h2>
+                <span class="otter-emoji">🦦</span>
+                THIS IS NOT OUR SPECIALTY, BUT WE WILL TRY OUR BEST TO HELP
+            </h2>
+            <p class="subtext">We're a little out of our otter element here, but we'll do our best to help you navigate these waters.</p>
+            <p>Diagnosing a repair remotely is much more difficult than a full replacement. But the more information you can provide upfront, the cheaper this job will be — you're eliminating the contractor's biggest cost driver: the diagnostic legwork.</p>
+        </div>
+
+        <!-- Repair Type Selector -->
+        <div class="section-container" id="repair-type-section">
+            <h2>What's the Issue? 🔧</h2>
+            <p class="subtitle">Select the type of repair you need</p>
+            <div class="repair-cards" id="repair-cards"></div>
+            <textarea id="other-description" class="hidden" placeholder="Please describe the issue in detail..."></textarea>
+        </div>
+
+        <!-- Photo Upload Section -->
+        <div class="section-container" id="photo-section" class="hidden">
+            <h2>📸 Photos Help Contractors Estimate Accurately</h2>
+            <div class="photo-instructions" id="photo-instructions"></div>
+
+            <div class="upload-zone" id="upload-zone-0">
+                <div class="emoji">📤</div>
+                <p><strong>Click to upload or drag and drop</strong></p>
+                <p style="font-size: 0.85rem; color: var(--text-light);">Images up to 10MB each</p>
+                <input type="file" class="file-input" accept="image/*" multiple>
+            </div>
+
+            <div id="photo-container-0">
+                <div class="photo-thumbnails" id="photo-thumbnails-0"></div>
+            </div>
+
+            <!-- Dynamic fields for repair type -->
+            <div id="repair-specific-fields"></div>
+        </div>
+
+        <!-- Material Identification Section (Roofing Only) -->
+        <div class="section-container" id="material-section" class="hidden">
+            <h2>🏠 What's Currently on Your Roof?</h2>
+            <p class="subtitle">Matching your existing materials is critical for repairs. We need to know exactly what's up there.</p>
+
+            <!-- Tier 1: Paperwork -->
+            <div class="accordion-item">
+                <button class="accordion-header open">
+                    <span>📋 Tier 1: Check Your Paperwork (Free)</span>
+                    <span class="accordion-toggle">▼</span>
+                </button>
+                <div class="accordion-content open" id="tier1-content">
+                    <p>Check for any of these documents from your original roof installation:</p>
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <input type="checkbox"> Prior roofer's invoice
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox"> Warranty registration
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox"> Proposal/contract
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox"> Permit records
+                        </div>
+                    </div>
+                    <p><strong>Upload any documents you found:</strong></p>
+                    <div class="upload-zone" id="upload-zone-tier1">
+                        <div class="emoji">📄</div>
+                        <p>Click or drag documents here</p>
+                        <input type="file" class="file-input" accept="image/*,.pdf" multiple>
+                    </div>
+                    <div id="photos-tier1" class="photo-thumbnails"></div>
+                    <div class="material-fields">
+                        <div>
+                            <label>Brand</label>
+                            <input type="text" class="material-input" data-field="brand" placeholder="e.g., GAF, Owens Corning">
+                        </div>
+                        <div>
+                            <label>Product Line</label>
+                            <input type="text" class="material-input" data-field="product" placeholder="e.g., Timberline, Duration">
+                        </div>
+                        <div>
+                            <label>Color</label>
+                            <input type="text" class="material-input" data-field="color" placeholder="e.g., Weathered Wood">
+                        </div>
+                    </div>
+                    <div id="tier1-success" class="material-identification-success hidden">
+                        <span class="checkmark">✓</span>
+                        <span>Material identified! You can skip the steps below.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tier 2: Leftover Materials -->
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>🏚️ Tier 2: Check for Leftover Materials (Free)</span>
+                    <span class="accordion-toggle">▼</span>
+                </button>
+                <div class="accordion-content" id="tier2-content">
+                    <p>Many homeowners have leftover shingles stored in their garage, attic, or shed.</p>
+                    <p>Look for the bundle wrapper — it has the brand, product name, and color printed on it.</p>
+                    <p><strong>Upload a photo of the bundle wrapper label:</strong></p>
+                    <div class="upload-zone" id="upload-zone-tier2">
+                        <div class="emoji">📸</div>
+                        <p>Click or drag photos here</p>
+                        <input type="file" class="file-input" accept="image/*" multiple>
+                    </div>
+                    <div id="photos-tier2" class="photo-thumbnails"></div>
+                    <div class="material-fields">
+                        <div>
+                            <label>Brand</label>
+                            <input type="text" class="material-input" data-field="brand" placeholder="e.g., GAF, Owens Corning">
+                        </div>
+                        <div>
+                            <label>Product Line</label>
+                            <input type="text" class="material-input" data-field="product" placeholder="e.g., Timberline, Duration">
+                        </div>
+                        <div>
+                            <label>Color</label>
+                            <input type="text" class="material-input" data-field="color" placeholder="e.g., Weathered Wood">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tier 3: AI Photo Identification -->
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>🤖 Tier 3: AI Photo Identification <span class="tier-price">$25-40</span></span>
+                    <span class="accordion-toggle">▼</span>
+                </button>
+                <div class="accordion-content" id="tier3-content">
+                    <p>Our AI tool can identify your shingle from photos in seconds.</p>
+                    <p>Take 7-8 clear photos from multiple angles — front texture, granule pattern, and the back of a shingle if accessible.</p>
+                    <div class="tier-option">
+                        <strong>💰 Starting at $25</strong> — refunded if you use an OtterQuote contractor
+                    </div>
+                    <div class="upload-zone" id="upload-zone-tier3">
+                        <div class="emoji">📸</div>
+                        <p>Click or drag photos here</p>
+                        <input type="file" class="file-input" accept="image/*" multiple>
+                    </div>
+                    <div id="photos-tier3" class="photo-thumbnails"></div>
+                    <button class="btn btn-primary" id="btn-tier3" data-action="ai-identification">
+                        🤖 Identify My Shingle ($25)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tier 4: ITEL Lab Analysis -->
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>🔬 Tier 4: ITEL Lab Analysis <span class="tier-price">$75-100</span></span>
+                    <span class="accordion-toggle">▼</span>
+                </button>
+                <div class="accordion-content" id="tier4-content">
+                    <p>For discontinued or hard-to-identify materials, our lab partner ITEL can identify from photos or physical samples.</p>
+                    <p>ITEL covers 170+ manufacturers and 35,000+ products — including discontinued materials.</p>
+                    <p>They can even source and ship discontinued shingles directly to your job site.</p>
+                    <div class="tier-option">
+                        <strong>💰 Starting at $75</strong> — refunded if you use an OtterQuote contractor
+                    </div>
+                    <p style="margin-top: 1rem; margin-bottom: 1rem;"><strong>Choose your method:</strong></p>
+                    <p>Option 1: Submit photos</p>
+                    <div class="upload-zone" id="upload-zone-tier4">
+                        <div class="emoji">📸</div>
+                        <p>Click or drag photos here</p>
+                        <input type="file" class="file-input" accept="image/*" multiple>
+                    </div>
+                    <div id="photos-tier4" class="photo-thumbnails"></div>
+                    <p style="margin-top: 1.5rem; margin-bottom: 1rem;">Option 2: Mail a sample</p>
+                    <div style="background: var(--light-gray); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                        <p style="font-size: 0.9rem; color: var(--text-light);">ITEL Sample Mailing Address:</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+                            ITEL Labs<br>
+                            123 Lab Street<br>
+                            Columbus, OH 43215
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-tier4" data-action="itel-analysis">
+                        🔬 Request ITEL Analysis ($75)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tier 5: Schedule Inspection -->
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>📅 Tier 5: Schedule an Inspection</span>
+                    <span class="accordion-toggle">▼</span>
+                </button>
+                <div class="accordion-content" id="tier5-content">
+                    <p>Can't figure it out? No problem — a contractor can identify it on-site.</p>
+                    <button class="btn btn-primary" onclick="window.location.href='/schedule-inspection.html'">
+                        📅 Schedule an Inspection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="submit-section" id="submit-section">
+            <h2>Ready to Submit? 🚀</h2>
+            <div class="submit-summary">
+                <div class="summary-item">
+                    <span class="label">Repair Type:</span>
+                    <span class="value" id="summary-repair-type">Not selected</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Photos Uploaded:</span>
+                    <span class="value" id="summary-photo-count">0</span>
+                </div>
+                <div class="summary-item" id="summary-material-row">
+                    <span class="label">Material Information:</span>
+                    <span class="value" id="summary-material-status">Not provided</span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-submit" id="btn-submit" disabled>
+                ✓ Submit for Contractor Review
+            </button>
+        </div>
+    </main>
+
+    <!-- Floating CTA -->
+    <div class="floating-cta">
+        <a href="/schedule-inspection.html" class="btn-floating">
+            📅 Schedule an Inspection Instead
+            <div class="subtext">Let a pro diagnose it</div>
+        </a>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/nav.js"></script>
+
+    <script>
+        // Require authentication
+        Auth.requireAuth('homeowner');
+
+        // State management
+        const state = {
+            selectedRepairType: null,
+            repairTypeMap: {
+                leak: { icon: '💧', title: 'Leak', description: 'Water is coming into my home' },
+                shingles: { icon: '💨', title: 'Blown-off Shingles', description: 'Shingles are missing or damaged from wind' },
+                other: { icon: '❓', title: 'Other', description: 'Something else is wrong' },
+                siding: { icon: '🪵', title: 'Describe Issue', description: 'Tell us what\'s happening' },
+                gutters: { icon: '🌧️', title: 'Describe Issue', description: 'Tell us what\'s happening' },
+                windows: { icon: '🪟', title: 'Describe Issue', description: 'Tell us what\'s happening' }
+            },
+            uploadedPhotos: {},
+            materialData: {
+                tier1: { files: [], brand: '', product: '', color: '' },
+                tier2: { files: [], brand: '', product: '', color: '' },
+                tier3: { files: [], identified: false },
+                tier4: { files: [], method: null }
+            }
+        };
+
+        // Get trade from sessionStorage
+        const tradeSelections = JSON.parse(sessionStorage.getItem('oq_trade_selections') || '{}');
+        const selectedTrade = Object.keys(tradeSelections).find(trade => tradeSelections[trade]);
+
+        // Initialize page
+        function init() {
+            renderRepairCards();
+            setupAccordions();
+            setupEventListeners();
+            updateSubmitState();
+        }
+
+        // Render repair cards based on trade
+        function renderRepairCards() {
+            const container = document.getElementById('repair-cards');
+            container.innerHTML = '';
+
+            if (selectedTrade === 'roofing') {
+                ['leak', 'shingles', 'other'].forEach(type => {
+                    const card = createRepairCard(type);
+                    container.appendChild(card);
+                });
+            } else if (['siding', 'gutters', 'windows'].includes(selectedTrade)) {
+                // Show simple textarea for other trades
+                const section = document.getElementById('repair-type-section');
+                section.querySelector('.subtitle').textContent = 'Tell us about your ' + selectedTrade + ' issue';
+                const textarea = section.querySelector('textarea');
+                textarea.classList.remove('hidden');
+                state.selectedRepairType = 'describe';
+                showPhotoSection();
+                updateSubmitState();
+            }
+        }
+
+        function createRepairCard(type) {
+            const card = document.createElement('div');
+            card.className = 'repair-card';
+            card.dataset.type = type;
+            const info = state.repairTypeMap[type];
+
+            card.innerHTML = `
+                <span class="icon">${info.icon}</span>
+                <div class="title">${info.title}</div>
+                <div class="description">${info.description}</div>
+            `;
+
+            card.addEventListener('click', () => selectRepairType(type, card));
+            return card;
+        }
+
+        function selectRepairType(type, cardElement) {
+            // Remove previous selection
+            document.querySelectorAll('.repair-card').forEach(card => card.classList.remove('selected'));
+
+            // Select new
+            cardElement.classList.add('selected');
+            state.selectedRepairType = type;
+
+            // Show/hide other description
+            const otherDesc = document.getElementById('other-description');
+            if (type === 'other') {
+                otherDesc.classList.remove('hidden');
+            } else {
+                otherDesc.classList.add('hidden');
+            }
+
+            showPhotoSection();
+            renderPhotoInstructions();
+
+            if (selectedTrade === 'roofing') {
+                showMaterialSection();
+            }
+
+            updateSubmitState();
+        }
+
+        function showPhotoSection() {
+            document.getElementById('photo-section').classList.remove('hidden');
+        }
+
+        function showMaterialSection() {
+            if (selectedTrade === 'roofing') {
+                document.getElementById('material-section').classList.remove('hidden');
+            }
+        }
+
+        function renderPhotoInstructions() {
+            const container = document.getElementById('photo-instructions');
+            container.innerHTML = '';
+
+            const instructions = getPhotoInstructions(state.selectedRepairType);
+            instructions.forEach((text, index) => {
+                const div = document.createElement('div');
+                div.className = 'photo-instruction';
+                div.textContent = text;
+                container.appendChild(div);
+            });
+
+            // Render repair-specific fields
+            renderRepairSpecificFields();
+        }
+
+        function getPhotoInstructions(type) {
+            const instructions = {
+                leak: [
+                    '📸 Interior damage — ceiling stains, dripping, water marks',
+                    '📸 Roof area above the leak (from the ground is fine)',
+                    '📸 Any flashing, vents, or penetrations near the suspected area'
+                ],
+                shingles: [
+                    '📸 Wide shot showing the missing area',
+                    '📸 Close-up of surrounding shingles (helps identify the product)',
+                    '📸 Photo of any shingles found on the ground'
+                ],
+                other: [
+                    '📸 Photos of whatever you\'re seeing (the more the better)'
+                ],
+                describe: [
+                    '📸 Photos of the issue (the more the better)'
+                ]
+            };
+            return instructions[type] || [];
+        }
+
+        function renderRepairSpecificFields() {
+            const container = document.getElementById('repair-specific-fields');
+            container.innerHTML = '';
+
+            if (state.selectedRepairType === 'leak') {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="roof-age"><strong>How old is your roof? (approximate)</strong></label>
+                    <input type="text" id="roof-age" placeholder="e.g., 15 years old">
+                `;
+                container.appendChild(div);
+            } else if (state.selectedRepairType === 'shingles') {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="shingles-count"><strong>Approximately how many shingles are missing?</strong></label>
+                    <input type="number" id="shingles-count" placeholder="0" min="0">
+                `;
+                container.appendChild(div);
+            } else if (state.selectedRepairType === 'other') {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="issue-description"><strong>Please describe what's happening:</strong></label>
+                    <textarea id="issue-description" placeholder="Describe the issue in detail..."></textarea>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Setup accordions
+        function setupAccordions() {
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const content = header.nextElementSibling;
+                    const isOpen = content.classList.contains('open');
+
+                    // Close all others
+                    document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+                    document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
+
+                    if (!isOpen) {
+                        content.classList.add('open');
+                        header.classList.add('open');
+                    }
+                });
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Photo uploads
+            setupPhotoUploads();
+
+            // Material identification buttons
+            document.getElementById('btn-tier3')?.addEventListener('click', () => {
+                const files = document.querySelectorAll('#photos-tier3 img');
+                if (files.length > 0) {
+                    alert('AI identification request noted. Next step in the full app would charge $25 and process images.');
+                } else {
+                    alert('Please upload photos first.');
+                }
+            });
+
+            document.getElementById('btn-tier4')?.addEventListener('click', () => {
+                alert('ITEL analysis request noted. Next step would charge $75 and open lab portal.');
+            });
+
+            // Submit button
+            document.getElementById('btn-submit').addEventListener('click', submitForm);
+        }
+
+        function setupPhotoUploads() {
+            // Tier 1
+            setupUploadZone('upload-zone-tier1', 'photos-tier1', 'tier1');
+            // Tier 2
+            setupUploadZone('upload-zone-tier2', 'photos-tier2', 'tier2');
+            // Tier 3
+            setupUploadZone('upload-zone-tier3', 'photos-tier3', 'tier3');
+            // Tier 4
+            setupUploadZone('upload-zone-tier4', 'photos-tier4', 'tier4');
+            // Main repair photos
+            setupUploadZone('upload-zone-0', 'photo-thumbnails-0', 'main');
+        }
+
+        function setupUploadZone(zoneId, thumbnailId, tier) {
+            const zone = document.getElementById(zoneId);
+            const fileInput = zone.querySelector('.file-input');
+            const thumbnailContainer = document.getElementById(thumbnailId);
+
+            if (!state.uploadedPhotos[tier]) {
+                state.uploadedPhotos[tier] = [];
+            }
+
+            // Click to upload
+            zone.addEventListener('click', () => fileInput.click());
+
+            // Drag and drop
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files, tier, thumbnailContainer);
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files, tier, thumbnailContainer);
+            });
+        }
+
+        function handleFiles(files, tier, thumbnailContainer) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const div = document.createElement('div');
+                        div.className = 'photo-thumbnail';
+                        div.innerHTML = `
+                            <img src="${e.target.result}" alt="Upload preview">
+                            <button class="remove-btn">×</button>
+                        `;
+
+                        div.querySelector('.remove-btn').addEventListener('click', (evt) => {
+                            evt.preventDefault();
+                            div.remove();
+                            state.uploadedPhotos[tier] = state.uploadedPhotos[tier].filter(f => f !== file);
+                            updateSubmitState();
+                        });
+
+                        thumbnailContainer.appendChild(div);
+                        state.uploadedPhotos[tier].push(file);
+                        updateSubmitState();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateSubmitState() {
+            const photoCount = Object.values(state.uploadedPhotos).reduce((sum, arr) => sum + arr.length, 0);
+            const hasRepairType = !!state.selectedRepairType;
+            const canSubmit = hasRepairType && photoCount > 0;
+
+            // Update summary
+            document.getElementById('summary-repair-type').textContent = state.selectedRepairType || 'Not selected';
+            document.getElementById('summary-photo-count').textContent = photoCount;
+
+            // Show/hide material row
+            const materialRow = document.getElementById('summary-material-row');
+            if (selectedTrade === 'roofing') {
+                materialRow.classList.remove('hidden');
+                const hasMaterial = checkMaterialIdentification();
+                document.getElementById('summary-material-status').textContent = hasMaterial ? '✓ Provided' : 'Not required';
+                document.getElementById('summary-material-status').classList.toggle('complete', hasMaterial);
+            } else {
+                materialRow.classList.add('hidden');
+            }
+
+            // Update submit button
+            const submitBtn = document.getElementById('btn-submit');
+            submitBtn.disabled = !canSubmit;
+        }
+
+        function checkMaterialIdentification() {
+            const brand = document.querySelector('input[data-field="brand"]')?.value || '';
+            const product = document.querySelector('input[data-field="product"]')?.value || '';
+            const color = document.querySelector('input[data-field="color"]')?.value || '';
+            return brand || product || color;
+        }
+
+        function submitForm() {
+            if (state.selectedRepairType && Object.values(state.uploadedPhotos).reduce((sum, arr) => sum + arr.length, 0) > 0) {
+                // Save to sessionStorage for now
+                const claim = {
+                    repairType: state.selectedRepairType,
+                    trade: selectedTrade,
+                    photos: Object.keys(state.uploadedPhotos).map(tier => ({
+                        tier,
+                        count: state.uploadedPhotos[tier].length
+                    })),
+                    materials: state.materialData,
+                    timestamp: new Date().toISOString()
+                };
+
+                sessionStorage.setItem('oq_repair_claim', JSON.stringify(claim));
+
+                // In real app, this would save to Supabase and redirect
+                alert('Claim submitted! In production, this would save to Supabase and redirect to dashboard.');
+                window.location.href = '/dashboard.html';
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
