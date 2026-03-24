@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Exclude authenticated/internal pages
+Disallow: /dashboard.html
+Disallow: /bids.html
+Disallow: /color-selection.html
+Disallow: /contract-signing.html
+Disallow: /contractor-dashboard.html
+Disallow: /contractor-opportunities.html
+Disallow: /contractor-bid-form.html
+Disallow: /contractor-profile.html
+Disallow: /contractor-settings.html
+Disallow: /partner-dashboard.html
+Disallow: /refer-a-friend.html
+Disallow: /ref.html
+Disallow: /status.html
+Disallow: /admin.html
+Disallow: /quotes.html
+Disallow: /contractor-leads.html
+
+Sitemap: https://otterquote.com/sitemap.xml
