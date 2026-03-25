@@ -731,16 +731,28 @@
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .progress-steps {
-        flex-wrap: wrap;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: var(--sp-2);
+        padding-bottom: var(--sp-2);
+        max-width: 100%;
       }
 
       .progress-step {
-        flex: 0 1 calc(50% - var(--sp-2));
+        flex: 0 0 auto;
+        min-width: 70px;
       }
 
-      .progress-step:nth-child(3),
-      .progress-step:nth-child(4) {
-        flex: 0 1 calc(50% - var(--sp-2));
+      .progress-step-number {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+      }
+
+      .progress-step-label {
+        font-size: 0.7rem;
       }
 
       .progress-connector {

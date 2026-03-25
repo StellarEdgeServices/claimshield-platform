@@ -39,6 +39,7 @@ const Nav = {
           ${links.map(l => `
             <a href="${l.href}" class="nav-link ${active === l.id ? 'active' : ''}">${l.label}</a>
           `).join('')}
+          ${showAuth ? '<div class="nav-mobile-auth" id="nav-mobile-auth-slot"></div>' : ''}
         </div>
         <div class="nav-actions" id="nav-actions">
           ${showAuth ? '<div id="nav-auth-slot"></div>' : ''}
@@ -67,9 +68,12 @@ const Nav = {
 
   async _renderAuthSlot() {
     const slot = document.getElementById('nav-auth-slot');
-    if (!slot) return;
+    const mobileSlot = document.getElementById('nav-mobile-auth-slot');
+    if (!slot && !mobileSlot) return;
 
     const user = await Auth.getUser();
+    let desktopHTML, mobileHTML;
+
     if (user) {
       // Determine which dashboard to link to based on role
       const role = await Auth.getRole();
@@ -79,16 +83,27 @@ const Nav = {
       const dashboardLabel = role === 'contractor'
         ? 'Contractor Portal'
         : 'My Dashboard';
-      slot.innerHTML = `
+      desktopHTML = `
         <a href="${dashboardUrl}" class="btn btn-sm btn-primary">${dashboardLabel}</a>
         <button class="btn btn-sm btn-ghost" onclick="Auth.signOut()">Sign Out</button>
       `;
+      mobileHTML = `
+        <a href="${dashboardUrl}" class="nav-link nav-mobile-cta">${dashboardLabel}</a>
+        <a href="#" class="nav-link nav-mobile-cta-secondary" onclick="Auth.signOut(); return false;">Sign Out</a>
+      `;
     } else {
-      slot.innerHTML = `
+      desktopHTML = `
         <a href="/get-started.html" class="btn btn-sm btn-primary">Get Started</a>
         <a href="/contractor-login.html" class="btn btn-sm btn-ghost">Contractor Login</a>
       `;
+      mobileHTML = `
+        <a href="/get-started.html" class="nav-link nav-mobile-cta">Get Started</a>
+        <a href="/contractor-login.html" class="nav-link nav-mobile-cta-secondary">Contractor Login</a>
+      `;
     }
+
+    if (slot) slot.innerHTML = desktopHTML;
+    if (mobileSlot) mobileSlot.innerHTML = mobileHTML;
   },
 
   /** Render the site footer */

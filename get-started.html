@@ -213,7 +213,15 @@
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .gs-layout { grid-template-columns: 1fr; }
-  .gs-right { display: none; }
+  .gs-right {
+    border-left: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: var(--sp-6);
+    order: -1;
+  }
+  .gs-benefits h2 { font-size: 1.25rem; margin-bottom: var(--sp-4); }
+  .benefit-item { margin-bottom: var(--sp-3); }
+  .benefit-icon { width: 32px; height: 32px; font-size: 1rem; }
   .gs-left { padding: var(--sp-8) var(--sp-6); }
   .gs-form .form-row { grid-template-columns: 1fr; }
   .referral-name-row.visible { grid-template-columns: 1fr; }

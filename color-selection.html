@@ -679,19 +679,35 @@
        * Owens Corning Design EyeQ embed
        */
       renderOCVisualizer(container) {
-        container.innerHTML = `
-          <div style="margin-bottom: var(--sp-4);">
-            <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning colors in real time.</p>
-            <iframe
-              src="https://designeyeq.owenscorning.com/"
-              style="width: 100%; height: 600px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1);"
-              allow="camera"
-            ></iframe>
-          </div>
-          <div class="color-option-note">
-            <strong>After visualizing:</strong> Once you've tried on colors you like, come back here and enter your selection in the form below.
-          </div>
-        `;
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          container.innerHTML = `
+            <div style="padding: var(--sp-6); background: rgba(255,255,255,0.03); border-radius: var(--radius-md);">
+              <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning colors in real time.</p>
+              <a href="https://designeyeq.owenscorning.com/" target="_blank" rel="noopener" class="btn btn-primary">
+                Open OC Design EyeQ
+                <span style="margin-left: 4px;">↗</span>
+              </a>
+              <div class="color-option-note" style="margin-top: var(--sp-4); margin-bottom: 0;">
+                <strong>After visualizing:</strong> Come back here and enter the color you selected in the form below.
+              </div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="margin-bottom: var(--sp-4);">
+              <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning colors in real time.</p>
+              <iframe
+                src="https://designeyeq.owenscorning.com/"
+                style="width: 100%; height: 600px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1);"
+                allow="camera"
+              ></iframe>
+            </div>
+            <div class="color-option-note">
+              <strong>After visualizing:</strong> Once you've tried on colors you like, come back here and enter your selection in the form below.
+            </div>
+          `;
+        }
       },
 
       /**
