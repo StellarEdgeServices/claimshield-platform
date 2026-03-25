@@ -164,6 +164,203 @@
       margin: 0;
     }
 
+    /* Policy type cards (RCV / ACV / IDK) */
+    .policy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--sp-8);
+      margin-bottom: var(--sp-8);
+    }
+
+    .policy-card {
+      background: var(--navy-2);
+      border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .policy-card:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .policy-card.selected {
+      border-color: var(--amber);
+      background: rgba(20, 184, 166, 0.08);
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.15);
+    }
+
+    .policy-card-icon {
+      font-size: 2.5rem;
+    }
+
+    .policy-card h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .policy-card-desc {
+      color: var(--slate);
+      font-size: 0.95rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Policy info panel (shown after selection) */
+    .policy-info-panel {
+      background: var(--navy-2);
+      border: 1px solid rgba(20, 184, 166, 0.15);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      margin-bottom: var(--sp-8);
+      animation: fadeUp 0.4s var(--ease);
+      display: none;
+    }
+
+    .policy-info-panel.visible {
+      display: block;
+    }
+
+    .policy-info-panel h3 {
+      margin: 0 0 var(--sp-4) 0;
+      font-size: 1.15rem;
+      color: var(--amber);
+    }
+
+    .policy-info-panel p {
+      color: var(--slate);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin: 0 0 var(--sp-4) 0;
+    }
+
+    .policy-info-panel p:last-child {
+      margin-bottom: 0;
+    }
+
+    .policy-info-panel .fraud-warning {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-md);
+      padding: var(--sp-4) var(--sp-6);
+      margin-top: var(--sp-6);
+    }
+
+    .policy-info-panel .fraud-warning p {
+      color: #FECACA;
+      font-size: 0.9rem;
+    }
+
+    .policy-info-panel .fraud-warning strong {
+      color: #FCA5A5;
+    }
+
+    .policy-info-panel .tip-box {
+      background: rgba(20, 184, 166, 0.06);
+      border: 1px solid rgba(20, 184, 166, 0.15);
+      border-radius: var(--radius-md);
+      padding: var(--sp-4) var(--sp-6);
+      margin-top: var(--sp-6);
+    }
+
+    .policy-info-panel .tip-box p {
+      color: var(--white);
+      font-size: 0.9rem;
+    }
+
+    /* IDK helper options */
+    .idk-options {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--sp-4);
+      margin-top: var(--sp-6);
+    }
+
+    .idk-option {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-4);
+      background: rgba(20, 184, 166, 0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: var(--sp-4) var(--sp-6);
+      transition: all var(--duration) var(--ease);
+    }
+
+    .idk-option:hover {
+      border-color: rgba(20, 184, 166, 0.2);
+      background: rgba(20, 184, 166, 0.06);
+    }
+
+    .idk-option-number {
+      background: var(--amber);
+      color: var(--navy);
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    .idk-option-content h4 {
+      margin: 0 0 var(--sp-1) 0;
+      font-size: 1rem;
+      color: var(--white);
+    }
+
+    .idk-option-content p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--slate);
+      line-height: 1.5;
+    }
+
+    .upload-stub {
+      margin-top: var(--sp-4);
+    }
+
+    .upload-stub label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-3) var(--sp-6);
+      background: var(--amber);
+      color: var(--navy);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all var(--duration) var(--ease);
+    }
+
+    .upload-stub label:hover {
+      background: var(--amber-2);
+      transform: translateY(-1px);
+    }
+
+    .upload-stub input[type="file"] {
+      display: none;
+    }
+
+    .upload-stub .upload-status {
+      margin-top: var(--sp-2);
+      font-size: 0.85rem;
+      color: var(--amber);
+      display: none;
+    }
+
     /* Trade selection grid */
     .trade-grid {
       display: grid;
@@ -384,6 +581,10 @@
         grid-template-columns: 1fr;
       }
 
+      .policy-grid {
+        grid-template-columns: 1fr;
+      }
+
       .repair-replace-grid {
         grid-template-columns: 1fr;
       }
@@ -451,20 +652,14 @@
   <div class="trade-page-layout">
     <div class="trade-page-main">
       <div class="container">
-        <!-- Step Indicator -->
-        <div class="step-indicator">
-          <div class="step-dot filled active" id="step-1-dot">1</div>
-          <div class="step-connector" id="connector-1-2"></div>
-          <div class="step-dot" id="step-2-dot">2</div>
-          <div class="step-connector" id="connector-2-3"></div>
-          <div class="step-dot" id="step-3-dot">3</div>
-        </div>
+        <!-- Step Indicator (rebuilt dynamically) -->
+        <div class="step-indicator" id="step-indicator"></div>
 
         <!-- Error Message (hidden by default) -->
         <div id="error-message" class="error-message" style="display: none;"></div>
 
         <!-- STEP 1: Funding Type -->
-        <div id="step-1" class="step-container">
+        <div id="step-funding" class="step-container">
           <div class="trade-header">
             <h1>How is this job being funded?</h1>
             <p class="trade-header-subtitle">Let us know how you're planning to pay for your project so we can match you with the right contractors.</p>
@@ -485,8 +680,114 @@
           </div>
         </div>
 
-        <!-- STEP 2: Trade Selection -->
-        <div id="step-2" class="step-container hidden">
+        <!-- STEP 2 (Insurance only): Policy Type — RCV / ACV / I Don't Know -->
+        <div id="step-policy" class="step-container hidden">
+          <div class="trade-header">
+            <h1>What type of insurance policy do you have?</h1>
+            <p class="trade-header-subtitle">This determines how much your insurance will cover and how we help you get the best value.</p>
+          </div>
+
+          <div class="policy-grid">
+            <div class="policy-card" id="policy-rcv">
+              <div class="policy-card-icon">🛡️</div>
+              <h3>Replacement Cost Value (RCV)</h3>
+              <p class="policy-card-desc">Insurance pays for the cost of the repair, minus your deductible.</p>
+            </div>
+
+            <div class="policy-card" id="policy-acv">
+              <div class="policy-card-icon">📉</div>
+              <h3>Actual Cash Value (ACV)</h3>
+              <p class="policy-card-desc">Insurance only pays the depreciated amount of the damaged items.</p>
+            </div>
+
+            <div class="policy-card" id="policy-idk">
+              <div class="policy-card-icon">❓</div>
+              <h3>I'm Not Sure</h3>
+              <p class="policy-card-desc">No worries — we'll help you figure it out.</p>
+            </div>
+          </div>
+
+          <!-- RCV Info Panel -->
+          <div class="policy-info-panel" id="info-rcv">
+            <h3>How Replacement Cost Value Works</h3>
+            <p>With an RCV policy, your insurance company agrees to pay the full cost of repairing or replacing your damaged property with materials of similar kind and quality — minus your deductible. This is the better of the two policy types for homeowners.</p>
+            <p>Your insurance company will typically issue two payments: an initial payment (the actual cash value) and a second payment (the recoverable depreciation) after the work is completed and you submit proof of completion.</p>
+
+            <div class="tip-box">
+              <p><strong>What this means for you:</strong> Since insurance is covering the cost, your goal should be to find the highest-rated contractor with the best products and strongest warranties — not the cheapest bid. OtterQuote will help you compare contractors on quality, not just price.</p>
+            </div>
+
+            <div class="fraud-warning">
+              <p><strong>A word of caution:</strong> You are legally required to pay your deductible. Any contractor who offers to "waive your deductible," "give you money back," or "work with your insurance so you don't pay anything out of pocket" may be committing insurance fraud on your behalf. This can jeopardize your claim, void your policy, and expose you to legal liability. OtterQuote will never facilitate this — and we recommend you avoid any contractor who suggests it.</p>
+            </div>
+          </div>
+
+          <!-- ACV Info Panel -->
+          <div class="policy-info-panel" id="info-acv">
+            <h3>How Actual Cash Value Works</h3>
+            <p>With an ACV policy, your insurance company pays only the depreciated value of your damaged property — meaning they deduct for age and wear. For example, if your 15-year roof originally cost $15,000 but has depreciated to $6,000, that's roughly what they'll pay (minus your deductible).</p>
+            <p>Unlike RCV policies, there is no second payment. What insurance gave you is all you are going to get from them.</p>
+
+            <div class="tip-box">
+              <p><strong>What this means for you:</strong> You should still negotiate for the best materials, warranties, and workmanship you can get — but you'll also benefit from competitive pricing since you're more sensitive to cost. OtterQuote will help you compare bids on both quality and price so you get the most value from your insurance payout.</p>
+            </div>
+          </div>
+
+          <!-- IDK Info Panel -->
+          <div class="policy-info-panel" id="info-idk">
+            <h3>Let's Figure It Out</h3>
+            <p>Knowing your policy type is important because it changes how much insurance will cover and how you should evaluate bids. Here are a few ways to find out:</p>
+
+            <div class="idk-options">
+              <div class="idk-option">
+                <div class="idk-option-number">1</div>
+                <div class="idk-option-content">
+                  <h4>Call Your Claims Adjuster</h4>
+                  <p>Your adjuster is the person assigned to your claim. Their number should be on any correspondence from your insurance company. Ask them: "Is my policy replacement cost or actual cash value?"</p>
+                </div>
+              </div>
+
+              <div class="idk-option">
+                <div class="idk-option-number">2</div>
+                <div class="idk-option-content">
+                  <h4>Call Your Insurance Agent</h4>
+                  <p>Your agent is the person who sold you the policy. They can look up your coverage details and tell you whether you have RCV or ACV coverage.</p>
+                </div>
+              </div>
+
+              <div class="idk-option">
+                <div class="idk-option-number">3</div>
+                <div class="idk-option-content">
+                  <h4>Check Your Loss Sheet for "Non-Recoverable Depreciation"</h4>
+                  <p>If your insurance estimate (loss sheet) lists "non-recoverable depreciation," that's a strong indicator you have an ACV policy. If it lists "recoverable depreciation," you likely have RCV. Look near the bottom of the estimate summary.</p>
+                </div>
+              </div>
+
+              <div class="idk-option">
+                <div class="idk-option-number">4</div>
+                <div class="idk-option-content">
+                  <h4>Upload Your Loss Sheet and We'll Help</h4>
+                  <p>If you have your insurance estimate (loss sheet), upload it here and we'll review it for you. We'll look for the depreciation language and let you know what type of policy you have.</p>
+                  <div class="upload-stub">
+                    <label for="loss-sheet-upload">
+                      📄 Upload Loss Sheet
+                      <input type="file" id="loss-sheet-upload" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    </label>
+                    <div class="upload-status" id="upload-status"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn btn-secondary" id="step-policy-back">← Back</button>
+            <button class="btn btn-primary" id="step-policy-continue" disabled>Continue →</button>
+          </div>
+        </div>
+
+        <!-- STEP: Trade Selection -->
+        <div id="step-trades" class="step-container hidden">
           <div class="trade-header">
             <h1>What do you need done?</h1>
             <p class="trade-header-subtitle">Select all the trades you need work on. You can choose more than one.</p>
@@ -519,17 +820,17 @@
           </div>
 
           <div class="action-buttons">
-            <button class="btn btn-secondary" id="step-2-back">← Back</button>
-            <button class="btn btn-primary" id="step-2-continue" disabled>Continue →</button>
+            <button class="btn btn-secondary" id="step-trades-back">← Back</button>
+            <button class="btn btn-primary" id="step-trades-continue" disabled>Continue →</button>
           </div>
         </div>
 
-        <!-- STEP 3: Repair or Replace -->
-        <div id="step-3" class="step-container hidden">
+        <!-- STEP: Repair or Replace -->
+        <div id="step-repair" class="step-container hidden">
           <div class="repair-replace-section">
             <div class="trade-header">
-              <h1 id="step-3-title">Repair or Replace?</h1>
-              <p class="trade-header-subtitle" id="step-3-subtitle">Let us know what you'd like to do with your selected trades.</p>
+              <h1 id="step-repair-title">Repair or Replace?</h1>
+              <p class="trade-header-subtitle" id="step-repair-subtitle">Let us know what you'd like to do with your selected trades.</p>
             </div>
 
             <!-- Single Trade Version (hidden by default) -->
@@ -565,8 +866,8 @@
             </div>
 
             <div class="action-buttons">
-              <button class="btn btn-secondary" id="step-3-back">← Back</button>
-              <button class="btn btn-primary" id="step-3-continue">Continue →</button>
+              <button class="btn btn-secondary" id="step-repair-back">← Back</button>
+              <button class="btn btn-primary" id="step-repair-continue">Continue →</button>
             </div>
           </div>
         </div>
@@ -584,17 +885,83 @@
   <script>
     /**
      * Trade Selector Logic
-     * Three-step funnel for funding type → trades → repair/replace
+     * Dynamic funnel:
+     *   Insurance path: Funding → Policy Type → Trades → Repair/Replace (4 steps)
+     *   Cash path:      Funding → Trades → Repair/Replace (3 steps)
      */
 
     // State management
     let state = {
       fundingType: null,
+      policyType: null,    // 'rcv', 'acv', 'idk' — only for insurance
       trades: [],
       repairReplace: {}
     };
 
     const TRADES = ['roofing', 'siding', 'gutters', 'windows'];
+
+    // ── Step sequence management ──
+    // The step IDs in the DOM are: step-funding, step-policy, step-trades, step-repair
+    // The active sequence depends on funding type.
+    function getStepSequence() {
+      if (state.fundingType === 'insurance') {
+        return ['step-funding', 'step-policy', 'step-trades', 'step-repair'];
+      }
+      return ['step-funding', 'step-trades', 'step-repair'];
+    }
+
+    let currentStepIndex = 0;
+
+    function buildStepIndicator() {
+      const sequence = getStepSequence();
+      const indicator = document.getElementById('step-indicator');
+      indicator.innerHTML = '';
+
+      sequence.forEach((stepId, index) => {
+        // Dot
+        const dot = document.createElement('div');
+        dot.className = 'step-dot';
+        dot.id = `dot-${index}`;
+        dot.textContent = index + 1;
+
+        if (index < currentStepIndex) {
+          dot.classList.add('filled');
+        } else if (index === currentStepIndex) {
+          dot.classList.add('active');
+        }
+
+        indicator.appendChild(dot);
+
+        // Connector (not after last dot)
+        if (index < sequence.length - 1) {
+          const conn = document.createElement('div');
+          conn.className = 'step-connector';
+          conn.id = `conn-${index}`;
+          if (index < currentStepIndex) {
+            conn.classList.add('filled');
+          }
+          indicator.appendChild(conn);
+        }
+      });
+    }
+
+    function goToStep(index) {
+      const sequence = getStepSequence();
+      currentStepIndex = index;
+
+      // Hide all step containers
+      document.querySelectorAll('.step-container').forEach(c => c.classList.add('hidden'));
+
+      // Show the target step
+      const targetId = sequence[index];
+      document.getElementById(targetId).classList.remove('hidden');
+
+      // Rebuild step indicator
+      buildStepIndicator();
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // ── Step 1: Funding Type ──
     document.getElementById('funding-insurance').addEventListener('click', () => {
@@ -607,18 +974,100 @@
 
     function selectFunding(type) {
       state.fundingType = type;
+      state.policyType = null; // Reset on funding change
       document.querySelectorAll('.funding-card').forEach(card => {
         card.classList.remove('selected');
       });
       document.getElementById(`funding-${type}`).classList.add('selected');
 
-      // Move to step 2
+      // Move to next step after brief delay
       setTimeout(() => {
-        goToStep(2);
+        goToStep(1); // Step index 1 is policy (insurance) or trades (cash)
       }, 300);
     }
 
-    // ── Step 2: Trade Selection ──
+    // ── Step 2 (Insurance only): Policy Type ──
+    const policyCards = ['rcv', 'acv', 'idk'];
+    const infoPanels = {
+      rcv: document.getElementById('info-rcv'),
+      acv: document.getElementById('info-acv'),
+      idk: document.getElementById('info-idk')
+    };
+
+    policyCards.forEach(type => {
+      document.getElementById(`policy-${type}`).addEventListener('click', () => {
+        selectPolicyType(type);
+      });
+    });
+
+    function selectPolicyType(type) {
+      state.policyType = type;
+
+      // Update card selection
+      policyCards.forEach(t => {
+        document.getElementById(`policy-${t}`).classList.remove('selected');
+      });
+      document.getElementById(`policy-${type}`).classList.add('selected');
+
+      // Show the appropriate info panel, hide others
+      Object.entries(infoPanels).forEach(([key, panel]) => {
+        if (key === type) {
+          panel.classList.add('visible');
+        } else {
+          panel.classList.remove('visible');
+        }
+      });
+
+      // Enable continue button (unless IDK — they can still continue, but the info is helpful)
+      document.getElementById('step-policy-continue').disabled = false;
+    }
+
+    document.getElementById('step-policy-back').addEventListener('click', () => {
+      goToStep(0);
+    });
+
+    document.getElementById('step-policy-continue').addEventListener('click', () => {
+      const sequence = getStepSequence();
+      const tradesIndex = sequence.indexOf('step-trades');
+      goToStep(tradesIndex);
+    });
+
+    // ── Loss sheet upload stub ──
+    const lossSheetInput = document.getElementById('loss-sheet-upload');
+    const uploadStatus = document.getElementById('upload-status');
+
+    lossSheetInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      uploadStatus.style.display = 'block';
+      uploadStatus.textContent = `Uploading "${file.name}"...`;
+
+      try {
+        const user = await Auth.getUser();
+        if (user && window.sb) {
+          const filePath = `${user.id}/loss-sheets/${Date.now()}-${file.name}`;
+          const { error } = await window.sb.storage
+            .from('claim-documents')
+            .upload(filePath, file);
+
+          if (error) throw error;
+
+          uploadStatus.textContent = `"${file.name}" uploaded successfully. We'll review it and get back to you.`;
+          uploadStatus.style.color = 'var(--amber)';
+        } else {
+          // Save reference in sessionStorage for later
+          uploadStatus.textContent = `"${file.name}" saved. We'll review it after you complete sign-up.`;
+          sessionStorage.setItem('oq_pending_loss_sheet', file.name);
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        uploadStatus.textContent = 'Upload failed. Please try again or continue without uploading.';
+        uploadStatus.style.color = '#FCA5A5';
+      }
+    });
+
+    // ── Trade Selection ──
     TRADES.forEach(trade => {
       const card = document.getElementById(`trade-${trade}`);
       card.addEventListener('click', () => {
@@ -634,35 +1083,38 @@
         state.trades.push(trade);
         card.classList.add('selected');
       }
-
-      // Update continue button state
-      updateStep2ContinueButton();
+      updateTradesContinueButton();
     }
 
-    function updateStep2ContinueButton() {
-      const continueBtn = document.getElementById('step-2-continue');
-      continueBtn.disabled = state.trades.length === 0;
+    function updateTradesContinueButton() {
+      document.getElementById('step-trades-continue').disabled = state.trades.length === 0;
     }
 
-    document.getElementById('step-2-back').addEventListener('click', () => {
-      goToStep(1);
+    document.getElementById('step-trades-back').addEventListener('click', () => {
+      const sequence = getStepSequence();
+      const tradesIndex = sequence.indexOf('step-trades');
+      goToStep(tradesIndex - 1);
     });
 
-    document.getElementById('step-2-continue').addEventListener('click', () => {
-      initializeStep3();
-      goToStep(3);
+    document.getElementById('step-trades-continue').addEventListener('click', () => {
+      initializeRepairStep();
+      const sequence = getStepSequence();
+      const repairIndex = sequence.indexOf('step-repair');
+      goToStep(repairIndex);
     });
 
-    // ── Step 3: Repair or Replace ──
-    document.getElementById('step-3-back').addEventListener('click', () => {
-      goToStep(2);
+    // ── Repair or Replace ──
+    document.getElementById('step-repair-back').addEventListener('click', () => {
+      const sequence = getStepSequence();
+      const repairIndex = sequence.indexOf('step-repair');
+      goToStep(repairIndex - 1);
     });
 
-    document.getElementById('step-3-continue').addEventListener('click', () => {
+    document.getElementById('step-repair-continue').addEventListener('click', () => {
       completeSelection();
     });
 
-    function initializeStep3() {
+    function initializeRepairStep() {
       state.repairReplace = {};
 
       // Initialize repair/replace for each selected trade
@@ -693,29 +1145,24 @@
       // Set default to 'replace'
       document.getElementById('replace-option').classList.add('selected');
 
-      document.getElementById('repair-option').addEventListener('click', () => {
-        state.repairReplace[trade] = 'repair';
-        document.getElementById('repair-option').classList.add('selected');
-        document.getElementById('replace-option').classList.remove('selected');
-      }, { once: true });
+      // Remove old listeners by cloning
+      const repairBtn = document.getElementById('repair-option');
+      const replaceBtn = document.getElementById('replace-option');
+      const newRepairBtn = repairBtn.cloneNode(true);
+      const newReplaceBtn = replaceBtn.cloneNode(true);
+      repairBtn.parentNode.replaceChild(newRepairBtn, repairBtn);
+      replaceBtn.parentNode.replaceChild(newReplaceBtn, replaceBtn);
 
-      document.getElementById('replace-option').addEventListener('click', () => {
-        state.repairReplace[trade] = 'replace';
-        document.getElementById('replace-option').classList.add('selected');
-        document.getElementById('repair-option').classList.remove('selected');
-      }, { once: true });
-
-      // Reattach listeners
-      document.getElementById('repair-option').addEventListener('click', () => {
+      newRepairBtn.addEventListener('click', () => {
         state.repairReplace[trade] = 'repair';
-        document.getElementById('repair-option').classList.add('selected');
-        document.getElementById('replace-option').classList.remove('selected');
+        newRepairBtn.classList.add('selected');
+        newReplaceBtn.classList.remove('selected');
       });
 
-      document.getElementById('replace-option').addEventListener('click', () => {
+      newReplaceBtn.addEventListener('click', () => {
         state.repairReplace[trade] = 'replace';
-        document.getElementById('replace-option').classList.add('selected');
-        document.getElementById('repair-option').classList.remove('selected');
+        newReplaceBtn.classList.add('selected');
+        newRepairBtn.classList.remove('selected');
       });
     }
 
@@ -761,47 +1208,16 @@
       });
     }
 
-    // ── Navigation between steps ──
-    function goToStep(step) {
-      // Update step containers
-      document.querySelectorAll('.step-container').forEach(container => {
-        container.classList.add('hidden');
-      });
-      document.getElementById(`step-${step}`).classList.remove('hidden');
-
-      // Update step indicator
-      document.querySelectorAll('.step-dot').forEach((dot, index) => {
-        const dotStep = index + 1;
-        dot.classList.remove('active', 'filled');
-
-        if (dotStep < step) {
-          dot.classList.add('filled');
-        } else if (dotStep === step) {
-          dot.classList.add('active');
-        }
-      });
-
-      // Update connectors
-      document.querySelectorAll('.step-connector').forEach((connector, index) => {
-        connector.classList.remove('filled');
-        if (index + 1 < step) {
-          connector.classList.add('filled');
-        }
-      });
-
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
     // ── Completion ──
     async function completeSelection() {
       try {
-        const continueBtn = document.getElementById('step-3-continue');
+        const continueBtn = document.getElementById('step-repair-continue');
         continueBtn.disabled = true;
 
         // Prepare selection data
         const selections = {
           funding_type: state.fundingType,
+          policy_type: state.policyType,  // null for cash
           trades: state.trades.map(trade => ({
             trade: trade,
             intent: state.repairReplace[trade] || 'replace'
@@ -837,6 +1253,7 @@
 
             const claimData = {
               funding_type: state.fundingType,
+              policy_type: state.policyType,
               trades: selections.trades.map(t => t.trade),
               job_type: jobType,
               updated_at: new Date().toISOString()
@@ -873,7 +1290,7 @@
       } catch (error) {
         console.error('Error completing selection:', error);
         showError('Something went wrong. Please try again.');
-        document.getElementById('step-3-continue').disabled = false;
+        document.getElementById('step-repair-continue').disabled = false;
       }
     }
 
@@ -889,6 +1306,9 @@
     // ── Init on page load ──
     async function initPage() {
       try {
+        // Build initial 3-step indicator (default to cash path)
+        buildStepIndicator();
+
         // Require authentication
         const user = await Auth.requireAuth('homeowner');
         if (!user && !CONFIG?.DEMO_MODE) {
