@@ -1,14 +1,15 @@
 /**
- * ClaimShield Edge Function: send-adjuster-email
- * Sends email to adjuster via Mailgun requesting insurance documents.
- * Sets reply-to to a unique ingest address for auto-capture of replies.
+ * OtterQuote Edge Function: send-adjuster-email
+ * Sends email requests for insurance documents to adjusters via Mailgun.
  * Rate-limited via Supabase check_rate_limit() RPC.
  *
+ * Limits: 10/day, 50/month
+ *
  * Environment variables:
+ *   SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
  *   MAILGUN_API_KEY
  *   MAILGUN_DOMAIN
- *   MAILGUN_FROM_NAME  (default: "ClaimShield")
- *   MAILGUN_FROM_EMAIL (default: "noreply@{MAILGUN_DOMAIN}")
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -18,7 +19,8 @@ const FUNCTION_NAME = "send-adjuster-email";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -31,65 +33,88 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { to, to_name, subject, body, reply_to, request_id, claim_id } = await req.json();
+    const { to, to_name, subject, body, reply_to, request_id } =
+      await req.json();
 
+    // Validate required fields
     if (!to || !subject || !body) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: to, subject, body" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Missing required fields: to, subject, body",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     // ========== RATE LIMIT CHECK ==========
-    const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
-      p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id || null,
-    });
+    const { data: rateLimitResult, error: rlError } = await supabase.rpc(
+      "check_rate_limit",
+      {
+        p_function_name: FUNCTION_NAME,
+        p_caller_id: request_id || null,
+      }
+    );
 
     if (rlError) {
       console.error("Rate limit check failed:", rlError);
       return new Response(
-        JSON.stringify({ error: "Rate limit check failed. Refusing to send for safety.", detail: rlError.message }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Rate limit check failed. Refusing to send email for safety.",
+          detail: rlError.message,
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     if (!rateLimitResult?.allowed) {
-      console.warn(`RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`);
+      console.warn(
+        `RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`
+      );
       return new Response(
         JSON.stringify({
           error: "Rate limit exceeded",
           reason: rateLimitResult?.reason,
           counts: rateLimitResult?.counts,
         }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
-    // ========== END RATE LIMIT CHECK ==========
 
+    // ========== VALIDATE MAILGUN ENV VARS ==========
     const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
     const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
-    const FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME") || "ClaimShield";
-    const FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL") || `noreply@${MAILGUN_DOMAIN}`;
 
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      throw new Error("Mailgun credentials not configured. Set MAILGUN_API_KEY and MAILGUN_DOMAIN in Edge Function secrets.");
+      throw new Error(
+        "Mailgun credentials not configured. Set MAILGUN_API_KEY and MAILGUN_DOMAIN."
+      );
     }
 
-    // Build form data for Mailgun API
-    const formData = new FormData();
-    formData.append("from", `${FROM_NAME} <${FROM_EMAIL}>`);
+    // ========== SEND EMAIL VIA MAILGUN ==========
+    const fromAddress = `OtterQuote <noreply@${MAILGUN_DOMAIN}>`;
+
+    // Build URL-encoded form data for Mailgun
+    const formData = new URLSearchParams();
+    formData.append("from", fromAddress);
     formData.append("to", to_name ? `${to_name} <${to}>` : to);
     formData.append("subject", subject);
     formData.append("text", body);
-
-    // Set reply-to to the unique ingest email so adjuster replies are captured
     if (reply_to) {
       formData.append("h:Reply-To", reply_to);
     }
 
-    // Send via Mailgun
-    const response = await fetch(
+    console.log("Sending Mailgun email to:", to, "subject:", subject);
+
+    const mailgunResponse = await fetch(
       `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
       {
         method: "POST",
@@ -100,36 +125,71 @@ serve(async (req) => {
       }
     );
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(`Mailgun error: ${JSON.stringify(result)}`);
+    if (!mailgunResponse.ok) {
+      const errorData = await mailgunResponse.text();
+      console.error(
+        "Mailgun request failed:",
+        mailgunResponse.status,
+        errorData
+      );
+      throw new Error(
+        `Mailgun API error (HTTP ${mailgunResponse.status}): ${errorData}`
+      );
     }
 
-    // Update the request record with sent status
+    const responseData = await mailgunResponse.json();
+    /*
+     * responseData shape:
+     * {
+     *   id: "<12345678901234567890abcdef@mail.otterquote.com>",
+     *   message: "Queued. Thank you."
+     * }
+     */
+
+    // ========== UPDATE ADJUSTER_EMAIL_REQUESTS TABLE ==========
     if (request_id) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("adjuster_email_requests")
         .update({
           sent_at: new Date().toISOString(),
-          mailgun_message_id: result.id,
+          mailgun_id: responseData.id,
         })
         .eq("id", request_id);
+
+      if (updateError) {
+        console.error(
+          "Failed to update adjuster_email_requests:",
+          updateError
+        );
+        // Non-fatal — the email was sent on Mailgun's side
+      }
     }
+
+    console.log(
+      "Email sent to:",
+      to,
+      "Mailgun ID:",
+      responseData.id,
+      "Request ID:",
+      request_id
+    );
 
     return new Response(
       JSON.stringify({
-        success: true,
-        message_id: result.id,
+        id: responseData.id,
+        status: "sent",
+        to: to,
         rate_limit_counts: rateLimitResult?.counts,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
     console.error("send-adjuster-email error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

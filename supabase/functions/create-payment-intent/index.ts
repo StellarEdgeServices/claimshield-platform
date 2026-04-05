@@ -1,9 +1,14 @@
 /**
- * ClaimShield Edge Function: create-payment-intent
- * Creates a Stripe PaymentIntent for Hover fees or deductible escrow.
+ * OtterQuote Edge Function: create-payment-intent
+ * Creates a Stripe PaymentIntent for three use cases:
+ *   - Hover measurement purchases (~$49)
+ *   - Deductible escrow
+ *   - Contractor platform fees
  * Rate-limited via Supabase check_rate_limit() RPC.
  *
  * Environment variables:
+ *   SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
  *   STRIPE_SECRET_KEY
  */
 
@@ -11,10 +16,12 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FUNCTION_NAME = "create-payment-intent";
+const STRIPE_API_BASE = "https://api.stripe.com/v1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -29,98 +36,197 @@ serve(async (req) => {
   try {
     const { amount, currency, description, metadata } = await req.json();
 
-    if (!amount || amount < 50) {
+    // Validate required fields
+    if (
+      !amount ||
+      typeof amount !== "number" ||
+      amount <= 0 ||
+      !Number.isInteger(amount)
+    ) {
       return new Response(
-        JSON.stringify({ error: "Amount must be at least 50 cents" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Invalid amount. Must be a positive integer (in cents).",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Hard cap: refuse any single payment intent over $10,000 (sanity check)
-    if (amount > 1000000) { // Stripe uses cents
+    if (!currency || typeof currency !== "string") {
       return new Response(
-        JSON.stringify({ error: "Amount exceeds maximum allowed ($10,000). Contact support." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Invalid currency. Must be a string (e.g., 'usd').",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!metadata || !metadata.claim_id || !metadata.type) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Missing required metadata fields: claim_id and type (hover_measurement, deductible_escrow, or platform_fee).",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const validTypes = ["hover_measurement", "deductible_escrow", "platform_fee"];
+    if (!validTypes.includes(metadata.type)) {
+      return new Response(
+        JSON.stringify({
+          error: `Invalid metadata.type. Must be one of: ${validTypes.join(", ")}`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     // ========== RATE LIMIT CHECK ==========
-    const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
-      p_function_name: FUNCTION_NAME,
-      p_caller_id: metadata?.claim_id || null,
-    });
+    const { data: rateLimitResult, error: rlError } = await supabase.rpc(
+      "check_rate_limit",
+      {
+        p_function_name: FUNCTION_NAME,
+        p_caller_id: metadata.claim_id || null,
+      }
+    );
 
     if (rlError) {
       console.error("Rate limit check failed:", rlError);
       return new Response(
-        JSON.stringify({ error: "Rate limit check failed. Refusing to process for safety.", detail: rlError.message }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "Rate limit check failed. Refusing to create payment intent for safety.",
+          detail: rlError.message,
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     if (!rateLimitResult?.allowed) {
-      console.warn(`RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`);
+      console.warn(
+        `RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`
+      );
       return new Response(
         JSON.stringify({
           error: "Rate limit exceeded",
           reason: rateLimitResult?.reason,
           counts: rateLimitResult?.counts,
         }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
-    // ========== END RATE LIMIT CHECK ==========
 
-    const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!STRIPE_SECRET_KEY) {
-      throw new Error("Stripe secret key not configured.");
+    // ========== GET STRIPE SECRET KEY ==========
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+
+    if (!stripeSecretKey) {
+      throw new Error(
+        "Stripe secret key not configured. Set STRIPE_SECRET_KEY environment variable."
+      );
     }
 
-    // Create PaymentIntent via Stripe API
-    const params = new URLSearchParams({
-      amount: String(amount),
-      currency: currency || "usd",
-      description: description || "ClaimShield payment",
-      "automatic_payment_methods[enabled]": "true",
-    });
+    // ========== CREATE PAYMENT INTENT ==========
+    const basicAuth = btoa(`${stripeSecretKey}:`);
 
-    // Add metadata
-    if (metadata) {
-      for (const [key, value] of Object.entries(metadata)) {
-        params.append(`metadata[${key}]`, String(value));
+    // Build URL-encoded form data
+    const formData = new URLSearchParams();
+    formData.append("amount", String(amount));
+    formData.append("currency", currency);
+    formData.append("description", description || "");
+    formData.append("metadata[claim_id]", metadata.claim_id);
+    formData.append("metadata[type]", metadata.type);
+    formData.append("automatic_payment_methods[enabled]", "true");
+
+    console.log(
+      "Creating Stripe PaymentIntent for",
+      metadata.type,
+      "claim:",
+      metadata.claim_id,
+      "amount:",
+      amount,
+      currency
+    );
+
+    const paymentIntentResponse = await fetch(
+      `${STRIPE_API_BASE}/payment_intents`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
       }
+    );
+
+    if (!paymentIntentResponse.ok) {
+      const errorData = await paymentIntentResponse.text();
+      console.error(
+        "Stripe PaymentIntent creation failed:",
+        paymentIntentResponse.status,
+        errorData
+      );
+      throw new Error(
+        `Stripe API error (HTTP ${paymentIntentResponse.status}): ${errorData}`
+      );
     }
 
-    const response = await fetch("https://api.stripe.com/v1/payment_intents", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
+    const paymentIntentData = await paymentIntentResponse.json();
+    /*
+     * paymentIntentData shape:
+     * {
+     *   id: "pi_xxx",
+     *   client_secret: "pi_xxx_secret_xxx",
+     *   amount: 4900,
+     *   currency: "usd",
+     *   status: "requires_payment_method",
+     *   metadata: { claim_id: "...", type: "..." },
+     *   ...
+     * }
+     */
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(`Stripe error: ${result.error?.message || JSON.stringify(result)}`);
-    }
+    console.log(
+      "Stripe PaymentIntent created. ID:",
+      paymentIntentData.id,
+      "Status:",
+      paymentIntentData.status
+    );
 
     return new Response(
       JSON.stringify({
-        client_secret: result.client_secret,
-        payment_intent_id: result.id,
-        amount: result.amount,
-        status: result.status,
+        client_secret: paymentIntentData.client_secret,
+        payment_intent_id: paymentIntentData.id,
+        status: paymentIntentData.status,
+        amount: paymentIntentData.amount,
+        currency: paymentIntentData.currency,
         rate_limit_counts: rateLimitResult?.counts,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
     console.error("create-payment-intent error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

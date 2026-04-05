@@ -225,6 +225,38 @@ window.Auth = {
               await sb.from('contractor_licenses').insert(licenseRecords);
             }
           }
+
+          // Upload insurance certificate files to Supabase Storage
+          if (data.insurance_certs && data.insurance_certs.length > 0) {
+            for (const cert of data.insurance_certs) {
+              try {
+                // Convert base64 back to binary
+                const binaryStr = atob(cert.base64);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                  bytes[i] = binaryStr.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: cert.type });
+
+                // Upload to contractor-documents/{user_id}/insurance/{filename}
+                const filePath = `${user.id}/insurance/${cert.name}`;
+                const { error: uploadError } = await sb.storage
+                  .from('contractor-documents')
+                  .upload(filePath, blob, {
+                    contentType: cert.type,
+                    upsert: true,
+                  });
+
+                if (uploadError) {
+                  console.error('Failed to upload insurance cert:', cert.name, uploadError);
+                } else {
+                  console.log('Insurance cert uploaded:', filePath);
+                }
+              } catch (uploadErr) {
+                console.error('Error uploading insurance cert:', cert.name, uploadErr);
+              }
+            }
+          }
         }
 
         sessionStorage.removeItem('cs_contractor_signup');

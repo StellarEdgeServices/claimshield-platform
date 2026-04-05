@@ -1,12 +1,15 @@
 /**
- * ClaimShield Edge Function: send-sms
- * Sends SMS notifications via Twilio.
+ * OtterQuote Edge Function: send-sms
+ * Sends SMS messages via Twilio.
  * Rate-limited via Supabase check_rate_limit() RPC.
+ *
+ * Rate limits (D-063 spending controls):
+ * 20/day, 100/month
  *
  * Environment variables:
  *   TWILIO_ACCOUNT_SID
  *   TWILIO_AUTH_TOKEN
- *   TWILIO_PHONE_NUMBER (E.164 format, e.g., +13175551234)
+ *   TWILIO_PHONE_NUMBER
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -16,7 +19,8 @@ const FUNCTION_NAME = "send-sms";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -24,105 +28,145 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Initialize Supabase client (needed for rate limiting and notification updates)
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { to, message, notification_id, claim_id } = await req.json();
+    const { to, message, notification_id } = await req.json();
 
+    // Validate required fields
     if (!to || !message) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: to, message" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Missing required fields: to, message",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     // ========== RATE LIMIT CHECK ==========
-    const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
-      p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id || null,
-    });
+    const { data: rateLimitResult, error: rlError } = await supabase.rpc(
+      "check_rate_limit",
+      {
+        p_function_name: FUNCTION_NAME,
+        p_caller_id: notification_id || null,
+      }
+    );
 
     if (rlError) {
       console.error("Rate limit check failed:", rlError);
-      // Fail closed — if we can't verify the rate limit, don't send
       return new Response(
-        JSON.stringify({ error: "Rate limit check failed. Refusing to send for safety.", detail: rlError.message }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "Rate limit check failed. Refusing to send SMS for safety.",
+          detail: rlError.message,
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     if (!rateLimitResult?.allowed) {
-      console.warn(`RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`);
+      console.warn(
+        `RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`
+      );
       return new Response(
         JSON.stringify({
           error: "Rate limit exceeded",
           reason: rateLimitResult?.reason,
           counts: rateLimitResult?.counts,
         }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
-    // ========== END RATE LIMIT CHECK ==========
 
-    const TWILIO_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const TWILIO_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const TWILIO_PHONE = Deno.env.get("TWILIO_PHONE_NUMBER");
+    // ========== GET TWILIO CREDENTIALS ==========
+    const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!;
+    const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
+    const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER")!;
 
-    if (!TWILIO_SID || !TWILIO_TOKEN || !TWILIO_PHONE) {
-      throw new Error("Twilio credentials not configured.");
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+      throw new Error(
+        "Twilio credentials not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER."
+      );
     }
 
-    // Send via Twilio REST API
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`;
-    const formBody = new URLSearchParams({
-      To: to,
-      From: TWILIO_PHONE,
-      Body: message,
-    });
+    // ========== SEND SMS ==========
+    const basicAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
-    const response = await fetch(twilioUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${btoa(`${TWILIO_SID}:${TWILIO_TOKEN}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formBody.toString(),
-    });
+    const formData = new URLSearchParams();
+    formData.append("To", to);
+    formData.append("From", TWILIO_PHONE_NUMBER);
+    formData.append("Body", message);
 
-    const result = await response.json();
+    console.log("Sending SMS to:", to, "from:", TWILIO_PHONE_NUMBER);
 
-    if (!response.ok) {
-      throw new Error(`Twilio error: ${result.message || JSON.stringify(result)}`);
+    const twilioResponse = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+      }
+    );
+
+    if (!twilioResponse.ok) {
+      const errorData = await twilioResponse.text();
+      console.error(
+        "Twilio SMS send failed:",
+        twilioResponse.status,
+        errorData
+      );
+      throw new Error(
+        `Twilio API error (HTTP ${twilioResponse.status}): ${errorData}`
+      );
     }
 
-    // Update notification record
-    if (notification_id) {
-      await supabase
-        .from("notifications")
-        .update({
-          delivered: true,
-          twilio_sid: result.sid,
-          delivered_at: new Date().toISOString(),
-        })
-        .eq("id", notification_id);
-    }
+    const twilioData = await twilioResponse.json();
+    /*
+     * twilioData shape:
+     * {
+     *   sid: "SM...",
+     *   account_sid: "AC...",
+     *   to: "+13175551234",
+     *   from: "+12025551234",
+     *   body: "...",
+     *   status: "queued",
+     *   date_created: "...",
+     *   ...
+     * }
+     */
+
+    console.log("SMS sent successfully. SID:", twilioData.sid);
 
     return new Response(
       JSON.stringify({
-        success: true,
-        sid: result.sid,
+        sid: twilioData.sid,
+        status: "sent",
+        to: twilioData.to,
         rate_limit_counts: rateLimitResult?.counts,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
     console.error("send-sms error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

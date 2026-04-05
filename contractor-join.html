@@ -1273,10 +1273,26 @@
                     throw new Error('Auth module not loaded');
                 }
 
-                // 1. Send magic link
+                // 1. Convert insurance certificate files to base64 for sessionStorage
+                const certFilesBase64 = [];
+                for (const file of insuranceCertsFiles) {
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(file);
+                    });
+                    certFilesBase64.push({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        base64: base64,
+                    });
+                }
+
+                // 2. Send magic link
                 await Auth.sendMagicLink(data.businessEmail, 'contractor');
 
-                // 2. Store contractor data in sessionStorage for post-auth profile creation
+                // 3. Store contractor data in sessionStorage for post-auth profile creation
                 sessionStorage.setItem('cs_contractor_signup', JSON.stringify({
                     company_name: data.businessName,
                     contact_name: data.ownerFirstName + ' ' + data.ownerLastName,
@@ -1303,6 +1319,7 @@
                     insurance_gl_amount: data.glAmount,
                     insurance_gl_expdate: data.glExpDate,
                     licenses: data.licenses,
+                    insurance_certs: certFilesBase64,
                     role: 'contractor',
                 }));
 
