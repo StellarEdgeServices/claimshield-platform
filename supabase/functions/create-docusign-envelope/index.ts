@@ -8,9 +8,9 @@
  * Environment variables:
  *   DOCUSIGN_INTEGRATION_KEY
  *   DOCUSIGN_USER_ID
- *   DOCUSIGN_ACCOUNT_ID
- *   DOCUSIGN_RSA_PRIVATE_KEY (base64 encoded PEM)
- *   DOCUSIGN_BASE_URL (default: https://account-d.docusign.com for sandbox)
+ *   DOCUSIGN_API_ACCOUNT_ID (fallback: DOCUSIGN_ACCOUNT_ID)
+ *   DOCUSIGN_RSA_PRIVATE_KEY (base64 encoded PKCS8 DER)
+ *   DOCUSIGN_BASE_URI (REST API base, e.g. https://demo.docusign.net for sandbox)
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -239,17 +239,33 @@ function buildTextTabs(
   documentId: string,
   documentType: string
 ): TextTab[] {
-  // Mapping of field names to anchor strings
+  // Mapping of field names to anchor strings found in contractor PDFs
   const fieldAnchors: { [key: string]: string } = {
-    // Contract fields
+    // Homeowner / property fields
     customer_name: "Name",
     customer_address: "Address:",
     customer_city_zip: "City/Zip:",
     customer_phone: "Phone",
     customer_email: "Email:",
+    // Insurance fields
     insurance_company: "Insurance Co",
     claim_number: "Claim #",
     deductible: "DEDUCTIBLE:",
+    // Contract / job fields
+    contract_date: "Date:",
+    job_description: "Description:",
+    material_type: "Material:",
+    contract_price: "Contract Price:",
+    warranty_years: "Warranty:",
+    estimated_start: "Start Date:",
+    decking_per_sheet: "Decking/Sheet:",
+    full_redeck_price: "Full Redeck:",
+    // Contractor fields
+    contractor_name: "Contractor:",
+    contractor_phone: "Contractor Phone:",
+    contractor_email: "Contractor Email:",
+    contractor_address: "Contractor Address:",
+    contractor_license: "License #:",
     // Color confirmation fields
     shingle_manufacturer: "Single Manufacture",
     shingle_type: "Shingle Type:",
@@ -383,13 +399,83 @@ serve(async (req) => {
 
     // ========== DOCUSIGN CONFIG ==========
     const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
-    const ACCOUNT_ID = Deno.env.get("DOCUSIGN_ACCOUNT_ID");
-    const BASE_URL = Deno.env.get("DOCUSIGN_BASE_URL") || "https://account-d.docusign.com";
+    const ACCOUNT_ID = Deno.env.get("DOCUSIGN_API_ACCOUNT_ID") || Deno.env.get("DOCUSIGN_ACCOUNT_ID");
+    // BASE_URI from Supabase secret is the REST API base (e.g., https://demo.docusign.net for sandbox)
+    const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
+    // OAuth host determined by environment (sandbox vs production)
+    const OAUTH_HOST = REST_API_BASE.includes("demo") ? "https://account-d.docusign.com" : "https://account.docusign.com";
 
     if (!INTEGRATION_KEY || !ACCOUNT_ID) {
       throw new Error(
-        "DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY and DOCUSIGN_ACCOUNT_ID."
+        "DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY and DOCUSIGN_API_ACCOUNT_ID."
       );
+    }
+
+    // ========== LOAD CLAIM + CONTRACTOR DATA ==========
+    // If fields not provided, auto-populate from claim and contractor records
+    let autoFields = fields || {};
+    if (!fields || Object.keys(fields).length === 0) {
+      const { data: claimData } = await supabase
+        .from("claims")
+        .select("*")
+        .eq("id", claim_id)
+        .single();
+
+      const { data: contractorData } = await supabase
+        .from("contractors")
+        .select("*")
+        .eq("id", contractor_id)
+        .single();
+
+      const { data: bidData } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("claim_id", claim_id)
+        .eq("contractor_id", contractor_id)
+        .single();
+
+      if (claimData && signer) {
+        autoFields = {
+          // Homeowner info
+          customer_name: signer.name,
+          customer_address: claimData.property_address || claimData.address_line1 || "",
+          customer_city_zip: `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim(),
+          customer_phone: claimData.phone || "",
+          customer_email: signer.email,
+          // Insurance info
+          insurance_company: claimData.insurance_carrier || "",
+          claim_number: claimData.claim_number || "",
+          deductible: claimData.deductible_amount ? `$${Number(claimData.deductible_amount).toLocaleString()}` : "",
+          // Job info
+          contract_date: new Date().toLocaleDateString("en-US"),
+          job_description: claimData.damage_type ? `Roof ${claimData.damage_type}` : "Roof Replacement",
+          material_type: claimData.material_product || bidData?.brand || "",
+          // Bid info
+          contract_price: bidData?.amount ? `$${Number(bidData.amount).toLocaleString()}` : "",
+          warranty_years: bidData?.warranty_years ? `${bidData.warranty_years} years` : "",
+          estimated_start: bidData?.estimated_start_date || "",
+          decking_per_sheet: bidData?.decking_price_per_sheet ? `$${bidData.decking_price_per_sheet}` : "",
+          full_redeck_price: bidData?.full_redeck_price ? `$${Number(bidData.full_redeck_price).toLocaleString()}` : "",
+          // Contractor info
+          contractor_name: contractorData?.company_name || "",
+          contractor_phone: contractorData?.phone || "",
+          contractor_email: contractorData?.email || "",
+          contractor_address: contractorData?.address_line1 ? `${contractorData.address_line1}, ${contractorData.address_city || ""}, ${contractorData.address_state || ""} ${contractorData.address_zip || ""}` : "",
+          contractor_license: "",
+        };
+
+        // Get contractor license info
+        if (contractorData) {
+          const { data: licenseData } = await supabase
+            .from("contractor_licenses")
+            .select("license_number, municipality")
+            .eq("contractor_id", contractorData.id)
+            .limit(1);
+          if (licenseData && licenseData.length > 0) {
+            autoFields.contractor_license = `${licenseData[0].license_number} (${licenseData[0].municipality})`;
+          }
+        }
+      }
     }
 
     // ========== FETCH TEMPLATE PDF ==========
@@ -398,17 +484,27 @@ serve(async (req) => {
 
     // ========== GET ACCESS TOKEN ==========
     console.log("Acquiring DocuSign access token");
-    const accessToken = await getAccessToken(BASE_URL);
+    const accessToken = await getAccessToken(OAUTH_HOST);
 
     // ========== BUILD ENVELOPE DEFINITION ==========
     const documentId = "1";
-    const textTabs = buildTextTabs(fields || {}, documentId, document_type);
+    const textTabs = buildTextTabs(autoFields, documentId, document_type);
 
     // Homeowner (recipient 1)
     const homeownerTabs = buildSignerTabs(documentId, "homeowner");
 
     // Contractor (recipient 2)
     const contractorTabs = buildSignerTabs(documentId, "contractor");
+
+    // Look up contractor info for recipient 2
+    let contractorEmail = "contractor@example.com";
+    let contractorName = "Contractor";
+    if (autoFields.contractor_email) {
+      contractorEmail = autoFields.contractor_email;
+    }
+    if (autoFields.contractor_name) {
+      contractorName = autoFields.contractor_name;
+    }
 
     const envelopeDefinition = {
       emailSubject: `${
@@ -439,8 +535,8 @@ serve(async (req) => {
             },
           },
           {
-            email: "contractor@example.com", // Placeholder; normally provided separately
-            name: "Contractor",
+            email: contractorEmail,
+            name: contractorName,
             recipientId: "2",
             routingOrder: "2",
             clientUserId: "contractor_1",
@@ -456,7 +552,7 @@ serve(async (req) => {
     // ========== CREATE ENVELOPE ==========
     console.log("Creating DocuSign envelope");
     const envelopeResponse = await fetch(
-      `${BASE_URL}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
+      `${REST_API_BASE}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
       {
         method: "POST",
         headers: {
@@ -487,7 +583,7 @@ serve(async (req) => {
     // ========== GENERATE EMBEDDED SIGNING URL ==========
     console.log("Generating embedded signing URL for homeowner");
     const recipientViewResponse = await fetch(
-      `${BASE_URL}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
+      `${REST_API_BASE}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
       {
         method: "POST",
         headers: {

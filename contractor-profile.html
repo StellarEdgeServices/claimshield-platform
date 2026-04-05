@@ -770,6 +770,59 @@
                 </div>
             </div>
 
+            <!-- Contract Template Card -->
+            <div class="profile-card">
+                <h2><span class="card-icon">📄</span>Contract Template</h2>
+
+                <div class="info-box" style="margin-bottom: var(--sp-6);">
+                    Upload your standard contract PDF. OtterQuote will auto-fill homeowner details, insurance info, and bid amounts when a homeowner is ready to sign. The contract is sent for e-signature via DocuSign.
+                </div>
+
+                <div id="contractTemplateView">
+                    <div class="view-field">
+                        <label>Current Contract Template</label>
+                        <div class="view-field-value" id="viewContractTemplate">No contract uploaded</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: var(--sp-4);">
+                    <div class="form-group">
+                        <label class="form-label">Upload Contract PDF</label>
+                        <div class="image-upload" style="height: auto; min-height: 100px;">
+                            <input type="file" id="contractPdfInput" accept=".pdf" onchange="uploadContractTemplate()">
+                            <label for="contractPdfInput" style="display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); cursor: pointer; padding: var(--sp-4);">
+                                <span style="font-size: 2rem;">📄</span>
+                                <span>Click to upload PDF</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">PDF format only, max 10MB</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="contractUploadStatus" style="display: none; padding: var(--sp-3); border-radius: 8px; margin-top: var(--sp-3);"></div>
+                </div>
+
+                <div id="contractAnchorHelp" style="display: none; margin-top: var(--sp-6);">
+                    <h3 style="font-size: 1rem; margin-bottom: var(--sp-3); color: var(--text-secondary);">Auto-Fill Fields Detected</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--sp-3);">
+                        OtterQuote scans your contract for these labels and auto-fills the corresponding data:
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); font-size: 0.85rem;">
+                        <div><strong>Name</strong> → Homeowner name</div>
+                        <div><strong>Address:</strong> → Property address</div>
+                        <div><strong>Phone</strong> → Homeowner phone</div>
+                        <div><strong>Email:</strong> → Homeowner email</div>
+                        <div><strong>Insurance Co</strong> → Insurance carrier</div>
+                        <div><strong>Claim #</strong> → Claim number</div>
+                        <div><strong>DEDUCTIBLE:</strong> → Deductible amount</div>
+                        <div><strong>Contract Price:</strong> → Bid amount</div>
+                        <div><strong>Material:</strong> → Shingle brand/type</div>
+                        <div><strong>Warranty:</strong> → Warranty years</div>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: var(--sp-3);">
+                        Tip: Include these exact labels in your contract to enable auto-fill. Fields not found will be left blank for manual entry.
+                    </p>
+                </div>
+            </div>
+
             <!-- Platform Stats Card -->
             <div class="profile-card">
                 <h2><span class="card-icon">📊</span>Platform Statistics</h2>
@@ -893,6 +946,9 @@
             document.getElementById('viewTrades').textContent = trades.length ? trades.join(', ') : '—';
             document.getElementById('viewBrands').textContent = c.preferred_brands ? c.preferred_brands.join(', ') : '—';
             document.getElementById('viewServiceArea').textContent = c.service_area_description || c.service_counties ? (c.service_counties || []).join(', ') : '—';
+
+            // Contract template
+            updateContractTemplateView();
         }
 
         // ── Populate edit fields from contractor data ──
@@ -1062,6 +1118,81 @@
                     }
                 }
                 toggleEdit('photos');
+            }
+        }
+
+        // ── Contract Template Upload ──
+        async function uploadContractTemplate() {
+            const input = document.getElementById('contractPdfInput');
+            const status = document.getElementById('contractUploadStatus');
+            if (!input.files.length) return;
+
+            const file = input.files[0];
+            if (file.type !== 'application/pdf') {
+                showUploadStatus('Please upload a PDF file.', 'error');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showUploadStatus('File too large. Maximum 10MB.', 'error');
+                return;
+            }
+
+            if (!contractorRecord || !sb) {
+                showUploadStatus('Not connected to database.', 'error');
+                return;
+            }
+
+            showUploadStatus('Uploading contract template...', 'info');
+
+            try {
+                // Upload to contractor-templates bucket (matches Edge Function path)
+                const filePath = `${contractorRecord.id}/contract.pdf`;
+                const { error: uploadError } = await sb.storage
+                    .from('contractor-templates')
+                    .upload(filePath, file, { contentType: 'application/pdf', upsert: true });
+
+                if (uploadError) throw uploadError;
+
+                // Get public URL and save to contractor record
+                const { data: urlData } = sb.storage
+                    .from('contractor-templates')
+                    .getPublicUrl(filePath);
+
+                await sb.from('contractors')
+                    .update({ contract_pdf_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+                    .eq('id', contractorRecord.id);
+
+                contractorRecord.contract_pdf_url = urlData.publicUrl;
+                updateContractTemplateView();
+                showUploadStatus('Contract template uploaded successfully!', 'success');
+
+                // Show anchor text help
+                document.getElementById('contractAnchorHelp').style.display = 'block';
+            } catch (err) {
+                console.error('Error uploading contract template:', err);
+                showUploadStatus('Failed to upload. Please try again.', 'error');
+            }
+        }
+
+        function showUploadStatus(message, type) {
+            const status = document.getElementById('contractUploadStatus');
+            status.style.display = 'block';
+            status.textContent = message;
+            status.style.background = type === 'error' ? 'rgba(239, 68, 68, 0.1)' :
+                                      type === 'success' ? 'rgba(16, 185, 129, 0.1)' :
+                                      'rgba(245, 158, 11, 0.1)';
+            status.style.color = type === 'error' ? '#ef4444' :
+                                 type === 'success' ? '#10b981' : '#f59e0b';
+        }
+
+        function updateContractTemplateView() {
+            const el = document.getElementById('viewContractTemplate');
+            if (contractorRecord && contractorRecord.contract_pdf_url) {
+                el.innerHTML = `<a href="${contractorRecord.contract_pdf_url}" target="_blank" style="color: var(--amber); text-decoration: none;">📄 View uploaded contract</a>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: var(--sp-2);">(Upload a new file to replace)</span>`;
+                document.getElementById('contractAnchorHelp').style.display = 'block';
+            } else {
+                el.textContent = 'No contract uploaded';
             }
         }
 
