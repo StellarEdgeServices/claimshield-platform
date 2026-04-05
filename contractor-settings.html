@@ -119,7 +119,8 @@
       line-height: 1.5;
     }
 
-    .tier-row {
+    /* ── Pricing tiers ── */
+    .pricing-tier {
       display: flex;
       align-items: flex-start;
       gap: var(--sp-6);
@@ -127,46 +128,84 @@
       border-bottom: 1px solid #E2E8F0;
     }
 
-    .tier-row:last-child {
+    .pricing-tier:last-of-type {
       border-bottom: none;
     }
 
-    .tier-row.disabled {
-      opacity: 0.6;
+    .pricing-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 2px;
     }
 
-    .tier-content {
-      flex: 1;
-    }
+    .pricing-icon.green { background: #D1FAE5; }
+    .pricing-icon.blue { background: #DBEAFE; }
+    .pricing-icon.purple { background: #EDE9FE; }
 
-    .tier-label {
+    .pricing-content { flex: 1; }
+
+    .pricing-label {
       font-weight: 600;
       color: var(--navy);
-      margin-bottom: var(--sp-2);
+      margin-bottom: var(--sp-1);
       display: flex;
       align-items: center;
       gap: var(--sp-3);
     }
 
-    .tier-description {
+    .pricing-description {
       font-size: 0.875rem;
       color: var(--slate);
-      margin-bottom: var(--sp-3);
       line-height: 1.5;
     }
 
-    .tier-fee {
+    .pricing-fee {
       font-family: var(--font-mono);
-      font-size: 0.875rem;
+      font-size: 1rem;
+      font-weight: 700;
       color: var(--navy);
-      font-weight: 600;
+      white-space: nowrap;
+      margin-top: 2px;
     }
 
+    .fee-summary {
+      background: var(--navy-3);
+      color: var(--white);
+      padding: var(--sp-6);
+      border-radius: var(--radius-lg);
+      margin-top: var(--sp-8);
+      text-align: center;
+    }
+
+    .fee-summary-label {
+      font-size: 0.875rem;
+      color: #E0E7FF;
+      margin-bottom: var(--sp-2);
+    }
+
+    .fee-summary-amount {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--amber);
+    }
+
+    .fee-summary-note {
+      font-size: 0.8rem;
+      color: #94A3B8;
+      margin-top: var(--sp-2);
+    }
+
+    /* ── Badge ── */
     .badge {
       display: inline-block;
       padding: var(--sp-2) var(--sp-3);
-      background: var(--navy-3);
-      color: var(--amber);
       border-radius: var(--radius-sm);
       font-size: 0.7rem;
       font-weight: 700;
@@ -179,26 +218,17 @@
       color: #0369A1;
     }
 
-    .badge.mandatory {
-      background: #FECACA;
-      color: #7F1D1D;
-    }
-
     .badge.coming-soon {
       background: #E5E7EB;
       color: #6B7280;
     }
 
-    .toggle-switch {
-      display: flex;
-      align-items: center;
-      gap: var(--sp-4);
-    }
-
+    /* ── Toggle switch ── */
     .switch {
       position: relative;
       width: 48px;
       height: 28px;
+      flex-shrink: 0;
     }
 
     .switch input {
@@ -244,60 +274,89 @@
       opacity: 0.5;
     }
 
-    .tier-controls {
+    /* ── Auto-Bid ── */
+    .autobid-toggle-row {
       display: flex;
       align-items: center;
       gap: var(--sp-4);
-      white-space: nowrap;
+      padding: var(--sp-4) 0;
     }
 
-    .fee-summary {
+    .autobid-toggle-label {
+      font-weight: 600;
+      color: var(--navy);
+      font-size: 1rem;
+    }
+
+    .autobid-status {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: var(--sp-1) var(--sp-3);
+      border-radius: var(--radius-sm);
+    }
+
+    .autobid-status.active {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+
+    .autobid-status.inactive {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .autobid-details {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+      margin-top: var(--sp-4);
+    }
+
+    .autobid-details.hidden {
+      display: none;
+    }
+
+    .autobid-summary-box {
       background: var(--navy-3);
       color: var(--white);
+      border-radius: var(--radius-md);
       padding: var(--sp-6);
-      border-radius: var(--radius-lg);
-      margin-top: var(--sp-8);
-      text-align: center;
-    }
-
-    .fee-summary-label {
-      font-size: 0.875rem;
-      color: #E0E7FF;
-      margin-bottom: var(--sp-2);
-    }
-
-    .fee-summary-amount {
-      font-family: var(--font-mono);
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--amber);
-    }
-
-    .future-tier-card {
-      background: #F3F4F6;
-      border: 2px dashed #D1D5DB;
-      border-radius: var(--radius-lg);
-      padding: var(--sp-6);
-      opacity: 0.7;
       margin-top: var(--sp-6);
     }
 
-    .future-tier-label {
+    .autobid-summary-title {
       font-weight: 600;
-      color: #6B7280;
-      margin-bottom: var(--sp-2);
+      font-size: 0.9rem;
+      color: var(--amber);
+      margin-bottom: var(--sp-3);
+    }
+
+    .autobid-summary-item {
+      font-size: 0.85rem;
+      color: #E0E7FF;
+      padding: var(--sp-2) 0;
       display: flex;
-      align-items: center;
       gap: var(--sp-3);
     }
 
-    .future-tier-description {
-      font-size: 0.875rem;
-      color: #9CA3AF;
-      margin-bottom: var(--sp-3);
-      line-height: 1.5;
+    .autobid-summary-item .check {
+      color: #34D399;
+      font-weight: 700;
     }
 
+    .info-box {
+      background: #EFF6FF;
+      border-left: 3px solid var(--amber);
+      padding: var(--sp-4);
+      border-radius: var(--radius-sm);
+      margin-top: var(--sp-4);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: var(--navy-3);
+    }
+
+    /* ── Notifications ── */
     .notifications-section {
       margin-bottom: var(--sp-8);
     }
@@ -400,9 +459,10 @@
       margin: 0;
     }
 
-    .disabled-section {
-      opacity: 0.5;
-      pointer-events: none;
+    /* ── Future sections ── */
+    .future-section {
+      position: relative;
+      margin-top: var(--sp-8);
     }
 
     .coming-soon-overlay {
@@ -429,22 +489,44 @@
       border: 1px solid #CBD5E1;
     }
 
-    .future-section {
-      position: relative;
-      margin-top: var(--sp-8);
+    .disabled-section {
+      opacity: 0.5;
+      pointer-events: none;
     }
 
-    .info-box {
-      background: #EFF6FF;
-      border-left: 3px solid var(--amber);
-      padding: var(--sp-4);
-      border-radius: var(--radius-sm);
-      margin-top: var(--sp-4);
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: var(--navy-3);
+    .future-tier-card {
+      background: #F3F4F6;
+      border: 2px dashed #D1D5DB;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+      opacity: 0.7;
+      margin-top: var(--sp-6);
     }
 
+    .future-tier-label {
+      font-weight: 600;
+      color: #6B7280;
+      margin-bottom: var(--sp-2);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+
+    .future-tier-description {
+      font-size: 0.875rem;
+      color: #9CA3AF;
+      margin-bottom: var(--sp-3);
+      line-height: 1.5;
+    }
+
+    .tier-fee {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    /* ── Save button ── */
     .save-button {
       background: var(--amber);
       color: var(--navy);
@@ -481,14 +563,9 @@
         font-size: 1.75rem;
       }
 
-      .tier-row {
+      .pricing-tier {
         flex-direction: column;
-        gap: var(--sp-4);
-      }
-
-      .tier-controls {
-        width: 100%;
-        justify-content: space-between;
+        gap: var(--sp-3);
       }
 
       .notification-types {
@@ -503,77 +580,127 @@
   <main>
     <div class="page-header">
       <h1>Settings & Preferences</h1>
-      <p class="page-subtitle">Configure your service levels, notifications, and bidding preferences</p>
+      <p class="page-subtitle">Manage your auto-bid settings, notifications, and review how OtterQuote pricing works.</p>
     </div>
 
-    <!-- Service Level Configuration -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Auto-Bid Settings (LIVE — Insurance)   -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="settings-card">
-      <div class="settings-card-title">Service Level</div>
+      <div class="settings-card-title">Auto-Bid Settings</div>
       <div class="settings-card-subtitle">
-        Choose how much OtterQuote handles for your opportunities. Higher service levels cost more but deliver more ready-to-install packages.
+        When auto-bid is enabled, OtterQuote will automatically place bids on your behalf for matching insurance full roof replacement opportunities in your service area.
       </div>
 
-      <!-- Contract Signing (always on) -->
-      <div class="tier-row">
-        <div class="tier-content">
-          <div class="tier-label">
-            Contract Signing
-            <span class="badge included">INCLUDED — Core Platform</span>
-          </div>
-          <div class="tier-description">
-            OtterQuote gets the homeowner's contract signed before you receive the opportunity.
-          </div>
-          <div class="tier-fee">Fee: 5.0% (mandatory)</div>
-        </div>
-        <div class="tier-controls">
-          <span style="color: var(--amber); font-weight: 600;">✓ Always On</span>
-        </div>
+      <!-- Master toggle -->
+      <div class="autobid-toggle-row">
+        <label class="switch">
+          <input type="checkbox" id="autoBidToggle">
+          <span class="slider"></span>
+        </label>
+        <div class="autobid-toggle-label">Enable Auto-Bid for Insurance Roofing</div>
+        <span class="autobid-status inactive" id="autoBidStatusBadge">OFF</span>
       </div>
 
-      <!-- Color Selection (toggleable) -->
-      <div class="tier-row">
-        <div class="tier-content">
-          <div class="tier-label">Color Selection</div>
-          <div class="tier-description">
-            We will work with the homeowner to select colors. Some homeowners may request to see physical color samples before making a final selection, which would require a visit from your team.
-          </div>
-          <div class="tier-fee">Fee: +3.0%</div>
-          <div class="info-box">
-            We will work with the homeowner to schedule an installation date. Some homeowners may want to meet with you before committing to a date.
-          </div>
-        </div>
-        <div class="tier-controls">
-          <label class="switch">
-            <input type="checkbox" id="colorSelectionToggle" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
+      <!-- Details panel (shown when toggle is on) -->
+      <div class="autobid-details hidden" id="autoBidDetails">
 
-      <!-- Deductible Collection (always on) -->
-      <div class="tier-row">
-        <div class="tier-content">
-          <div class="tier-label">
-            Deductible Collection
-            <span class="badge mandatory">MANDATORY — Platform Requirement</span>
+        <div class="info-box" style="margin-top: 0;">
+          <strong>How it works:</strong> When a homeowner in your service area submits an insurance claim for a full roof replacement, OtterQuote will automatically place a bid on your behalf at the insurance company's approved RCV (Replacement Cost Value) amount. The homeowner sees your bid instantly and can sign a contract right away.
+        </div>
+
+        <!-- Summary of what auto-bid matches on -->
+        <div class="autobid-summary-box">
+          <div class="autobid-summary-title">Your Auto-Bid Will Match On:</div>
+          <div class="autobid-summary-item">
+            <span class="check">&#10003;</span>
+            <span><strong>Funding type:</strong> Insurance claims only</span>
           </div>
-          <div class="tier-description">
-            OtterQuote collects the homeowner's deductible and holds it in escrow. Released to you after the ACV check is collected.
+          <div class="autobid-summary-item">
+            <span class="check">&#10003;</span>
+            <span><strong>Scope:</strong> Full roof replacement only (not repairs)</span>
           </div>
-          <div class="tier-fee">Fee: +5.0%</div>
-          <div class="info-box">
-            This protects both you and the homeowner. It locks in the customer and ensures payment.
+          <div class="autobid-summary-item">
+            <span class="check">&#10003;</span>
+            <span><strong>Trade:</strong> Roofing</span>
+          </div>
+          <div class="autobid-summary-item">
+            <span class="check">&#10003;</span>
+            <span><strong>Price:</strong> RCV amount from the insurance estimate</span>
+          </div>
+          <div class="autobid-summary-item">
+            <span class="check">&#10003;</span>
+            <span><strong>Location:</strong> Within your configured service area</span>
           </div>
         </div>
-        <div class="tier-controls">
-          <span style="color: var(--amber); font-weight: 600;">✓ Always On</span>
+
+        <div class="info-box">
+          <strong>Tip:</strong> Auto-bid gives you a huge advantage. Homeowners are far more likely to sign when a contract is ready immediately. You can still manually bid on opportunities that don't match your auto-bid criteria.
         </div>
       </div>
 
-      <!-- Fee Summary -->
+      <!-- Future: Retail auto-bid -->
+      <div class="future-tier-card">
+        <div class="future-tier-label">
+          Auto-Bid for Retail Jobs
+          <span class="badge coming-soon">Coming Soon</span>
+        </div>
+        <div class="future-tier-description">
+          Set custom pricing per material type for retail (non-insurance) roofing opportunities. Coming after insurance auto-bid is established.
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- How Our Pricing Works (Informational)  -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="settings-card">
+      <div class="settings-card-title">How Our Pricing Works</div>
+      <div class="settings-card-subtitle">
+        You only pay for what OtterQuote delivers. Our fee is a percentage of the job value, based on which services we successfully complete for your project.
+      </div>
+
+      <!-- Tier 1: Signed Contract -->
+      <div class="pricing-tier">
+        <div class="pricing-icon green">&#9998;</div>
+        <div class="pricing-content">
+          <div class="pricing-label">Signed Contract</div>
+          <div class="pricing-description">
+            OtterQuote gets the homeowner's contract signed before you receive the project. This is the core of what we deliver — a contract-ready project, not a lead.
+          </div>
+        </div>
+        <div class="pricing-fee">5%</div>
+      </div>
+
+      <!-- Tier 2: Color Selection -->
+      <div class="pricing-tier">
+        <div class="pricing-icon blue">&#127912;</div>
+        <div class="pricing-content">
+          <div class="pricing-label">Color Selection Completed</div>
+          <div class="pricing-description">
+            If the homeowner selects their shingle colors through OtterQuote's online tools before you receive the project, this additional fee applies. If the homeowner prefers to pick colors in person with your team, you won't be charged for this tier.
+          </div>
+        </div>
+        <div class="pricing-fee">+3%</div>
+      </div>
+
+      <!-- Tier 3: Deductible Collection -->
+      <div class="pricing-tier">
+        <div class="pricing-icon purple">&#128176;</div>
+        <div class="pricing-content">
+          <div class="pricing-label">Deductible Collected</div>
+          <div class="pricing-description">
+            OtterQuote collects the homeowner's deductible and holds it in escrow on your behalf. Released to you after the ACV check is collected. This locks in the customer and protects both parties.
+          </div>
+        </div>
+        <div class="pricing-fee">+5%</div>
+      </div>
+
+      <!-- Fee range summary -->
       <div class="fee-summary">
-        <div class="fee-summary-label">Your current platform fee:</div>
-        <div class="fee-summary-amount"><span id="totalFeePercent">13.0%</span> of job value</div>
+        <div class="fee-summary-label">Your platform fee per project:</div>
+        <div class="fee-summary-amount">5% &ndash; 13% of job value</div>
+        <div class="fee-summary-note">Based on which services OtterQuote completes for each project</div>
       </div>
 
       <!-- Future Tier Preview -->
@@ -583,13 +710,15 @@
           <span class="badge coming-soon">Coming Soon</span>
         </div>
         <div class="future-tier-description">
-          We upload everything to your CRM, coordinate scheduling, collect ACV check. You just hit 'submit order'.
+          We upload everything to your CRM, coordinate scheduling, and collect the ACV check. You just hit "submit order."
         </div>
         <div class="tier-fee">Fee: ~20% total</div>
       </div>
     </div>
 
-    <!-- Notification Preferences -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Notification Preferences                -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="settings-card">
       <div class="settings-card-title">Notification Preferences</div>
 
@@ -642,53 +771,22 @@
             <input type="checkbox" id="notif48hReminder" checked>
             <label for="notif48hReminder">48-hour contact reminder</label>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auto-Bid Settings (Future) -->
-    <div class="settings-card">
-      <div class="settings-card-title">Auto-Bid Settings</div>
-      <div class="future-section">
-        <div style="font-weight: 600; color: var(--navy); margin-bottom: var(--sp-4);">
-          Set default bid parameters and let OtterQuote automatically bid on matching leads.
-        </div>
-        <div class="disabled-section">
-          <label class="switch disabled">
-            <input type="checkbox" disabled>
-            <span class="slider"></span>
-          </label>
-          <span style="margin-left: var(--sp-3); color: var(--slate);">Enable auto-bid</span>
-        </div>
-        <div style="margin-top: var(--sp-6); padding: var(--sp-6); background: #F8FAFC; border-radius: var(--radius-md);">
-          <div style="font-weight: 600; color: var(--slate); margin-bottom: var(--sp-3); font-size: 0.875rem;">Default pricing by material type (greyed out — feature not yet available)</div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4);">
-            <div>
-              <div style="font-size: 0.85rem; color: var(--slate); margin-bottom: var(--sp-2);">Architectural Shingles</div>
-              <input type="text" placeholder="$" disabled style="width: 100%; padding: var(--sp-2) var(--sp-3); background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: var(--radius-sm); color: #94A3B8;">
-            </div>
-            <div>
-              <div style="font-size: 0.85rem; color: var(--slate); margin-bottom: var(--sp-2);">Luxury Shingles</div>
-              <input type="text" placeholder="$" disabled style="width: 100%; padding: var(--sp-2) var(--sp-3); background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: var(--radius-sm); color: #94A3B8;">
-            </div>
-            <div>
-              <div style="font-size: 0.85rem; color: var(--slate); margin-bottom: var(--sp-2);">Metal Roofing</div>
-              <input type="text" placeholder="$" disabled style="width: 100%; padding: var(--sp-2) var(--sp-3); background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: var(--radius-sm); color: #94A3B8;">
-            </div>
+          <div class="notification-checkbox">
+            <input type="checkbox" id="notifAutoBid" checked>
+            <label for="notifAutoBid">Auto-bid placed on your behalf</label>
           </div>
         </div>
-        <div class="coming-soon-overlay">
-          <div class="coming-soon-text">Coming Soon</div>
-        </div>
       </div>
     </div>
 
-    <!-- CRM Integration (Future) -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- CRM Integration (Future)                -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="settings-card">
       <div class="settings-card-title">CRM Integration</div>
       <div class="future-section">
         <div style="font-weight: 600; color: var(--navy); margin-bottom: var(--sp-4);">
-          Connect your CRM to receive leads directly.
+          Connect your CRM to receive projects directly.
         </div>
         <div class="disabled-section">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4);">
@@ -715,7 +813,7 @@
     <!-- Action Bar -->
     <div class="action-bar">
       <button class="save-button" onclick="saveSettings()">Save Settings</button>
-      <div style="margin-top: var(--sp-4); font-size: 0.85rem; color: var(--slate);">Changes are saved automatically to your account.</div>
+      <div style="margin-top: var(--sp-4); font-size: 0.85rem; color: var(--slate);">Changes are saved to your account when you click Save Settings.</div>
     </div>
   </main>
 
@@ -727,28 +825,28 @@
   <script src="js/nav.js"></script>
 
   <script>
-    // State
+    // ── State ──
     let currentUser = null;
     let contractorRecord = null;
 
-    // Fee calculation
-    const COLOR_SELECTION_FEE = 0.03;
-    const CONTRACT_SIGNING_FEE = 0.05;
-    const DEDUCTIBLE_COLLECTION_FEE = 0.05;
+    // ── Auto-Bid Toggle Logic ──
+    const autoBidToggle = document.getElementById('autoBidToggle');
+    const autoBidDetails = document.getElementById('autoBidDetails');
+    const autoBidStatusBadge = document.getElementById('autoBidStatusBadge');
 
-    const colorToggle = document.getElementById('colorSelectionToggle');
-
-    function updateFeeCalculation() {
-      let totalFee = CONTRACT_SIGNING_FEE;
-      if (colorToggle.checked) {
-        totalFee += COLOR_SELECTION_FEE;
+    function updateAutoBidUI() {
+      if (autoBidToggle.checked) {
+        autoBidDetails.classList.remove('hidden');
+        autoBidStatusBadge.textContent = 'ACTIVE';
+        autoBidStatusBadge.className = 'autobid-status active';
+      } else {
+        autoBidDetails.classList.add('hidden');
+        autoBidStatusBadge.textContent = 'OFF';
+        autoBidStatusBadge.className = 'autobid-status inactive';
       }
-      totalFee += DEDUCTIBLE_COLLECTION_FEE;
-      const feePercent = (totalFee * 100).toFixed(1);
-      document.getElementById('totalFeePercent').textContent = feePercent + '%';
     }
 
-    colorToggle.addEventListener('change', updateFeeCalculation);
+    autoBidToggle.addEventListener('change', updateAutoBidUI);
 
     // ── Initialize: Load settings from Supabase ──
     async function initSettings() {
@@ -766,11 +864,11 @@
           if (error) { console.error('Error loading contractor:', error); return; }
           contractorRecord = data;
 
-          // Populate color selection toggle
-          if (data.color_selection_enabled !== undefined && data.color_selection_enabled !== null) {
-            colorToggle.checked = data.color_selection_enabled;
+          // Populate auto-bid toggle
+          if (data.auto_bid_enabled !== undefined && data.auto_bid_enabled !== null) {
+            autoBidToggle.checked = data.auto_bid_enabled;
           }
-          updateFeeCalculation();
+          updateAutoBidUI();
 
           // Populate notification emails
           const emails = data.notification_emails || [data.email];
@@ -805,6 +903,7 @@
             if (prefs.color_complete !== undefined) document.getElementById('notifColorComplete').checked = prefs.color_complete;
             if (prefs.deductible_collected !== undefined) document.getElementById('notifDeductibleCollected').checked = prefs.deductible_collected;
             if (prefs.reminder_48h !== undefined) document.getElementById('notif48hReminder').checked = prefs.reminder_48h;
+            if (prefs.auto_bid_placed !== undefined) document.getElementById('notifAutoBid').checked = prefs.auto_bid_placed;
           }
         } catch (err) {
           console.error('Error initializing settings:', err);
@@ -812,14 +911,14 @@
       }
     }
 
-    // Add/Remove email and phone fields
+    // ── Add/Remove email and phone fields ──
     function addEmailField() {
       const emailList = document.getElementById('emailList');
       const newItem = document.createElement('div');
       newItem.className = 'notification-item';
       newItem.innerHTML = `
         <input type="text" placeholder="Email address" class="email-input">
-        <button class="remove-btn" onclick="this.parentElement.remove()">Remove</button>
+        <button class="remove-btn">Remove</button>
       `;
       emailList.appendChild(newItem);
     }
@@ -830,7 +929,7 @@
       newItem.className = 'notification-item';
       newItem.innerHTML = `
         <input type="text" placeholder="Phone number" class="phone-input">
-        <button class="remove-btn" onclick="this.parentElement.remove()">Remove</button>
+        <button class="remove-btn">Remove</button>
       `;
       phoneList.appendChild(newItem);
     }
@@ -850,7 +949,13 @@
 
       // Collect settings
       const settings = {
-        color_selection_enabled: colorToggle.checked,
+        auto_bid_enabled: autoBidToggle.checked,
+        auto_bid_settings: {
+          funding_type: 'insurance',
+          scope: 'full_replacement',
+          trade: 'roofing',
+          pricing: 'rcv',
+        },
         notification_emails: Array.from(document.querySelectorAll('.email-input')).map(el => el.value.trim()).filter(v => v),
         notification_phones: Array.from(document.querySelectorAll('.phone-input')).map(el => el.value.trim()).filter(v => v),
         notification_preferences: {
@@ -860,6 +965,7 @@
           color_complete: document.getElementById('notifColorComplete').checked,
           deductible_collected: document.getElementById('notifDeductibleCollected').checked,
           reminder_48h: document.getElementById('notif48hReminder').checked,
+          auto_bid_placed: document.getElementById('notifAutoBid').checked,
         },
         updated_at: new Date().toISOString(),
       };
@@ -868,12 +974,13 @@
       button.disabled = true;
 
       if (!contractorRecord || !sb) {
-        // No database connection — show error
         button.textContent = 'Error — Not Connected';
         button.style.backgroundColor = '#EF4444';
+        button.style.color = '#FFFFFF';
         setTimeout(() => {
           button.textContent = originalText;
           button.style.backgroundColor = '';
+          button.style.color = '';
           button.disabled = false;
         }, 2000);
         return;
@@ -902,19 +1009,21 @@
         console.error('Error saving settings:', err);
         button.textContent = 'Error — Try Again';
         button.style.backgroundColor = '#EF4444';
+        button.style.color = '#FFFFFF';
 
         setTimeout(() => {
           button.textContent = originalText;
           button.style.backgroundColor = '';
+          button.style.color = '';
           button.disabled = false;
         }, 2000);
       }
     }
 
-    // Initialize
+    // ── Initialize ──
     document.addEventListener('DOMContentLoaded', () => {
       initSettings();
-      updateFeeCalculation();
+      updateAutoBidUI();
     });
   </script>
 </body>
