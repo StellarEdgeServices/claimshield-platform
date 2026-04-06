@@ -966,13 +966,12 @@
       document.getElementById('modalBody').textContent = 'Awarding the project and notifying the contractor...';
 
       try {
-        // 1. Update claim status to 'awarded' and store winning contractor_id
+        // 1. Update claim status to 'awarded' and store winning contractor
         const { error: claimErr } = await sb
           .from('claims')
           .update({
-            contractor_id: bid.contractor_id,
             selected_contractor_id: bid.contractor_id,
-            selected_quote_id: bidId,
+            selected_bid_amount: bid.total_price,
             status: 'awarded',
           })
           .eq('id', currentClaim.id);
