@@ -192,6 +192,11 @@
             color: #991B1B;
         }
 
+        .status-completed {
+            background: #E0E7FF;
+            color: #3730A3;
+        }
+
         .action-btn {
             display: inline-block;
             padding: var(--sp-2) var(--sp-4);
@@ -489,7 +494,7 @@
                     <th>Material</th>
                     <th>Est. Value</th>
                     <th>Status</th>
-                    <th>Action</th>
+                    <th>Progress</th>
                 </tr>
             </thead>
             <tbody id="leadsTableBody">
@@ -538,6 +543,33 @@
         let currentContractor = null;
         let allLeads = [];
         let allActivity = [];
+
+        // Format relative time for activity feed
+        function formatActivityTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMin = Math.floor(diffMs / 60000);
+            const diffHrs = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMin < 1) return 'Just now';
+            if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+            if (diffHrs < 24) return `${diffHrs} hour${diffHrs === 1 ? '' : 's'} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Activity dot color by event type
+        function activityDotClass(type) {
+            switch (type) {
+                case 'bid_accepted': return 'background: #15803D;';
+                case 'bid_submitted': return 'background: #0284C7;';
+                case 'bid_rejected': return 'background: #991B1B;';
+                case 'opportunity_matched': return 'background: var(--amber);';
+                default: return 'background: #6B7280;';
+            }
+        }
 
         // Initialize
         async function init() {
@@ -606,22 +638,43 @@
                 const totalEarnings = (earnData || []).reduce((sum, q) => sum + (q.amount || 0), 0);
                 document.getElementById('earningsAmount').textContent = '$' + totalEarnings.toLocaleString();
 
-                // Load recent claims for contractor's service area
-                const { data: recentClaims } = await sb
-                  .from('claims')
-                  .select('*')
-                  .in('status', ['pending', 'bidding', 'awarded'])
+                // Load won/active projects — quotes this contractor won, joined with claim details
+                const { data: wonQuotes } = await sb
+                  .from('quotes')
+                  .select('id, claim_id, amount, status, created_at, claims(id, property_address, damage_type, material_product, rcv_amount)')
+                  .eq('contractor_id', currentUser.id)
+                  .in('status', ['awarded', 'completed'])
                   .order('created_at', { ascending: false })
-                  .limit(10);
+                  .limit(20);
 
-                if (recentClaims) {
-                  allLeads = recentClaims.map(claim => ({
-                    id: claim.id,
-                    location: claim.property_address || 'Unknown',
-                    damageType: claim.damage_type || 'Unknown',
-                    material: claim.material_product || 'Not specified',
-                    estimatedValue: claim.rcv_amount ? '$' + claim.rcv_amount.toLocaleString() : 'Unknown',
-                    status: claim.status === 'pending' ? 'New' : (claim.status === 'bidding' ? 'Bidding' : 'Awarded'),
+                if (wonQuotes && wonQuotes.length > 0) {
+                  allLeads = wonQuotes.map(q => {
+                    const claim = q.claims || {};
+                    return {
+                      id: claim.id ? String(claim.id).slice(0, 8) : q.claim_id?.slice(0, 8) || '—',
+                      fullId: q.claim_id,
+                      location: claim.property_address || 'Unknown',
+                      damageType: claim.damage_type || 'Unknown',
+                      material: claim.material_product || 'Not specified',
+                      estimatedValue: q.amount ? '$' + Number(q.amount).toLocaleString() : (claim.rcv_amount ? '$' + Number(claim.rcv_amount).toLocaleString() : '—'),
+                      status: q.status === 'completed' ? 'Completed' : 'Won',
+                    };
+                  });
+                }
+
+                // Load activity feed from activity_log
+                const { data: activityData } = await sb
+                  .from('activity_log')
+                  .select('event_type, title, metadata, created_at')
+                  .eq('user_id', currentUser.id)
+                  .order('created_at', { ascending: false })
+                  .limit(15);
+
+                if (activityData && activityData.length > 0) {
+                  allActivity = activityData.map(evt => ({
+                    text: evt.title,
+                    time: formatActivityTime(evt.created_at),
+                    type: evt.event_type,
                   }));
                 }
               }
@@ -689,13 +742,13 @@
             } else {
                 leadsBody.innerHTML = allLeads.map(lead => `
                     <tr>
-                        <td class="lead-id">${lead.id}</td>
+                        <td class="lead-id" title="${lead.fullId || ''}">${lead.id}</td>
                         <td>${lead.location}</td>
                         <td>${lead.damageType}</td>
                         <td>${lead.material}</td>
                         <td>${lead.estimatedValue}</td>
-                        <td><span class="status-badge status-${lead.status.toLowerCase().replace(/\s+/g, '')}">${lead.status}</span></td>
-                        <td><a href="contractor-bid-form.html?claim_id=${lead.id}" class="action-btn">Submit Bid</a></td>
+                        <td><span class="status-badge status-${lead.status.toLowerCase()}">${lead.status}</span></td>
+                        <td>${lead.status === 'Completed' ? '<span style="color: var(--slate);">—</span>' : '<span class="status-badge status-won">Active</span>'}</td>
                     </tr>
                 `).join('');
             }
@@ -713,7 +766,7 @@
             } else {
                 activityFeed.innerHTML = allActivity.map(activity => `
                     <div class="activity-item">
-                        <div class="activity-dot"></div>
+                        <div class="activity-dot" style="${activityDotClass(activity.type)}"></div>
                         <div class="activity-content">
                             <div class="activity-text">${activity.text}</div>
                             <div class="activity-time">${activity.time}</div>
