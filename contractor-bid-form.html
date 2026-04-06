@@ -843,20 +843,24 @@
           await new Promise(resolve => setTimeout(resolve, 800));
         } else if (sb && currentUser && currentClaim) {
           // Real mode: insert quote to database
+          const totalPrice = parseFloat(formData.get('totalPrice'));
+          const feePercentage = 13.0; // Base 5% + Color 3% + Deductible 5%
           const quoteData = {
             claim_id: currentClaim.id,
             contractor_id: currentUser.id,
-            amount: parseFloat(formData.get('totalPrice')),
-            warranty_years: parseInt(formData.get('workmanshipWarranty')),
-            start_date: formData.get('startDate'),
-            notes: formData.get('homeownerMessage'),
-            decking_price_per_sheet: parseFloat(formData.get('deckingPricePerSheet')),
-            full_redeck_price: parseFloat(formData.get('fullRedeckPrice')),
+            total_price: totalPrice,
+            fee_percentage: feePercentage,
+            fee_amount: totalPrice * (feePercentage / 100),
+            estimated_start_date: formData.get('startDate'),
+            estimated_completion_time: formData.get('completionTime') || null,
+            workmanship_warranty_years: parseInt(formData.get('workmanshipWarranty')),
+            manufacturer_warranty_years: parseInt(formData.get('manufacturerWarranty')) || null,
+            warranty_summary: formData.get('warrantySummary') || null,
+            brand: formData.get('brandProductLine') || null,
+            contractor_message: formData.get('homeownerMessage') || null,
+            decking_price_per_sheet: parseFloat(formData.get('deckingPricePerSheet')) || null,
+            full_redeck_price: parseFloat(formData.get('fullRedeckPrice')) || null,
             supplement_acknowledged: formData.get('supplementAcknowledged') === 'on',
-            trade_type: formData.get('tradeType') || 'roofing',
-            is_bundled_bid: formData.get('isBundledBid') === 'true',
-            bundled_trades: JSON.parse(formData.get('bundledTrades') || '[]'),
-            per_trade_breakdown: JSON.parse(formData.get('perTradeBreakdown') || '{}'),
           };
 
           const { error } = await sb
@@ -867,7 +871,7 @@
 
           gtag('event', 'bid_submitted', {
             claim_id: currentClaim.id,
-            bid_amount: quoteData.amount,
+            bid_amount: quoteData.total_price,
           });
         }
 
