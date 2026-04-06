@@ -977,17 +977,17 @@
           .eq('id', currentClaim.id);
         if (claimErr) throw claimErr;
 
-        // 2. Update winning quote status to 'awarded'
+        // 2. Update winning quote status to 'selected'
         const { error: winErr } = await sb
           .from('quotes')
-          .update({ status: 'awarded' })
+          .update({ status: 'selected' })
           .eq('id', bidId);
         if (winErr) throw winErr;
 
-        // 3. Reject all other quotes for this claim
+        // 3. Decline all other quotes for this claim
         const { error: rejectErr } = await sb
           .from('quotes')
-          .update({ status: 'rejected' })
+          .update({ status: 'declined' })
           .eq('claim_id', currentClaim.id)
           .neq('id', bidId);
         if (rejectErr) throw rejectErr;
