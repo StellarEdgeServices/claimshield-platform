@@ -1248,6 +1248,18 @@
               jobType = 'retail';
             }
 
+            // Fetch profile address for property_address
+            let propertyAddress = null;
+            const { data: profile } = await window.sb
+              .from('profiles')
+              .select('address_street, address_city, address_state, address_zip')
+              .eq('id', user.id)
+              .single();
+            if (profile) {
+              propertyAddress = [profile.address_street, profile.address_city, profile.address_state, profile.address_zip]
+                .filter(Boolean).join(', ');
+            }
+
             // Update or create claim
             const { data: existingClaim } = await window.sb
               .from('claims')
@@ -1262,6 +1274,7 @@
               policy_type: state.policyType,
               trades: selections.trades.map(t => t.trade),
               job_type: jobType,
+              property_address: propertyAddress,
               updated_at: new Date().toISOString()
             };
 
