@@ -1237,7 +1237,13 @@
             const hasReplace = selections.trades.some(t => t.intent === 'replace');
 
             if (state.fundingType === 'insurance') {
-              jobType = hasRepair ? 'repair' : 'replacement';
+              if (hasRepair) {
+                jobType = 'repair';
+              } else if (state.policyType === 'acv') {
+                jobType = 'insurance_acv';
+              } else {
+                jobType = 'insurance_rcv';
+              }
             } else {
               jobType = 'retail';
             }
