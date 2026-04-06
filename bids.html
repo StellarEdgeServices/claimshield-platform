@@ -162,6 +162,22 @@
     .select-contractor-cta h3 { margin-bottom: var(--sp-3); }
     .select-contractor-cta p { margin-bottom: var(--sp-6); }
 
+    /* Confirmation Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--sp-6); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-card { background: var(--navy-2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--sp-10); max-width: 480px; width: 100%; text-align: center; transform: translateY(12px); transition: transform 0.25s ease; }
+    .modal-overlay.active .modal-card { transform: translateY(0); }
+    .modal-icon { font-size: 3rem; margin-bottom: var(--sp-4); }
+    .modal-card h3 { font-size: 1.25rem; margin-bottom: var(--sp-3); color: var(--white); }
+    .modal-card p { color: var(--slate); line-height: 1.7; margin-bottom: var(--sp-8); font-size: 0.95rem; }
+    .modal-card .contractor-highlight { color: var(--amber); font-weight: 700; }
+    .modal-actions { display: flex; gap: var(--sp-3); justify-content: center; }
+    .modal-actions .btn { min-width: 140px; }
+    .modal-card .btn-ghost { border: 1px solid rgba(255,255,255,0.15); }
+    .modal-card .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+    .modal-spinner { display: none; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ════════════════════════════════════════ */
     /* RESPONSIVE */
     /* ════════════════════════════════════════ */
@@ -276,6 +292,20 @@
         </div>
 
       </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card">
+      <div class="modal-icon">🦦</div>
+      <h3 id="modalTitle">Confirm Your Selection</h3>
+      <p id="modalBody"></p>
+      <div class="modal-actions" id="modalActions">
+        <button class="btn btn-sm btn-ghost" onclick="closeModal()">Go Back</button>
+        <button class="btn btn-sm btn-primary" id="modalConfirmBtn" onclick="confirmSelection()">Yes, Continue</button>
+      </div>
+      <div class="modal-spinner" id="modalSpinner"></div>
     </div>
   </div>
 
@@ -922,38 +952,68 @@
     };
 
     // ── Select Contractor ──
-    window.selectContractor = async function(bidId) {
+    let pendingBidId = null;
+
+    window.selectContractor = function(bidId) {
       const bid = bids.find(b => b.id === bidId);
       if (!bid) return;
 
       const c = contractors[bid.contractor_id] || {};
-      const confirmed = confirm(`Select ${c.company_name || 'this contractor'}? This will begin the contract signing process.\n\nTotal Price: $${(bid.total_price || 0).toLocaleString()}\n\nYou can still switch to another OtterQuote contractor up to 3 days before installation.`);
+      pendingBidId = bidId;
 
-      if (!confirmed) return;
+      document.getElementById('modalBody').innerHTML =
+        `You're selecting <span class="contractor-highlight">${esc(c.company_name || 'this contractor')}</span>. They'll be notified and your contract will be prepared. Continue?`;
+      document.getElementById('modalActions').style.display = 'flex';
+      document.getElementById('modalSpinner').style.display = 'none';
+      document.getElementById('modalConfirmBtn').disabled = false;
+      document.getElementById('confirmModal').classList.add('active');
+    };
+
+    window.closeModal = function() {
+      document.getElementById('confirmModal').classList.remove('active');
+      pendingBidId = null;
+    };
+
+    window.confirmSelection = async function() {
+      if (!pendingBidId) return;
+      const bidId = pendingBidId;
+      const bid = bids.find(b => b.id === bidId);
+      if (!bid) return;
+
+      // Show loading state
+      document.getElementById('modalConfirmBtn').disabled = true;
+      document.getElementById('modalActions').style.display = 'none';
+      document.getElementById('modalSpinner').style.display = 'block';
+      document.getElementById('modalTitle').textContent = 'Processing...';
+      document.getElementById('modalBody').textContent = 'Awarding the project and notifying the contractor...';
 
       try {
-        // Update claim with selected contractor
-        await sb
+        // 1. Update claim status to 'awarded' and store winning contractor_id
+        const { error: claimErr } = await sb
           .from('claims')
           .update({
+            contractor_id: bid.contractor_id,
             selected_contractor_id: bid.contractor_id,
             selected_quote_id: bidId,
-            status: 'contractor_selected',
+            status: 'awarded',
           })
           .eq('id', currentClaim.id);
+        if (claimErr) throw claimErr;
 
-        // Update quote status
-        await sb
+        // 2. Update winning quote status to 'awarded'
+        const { error: winErr } = await sb
           .from('quotes')
-          .update({ status: 'accepted' })
+          .update({ status: 'awarded' })
           .eq('id', bidId);
+        if (winErr) throw winErr;
 
-        // Mark other quotes as not selected
-        await sb
+        // 3. Reject all other quotes for this claim
+        const { error: rejectErr } = await sb
           .from('quotes')
-          .update({ status: 'not_selected' })
+          .update({ status: 'rejected' })
           .eq('claim_id', currentClaim.id)
           .neq('id', bidId);
+        if (rejectErr) throw rejectErr;
 
         gtag('event', 'contractor_selected', {
           bid_id: bidId,
@@ -961,11 +1021,16 @@
           price: bid.total_price,
         });
 
-        // Redirect to contract signing
-        window.location.href = `contract-signing.html?bid=${bidId}`;
+        // 4. Redirect to contract signing with claim_id and contractor_id
+        window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}`;
       } catch (err) {
         console.error('Selection error:', err);
-        alert('Something went wrong. Please try again.');
+        document.getElementById('modalTitle').textContent = 'Something Went Wrong';
+        document.getElementById('modalBody').textContent = 'There was a problem awarding this project. Please try again.';
+        document.getElementById('modalSpinner').style.display = 'none';
+        document.getElementById('modalActions').style.display = 'flex';
+        document.getElementById('modalConfirmBtn').disabled = false;
+        document.getElementById('modalTitle').textContent = 'Confirm Your Selection';
       }
     };
 
