@@ -186,6 +186,17 @@
         <div id="opportunitiesContainer"></div>
     </main>
 
+    <!-- Project Detail Modal (Bug 3 fix — D-074 compliant: no street address) -->
+    <div id="detailModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(11,25,41,0.75);backdrop-filter:blur(4px);overflow-y:auto;" onclick="if(event.target===this)closeDetailModal()">
+      <div style="background:#fff;border-radius:12px;max-width:520px;width:90%;margin:5vh auto;padding:2rem;position:relative;">
+        <button onclick="closeDetailModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#94A3B8;line-height:1;">×</button>
+        <h2 id="detailModalTitle" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:#0B1929;margin-bottom:0.25rem;"></h2>
+        <p id="detailModalLocation" style="font-size:0.95rem;color:#94A3B8;margin-bottom:1.5rem;"></p>
+        <div id="detailModalBody" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;"></div>
+        <div id="detailModalFooter" style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:flex-end;"></div>
+      </div>
+    </div>
+
     <footer id="site-footer"></footer>
 
     <script src="js/config.js"></script>
@@ -484,9 +495,82 @@
                     + notes
                     + '<div class="info-block" style="margin-bottom:var(--sp-6)"><span class="info-label">Submitted</span><span class="info-value">' + new Date(o.claimFiledDate).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + '</span></div>'
                     + feeHtml
-                    + '<div class="actions-row"><button class="btn btn-secondary">Details</button><a href="contractor-bid-form.html?project=' + o.id + '" class="btn btn-primary">Submit Bid</a></div>'
+                    + '<div class="actions-row"><button class="btn btn-secondary" onclick="showDetails(\'' + o.id + '\')">Details</button><a href="contractor-bid-form.html?project=' + o.id + '" class="btn btn-primary">Submit Bid</a></div>'
                     + '</div>';
             }).join('');
+        }
+
+        // ── Details Modal (Bug 3 fix) ──
+        // D-074: shows city/zip, trade type, job type, urgency — never full street address
+        function showDetails(id) {
+            const o = allOpportunities.find(op => op.id === id);
+            if (!o) return;
+
+            const jobTypeLabels = {
+                insurance_rcv: 'Insurance (RCV)',
+                insurance_acv: 'Insurance (ACV)',
+                retail: 'Retail / Cash',
+                repair: 'Repair Only'
+            };
+            const urgencyLabels = {
+                flexible: 'Flexible',
+                '30_days': 'Within 30 Days',
+                '2_weeks': 'Within 2 Weeks',
+                asap: 'ASAP'
+            };
+
+            document.getElementById('detailModalTitle').textContent = 'Project Details';
+            document.getElementById('detailModalLocation').textContent =
+                o.location + (o.zip ? ', IN ' + o.zip : '') + (o.distance ? ' — ' + o.distance + ' mi away' : '');
+
+            const tradeDisplay = (o.trades || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'Not specified';
+            const urgencyDisplay = urgencyLabels[o.urgency] || o.urgency || 'Flexible';
+            const urgencyNote = o.urgency === 'asap' && o.urgencyDeadline
+                ? ' (by ' + new Date(o.urgencyDeadline).toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ')'
+                : '';
+
+            document.getElementById('detailModalBody').innerHTML = `
+                <div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Job Type</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${jobTypeLabels[o.jobType] || o.jobType || 'N/A'}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Trade(s)</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${tradeDisplay}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Urgency</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${urgencyDisplay}${urgencyNote}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Damage Type</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${o.damageType || 'N/A'}${o.damageDetail ? ' — ' + o.damageDetail : ''}</div>
+                </div>
+                ${o.estimatedValue ? `<div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Est. Value</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${fmt(o.estimatedValue)}</div>
+                </div>` : ''}
+                ${o.material ? `<div>
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Material</div>
+                    <div style="font-size:1rem;font-weight:500;color:#0B1929;">${o.material}</div>
+                </div>` : ''}
+                ${o.homeownerNotes ? `<div style="grid-column:1/-1;">
+                    <div style="font-size:0.75rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Homeowner Notes</div>
+                    <div style="font-size:0.9rem;color:#0B1929;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:6px;padding:.75rem 1rem;">${o.homeownerNotes}</div>
+                </div>` : ''}
+            `;
+
+            document.getElementById('detailModalFooter').innerHTML =
+                `<button onclick="closeDetailModal()" style="background:#F3F4F6;color:#0B1929;border:1px solid #D1D5DB;border-radius:6px;padding:.6rem 1.25rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;">Close</button>
+                 <a href="contractor-bid-form.html?project=${o.id}" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:.6rem 1.25rem;font-family:'DM Sans',sans-serif;font-weight:600;text-decoration:none;">Submit Bid →</a>`;
+
+            document.getElementById('detailModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+            document.body.style.overflow = '';
         }
 
         function applyFilters() {

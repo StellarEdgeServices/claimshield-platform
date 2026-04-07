@@ -958,6 +958,15 @@
       const bid = bids.find(b => b.id === bidId);
       if (!bid) return;
 
+      // Check if claim is already awarded — show a specific message instead of a generic error
+      if (currentClaim && currentClaim.status === 'awarded') {
+        document.getElementById('modalTitle').textContent = 'Project Already Awarded';
+        document.getElementById('modalBody').textContent = 'This project has already been awarded to a contractor.';
+        document.getElementById('modalActions').style.display = 'none';
+        document.getElementById('modalSpinner').style.display = 'none';
+        return;
+      }
+
       // Show loading state
       document.getElementById('modalConfirmBtn').disabled = true;
       document.getElementById('modalActions').style.display = 'none';

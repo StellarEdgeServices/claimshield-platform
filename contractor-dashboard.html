@@ -468,17 +468,17 @@
             </div>
             <div class="stat-card">
                 <span class="stat-card-label">Active Bids</span>
-                <span class="stat-card-value" id="activeBidsCount">3</span>
+                <span class="stat-card-value" id="activeBidsCount">—</span>
                 <a href="#projectsTable" class="stat-card-link">Manage →</a>
             </div>
             <div class="stat-card">
                 <span class="stat-card-label">Won Jobs</span>
-                <span class="stat-card-value" id="wonJobsCount">2</span>
+                <span class="stat-card-value" id="wonJobsCount">—</span>
                 <span class="stat-card-link" style="color: var(--slate);">—</span>
             </div>
             <div class="stat-card">
                 <span class="stat-card-label">Month Earnings</span>
-                <span class="stat-card-value" id="earningsAmount">$3,850</span>
+                <span class="stat-card-value" id="earningsAmount">—</span>
                 <span class="stat-card-link" style="color: var(--slate);">—</span>
             </div>
         </div>
@@ -662,32 +662,34 @@
                 }
                 document.getElementById('availableLeadsCount').textContent = availableCount;
 
-                // Load active bids count (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
+                // Active bids = quotes with status 'pending' or 'submitted'
+                // (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
                 const { count: bidCount } = await sb
                   .from('quotes')
                   .select('id', { count: 'exact', head: true })
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['submitted']);
-                document.getElementById('activeBidsCount').textContent = bidCount || 0;
+                  .in('status', ['pending', 'submitted']);
+                document.getElementById('activeBidsCount').textContent = bidCount ?? 0;
 
-                // Won Jobs count
+                // Won Jobs = quotes with status 'awarded'
                 const { count: wonCount } = await sb
                   .from('quotes')
                   .select('id', { count: 'exact', head: true })
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['selected', 'awarded', 'completed']);
-                document.getElementById('wonJobsCount').textContent = wonCount || 0;
+                  .eq('status', 'awarded');
+                document.getElementById('wonJobsCount').textContent = wonCount ?? 0;
 
-                // Month earnings
+                // Monthly earnings = sum of fee_amount on awarded quotes for the current calendar month
+                // Uses updated_at (when the quote was awarded) rather than created_at (when it was submitted)
                 const now = new Date();
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
                 const { data: earnData } = await sb
                   .from('quotes')
-                  .select('total_price')
+                  .select('fee_amount')
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['selected', 'awarded', 'completed'])
-                  .gte('created_at', monthStart);
-                const totalEarnings = (earnData || []).reduce((sum, q) => sum + (q.total_price || 0), 0);
+                  .eq('status', 'awarded')
+                  .gte('updated_at', monthStart);
+                const totalEarnings = (earnData || []).reduce((sum, q) => sum + (parseFloat(q.fee_amount) || 0), 0);
                 document.getElementById('earningsAmount').textContent = '$' + totalEarnings.toLocaleString();
 
                 // Load all projects — submitted bids, won jobs, and completed jobs

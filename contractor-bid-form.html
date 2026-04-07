@@ -758,13 +758,24 @@
     function updateClaimSummary() {
       if (!currentClaim) return;
 
+      // D-074: Display only city + zip — never the full street address to contractors before bid submission
+      const addressParts = (currentClaim.property_address || '').split(',');
+      let city = 'Unknown';
+      if (addressParts.length >= 2) {
+        city = addressParts[1].trim();
+      } else if (addressParts.length === 1) {
+        city = addressParts[0].trim();
+      }
+      const zip = (currentClaim.property_address || '').match(/\d{5}/)?.[0] || '';
+      const locationDisplay = zip ? `${city}, IN ${zip}` : city;
+
       // Update the project summary section with real claim data
       const summaryGrid = document.querySelector('.summary-grid');
       if (summaryGrid) {
         summaryGrid.innerHTML = `
           <div class="summary-item">
             <div class="summary-label">Location</div>
-            <div class="summary-value">${currentClaim.property_address || 'Not provided'}</div>
+            <div class="summary-value">${locationDisplay}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Damage Type</div>
@@ -856,9 +867,14 @@
             estimated_completion_time: formData.get('completionTime') || null,
           });
 
+          // Guard: contractor profile must be loaded before INSERT (RLS requires contractor_id = contractors.id)
+          if (!currentContractor) {
+            throw new Error('Your contractor profile could not be loaded. Please refresh the page and try again.');
+          }
+
           const quoteData = {
             claim_id: currentClaim.id,
-            contractor_id: currentContractor ? currentContractor.id : currentUser.id,
+            contractor_id: currentContractor.id,
             total_price: totalPrice,
             fee_percentage: feePercentage,
             fee_amount: totalPrice * (feePercentage / 100),
@@ -967,24 +983,45 @@
       updateTradeState();
     }
 
-    // Initialize page
-    (async () => {
-      await init();
-      updateFeeCalculator();
-
-      // Set default start date to today
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('startDate').value = today;
-
-      // Check if this is a multi-trade project (from URL or claim data)
-      const urlParams = new URLSearchParams(window.location.search);
-      const tradesParam = urlParams.get('trades');
-      if (tradesParam) {
-        try { initTradeSelection(JSON.parse(tradesParam)); } catch(e) {}
-      } else if (currentClaim && currentClaim.trades && currentClaim.trades.length > 1) {
-        initTradeSelection(currentClaim.trades);
+    // Initialize page — wait for INITIAL_SESSION so the Supabase client
+    // has the JWT attached before any RLS-protected queries fire.
+    // Without this wait the contractor profile query can silently return
+    // nothing, leaving currentContractor null and causing an RLS violation
+    // on INSERT.  (Same fix applied to contractor-dashboard.html in Session 59.)
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!sb && typeof supabase !== 'undefined') {
+        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
       }
-    })();
+
+      async function startUp() {
+        await init();
+        updateFeeCalculator();
+
+        // Set default start date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+
+        // Check if this is a multi-trade project (from URL or claim data)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tradesParam = urlParams.get('trades');
+        if (tradesParam) {
+          try { initTradeSelection(JSON.parse(tradesParam)); } catch(e) {}
+        } else if (currentClaim && currentClaim.trades && currentClaim.trades.length > 1) {
+          initTradeSelection(currentClaim.trades);
+        }
+      }
+
+      if (sb) {
+        const { data: { subscription } } = sb.auth.onAuthStateChange((event) => {
+          if (event === 'INITIAL_SESSION') {
+            subscription.unsubscribe();
+            startUp();
+          }
+        });
+      } else {
+        startUp();
+      }
+    });
   </script>
 </body>
 </html>
