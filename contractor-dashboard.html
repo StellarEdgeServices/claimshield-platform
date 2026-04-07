@@ -469,7 +469,7 @@
             <div class="stat-card">
                 <span class="stat-card-label">Active Bids</span>
                 <span class="stat-card-value" id="activeBidsCount">3</span>
-                <a href="contractor-opportunities.html" class="stat-card-link">Manage →</a>
+                <a href="#projectsTable" class="stat-card-link">Manage →</a>
             </div>
             <div class="stat-card">
                 <span class="stat-card-label">Won Jobs</span>
@@ -484,7 +484,7 @@
         </div>
 
         <!-- Active Projects -->
-        <h2 class="section-header">Active Projects</h2>
+        <h2 class="section-header" id="projectsTable">Active Projects</h2>
         <table class="leads-table" id="leadsTable">
             <thead>
                 <tr>
@@ -693,7 +693,7 @@
                 // Load all projects — submitted bids, won jobs, and completed jobs
                 const { data: allQuotes } = await sb
                   .from('quotes')
-                  .select('id, claim_id, total_price, status, created_at, claims(id, address_line1, address_city, address_state, address_zip, damage_type, material_product, rcv_amount)')
+                  .select('id, claim_id, total_price, status, created_at, claims(id, property_address, damage_type, material_product, rcv_amount)')
                   .eq('contractor_id', contractor.id)
                   .in('status', ['submitted', 'selected', 'awarded', 'completed'])
                   .order('created_at', { ascending: false })
@@ -706,7 +706,7 @@
                     return {
                       id: claim.id ? String(claim.id).slice(0, 8) : q.claim_id?.slice(0, 8) || '—',
                       fullId: q.claim_id,
-                      location: [claim.address_line1, claim.address_city, claim.address_state, claim.address_zip].filter(Boolean).join(', ') || 'Unknown',
+                      location: claim.property_address || 'Unknown',
                       damageType: claim.damage_type || 'Unknown',
                       material: claim.material_product || 'Not specified',
                       estimatedValue: q.total_price ? '$' + Number(q.total_price).toLocaleString() : (claim.rcv_amount ? '$' + Number(claim.rcv_amount).toLocaleString() : '—'),
