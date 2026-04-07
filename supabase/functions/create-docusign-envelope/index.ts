@@ -26,6 +26,8 @@ const corsHeaders = {
 // ========== TOKEN CACHE ==========
 interface CachedToken {
   accessToken: string;
+  accountId: string;
+  baseUri: string;
   expiresAt: number;
 }
 
@@ -105,13 +107,13 @@ async function createJwtAssertion(
 }
 
 // ========== TOKEN MANAGEMENT ==========
-async function getAccessToken(baseUrl: string): Promise<string> {
+async function getAccessToken(baseUrl: string): Promise<CachedToken> {
   const now = Date.now();
 
   // Return cached token if valid (with 5-minute buffer)
   if (cachedToken && cachedToken.expiresAt > now + 300000) {
     console.log("Using cached DocuSign access token");
-    return cachedToken.accessToken;
+    return cachedToken;
   }
 
   console.log("Fetching new DocuSign access token via JWT grant flow");
@@ -151,13 +153,38 @@ async function getAccessToken(baseUrl: string): Promise<string> {
     throw new Error("No access_token in DocuSign response");
   }
 
+  // Fetch account info from /oauth/userinfo to get the correct account ID and base URI.
+  // This avoids relying on a hardcoded DOCUSIGN_API_ACCOUNT_ID secret which may be wrong.
+  console.log("Fetching DocuSign account info via /oauth/userinfo");
+  const userInfoResponse = await fetch(`${oauthHost}/oauth/userinfo`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!userInfoResponse.ok) {
+    const errText = await userInfoResponse.text();
+    throw new Error(`DocuSign userinfo request failed: ${userInfoResponse.status} ${errText}`);
+  }
+
+  const userInfo = await userInfoResponse.json();
+  const account = userInfo.accounts?.find((a: any) => a.is_default) || userInfo.accounts?.[0];
+
+  if (!account?.account_id) {
+    throw new Error(`Could not determine DocuSign account ID from userinfo: ${JSON.stringify(userInfo)}`);
+  }
+
+  // base_uri from userinfo is the REST API base (e.g. https://demo.docusign.net)
+  const resolvedBaseUri = account.base_uri || baseUrl;
+  console.log(`DocuSign account ID: ${account.account_id}, base_uri: ${resolvedBaseUri}`);
+
   // Cache token (valid for 1 hour, cache with 5-minute buffer)
   cachedToken = {
     accessToken,
+    accountId: account.account_id,
+    baseUri: resolvedBaseUri,
     expiresAt: now + 3600000 - 300000,
   };
 
-  return accessToken;
+  return cachedToken;
 }
 
 // ========== PDF RETRIEVAL ==========
@@ -293,7 +320,7 @@ function buildTextTabs(
       value: String(fieldValue),
       locked: "true",
       font: "helvetica",
-      fontSize: "10",
+      fontSize: "size10",
       documentId,
     });
   }
@@ -399,15 +426,13 @@ serve(async (req) => {
 
     // ========== DOCUSIGN CONFIG ==========
     const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
-    const ACCOUNT_ID = Deno.env.get("DOCUSIGN_API_ACCOUNT_ID") || Deno.env.get("DOCUSIGN_ACCOUNT_ID");
-    // BASE_URI from Supabase secret is the REST API base (e.g., https://demo.docusign.net for sandbox)
+    // BASE_URI from Supabase secret determines sandbox vs production OAuth routing.
+    // Account ID is resolved dynamically via /oauth/userinfo — do not rely on DOCUSIGN_API_ACCOUNT_ID.
     const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
-    // OAuth host determined by environment (sandbox vs production)
-    const OAUTH_HOST = REST_API_BASE.includes("demo") ? "https://account-d.docusign.com" : "https://account.docusign.com";
 
-    if (!INTEGRATION_KEY || !ACCOUNT_ID) {
+    if (!INTEGRATION_KEY) {
       throw new Error(
-        "DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY and DOCUSIGN_API_ACCOUNT_ID."
+        "DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY."
       );
     }
 
@@ -482,9 +507,12 @@ serve(async (req) => {
     console.log(`Fetching template: ${contractor_id}/${document_type}.pdf`);
     const templateBase64 = await getTemplateFromStorage(supabase, contractor_id, document_type);
 
-    // ========== GET ACCESS TOKEN ==========
+    // ========== GET ACCESS TOKEN + ACCOUNT INFO ==========
     console.log("Acquiring DocuSign access token");
-    const accessToken = await getAccessToken(OAUTH_HOST);
+    const tokenInfo = await getAccessToken(REST_API_BASE);
+    const accessToken = tokenInfo.accessToken;
+    const ACCOUNT_ID = tokenInfo.accountId;
+    const RESOLVED_BASE_URI = tokenInfo.baseUri;
 
     // ========== BUILD ENVELOPE DEFINITION ==========
     const documentId = "1";
@@ -552,7 +580,7 @@ serve(async (req) => {
     // ========== CREATE ENVELOPE ==========
     console.log("Creating DocuSign envelope");
     const envelopeResponse = await fetch(
-      `${REST_API_BASE}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
+      `${RESOLVED_BASE_URI}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
       {
         method: "POST",
         headers: {
@@ -583,7 +611,7 @@ serve(async (req) => {
     // ========== GENERATE EMBEDDED SIGNING URL ==========
     console.log("Generating embedded signing URL for homeowner");
     const recipientViewResponse = await fetch(
-      `${REST_API_BASE}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
+      `${RESOLVED_BASE_URI}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
       {
         method: "POST",
         headers: {
