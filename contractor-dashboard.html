@@ -606,14 +606,16 @@
                 // Load opportunities count — must match contractor-opportunities.html logic exactly
                 let availableCount = 0;
                 try {
-                  const { data: oppClaims } = await sb
+                  console.log('[OQ_DEBUG] Starting claims query, sb auth:', !!(await sb.auth.getSession())?.data?.session);
+                  const { data: oppClaims, error: oppError } = await sb
                     .from('claims')
-                    .select('id, selected_trades, trades')
+                    .select('*')
                     .eq('ready_for_bids', true)
                     .in('status', ['active', 'bidding', 'pending'])
                     .order('created_at', { ascending: false })
                     .limit(50);
 
+                  console.log('[OQ_DEBUG] Claims result:', oppClaims ? oppClaims.length : 'null', 'error:', JSON.stringify(oppError));
                   if (oppClaims && oppClaims.length > 0) {
                     let filteredOpps = oppClaims;
 
@@ -656,10 +658,12 @@
                     }
 
                     availableCount = filteredOpps.length;
+                    console.log('[OQ_DEBUG] After all filters:', availableCount);
                   }
                 } catch (err) {
-                  console.error('Error loading opportunity count:', err);
+                  console.error('[OQ_DEBUG] Error loading opportunity count:', err.message, err.stack);
                 }
+                console.log('[OQ_DEBUG] Setting availableLeadsCount to:', availableCount);
                 document.getElementById('availableLeadsCount').textContent = availableCount;
 
                 // Load active bids count (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
