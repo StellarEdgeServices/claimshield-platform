@@ -165,36 +165,10 @@ serve(async (req) => {
             );
           }
 
-          // Also fetch the PDF for storage
-          const pdfResponse = await fetch(
-            `${HOVER_API_BASE}/api/v1/jobs/${job_id}/measurements.pdf`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-
-          if (pdfResponse.ok) {
-            const pdfBlob = await pdfResponse.blob();
-            const pdfArrayBuffer = await pdfBlob.arrayBuffer();
-            const pdfFilename = `hover_${job_id}_measurements.pdf`;
-
-            // Upload PDF to Supabase Storage
-            const { error: uploadError } = await supabase.storage
-              .from("claim-documents")
-              .upload(
-                `${order.claim_id}/${pdfFilename}`,
-                new Uint8Array(pdfArrayBuffer),
-                { contentType: "application/pdf", upsert: true }
-              );
-
-            if (uploadError) {
-              console.error("Failed to upload Hover PDF:", uploadError);
-            } else {
-              console.log(`Hover PDF uploaded: ${pdfFilename}`);
-            }
-          }
+          // PDFs are served on-demand from Hover API — not stored in Supabase Storage (Session 57 decision).
+          // Hover PDFs are 5–20MB each; Supabase Pro plan includes only 8GB storage.
+          // To retrieve a PDF: GET ${HOVER_API_BASE}/api/v1/jobs/{job_id}/measurements.pdf
+          // with a valid Bearer token from hover_tokens. Build a dedicated on-demand fetch endpoint.
         }
       } catch (measurementError) {
         console.error("Error fetching measurements:", measurementError);
