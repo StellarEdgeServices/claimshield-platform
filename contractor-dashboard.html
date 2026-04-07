@@ -675,7 +675,7 @@
                   .from('quotes')
                   .select('id', { count: 'exact', head: true })
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['awarded', 'completed']);
+                  .in('status', ['selected', 'awarded', 'completed']);
                 document.getElementById('wonJobsCount').textContent = wonCount || 0;
 
                 // Month earnings
@@ -685,7 +685,7 @@
                   .from('quotes')
                   .select('total_price')
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['awarded', 'completed'])
+                  .in('status', ['selected', 'awarded', 'completed'])
                   .gte('created_at', monthStart);
                 const totalEarnings = (earnData || []).reduce((sum, q) => sum + (q.total_price || 0), 0);
                 document.getElementById('earningsAmount').textContent = '$' + totalEarnings.toLocaleString();
@@ -695,14 +695,14 @@
                   .from('quotes')
                   .select('id, claim_id, total_price, status, created_at, claims(id, address_line1, address_city, address_state, address_zip, damage_type, material_product, rcv_amount)')
                   .eq('contractor_id', contractor.id)
-                  .in('status', ['submitted', 'awarded', 'completed'])
+                  .in('status', ['submitted', 'selected', 'awarded', 'completed'])
                   .order('created_at', { ascending: false })
                   .limit(20);
 
                 if (allQuotes && allQuotes.length > 0) {
                   allLeads = allQuotes.map(q => {
                     const claim = q.claims || {};
-                    const statusMap = { submitted: 'Bid Pending', awarded: 'Won', completed: 'Completed' };
+                    const statusMap = { submitted: 'Bid Pending', selected: 'Won', awarded: 'Won', completed: 'Completed' };
                     return {
                       id: claim.id ? String(claim.id).slice(0, 8) : q.claim_id?.slice(0, 8) || '—',
                       fullId: q.claim_id,
