@@ -662,11 +662,11 @@
                 }
                 document.getElementById('availableLeadsCount').textContent = availableCount;
 
-                // Load active bids count
+                // Load active bids count (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
                 const { count: bidCount } = await sb
                   .from('quotes')
                   .select('id', { count: 'exact', head: true })
-                  .eq('contractor_id', currentUser.id)
+                  .eq('contractor_id', contractor.id)
                   .in('status', ['submitted']);
                 document.getElementById('activeBidsCount').textContent = bidCount || 0;
 
@@ -674,7 +674,7 @@
                 const { count: wonCount } = await sb
                   .from('quotes')
                   .select('id', { count: 'exact', head: true })
-                  .eq('contractor_id', currentUser.id)
+                  .eq('contractor_id', contractor.id)
                   .in('status', ['awarded', 'completed']);
                 document.getElementById('wonJobsCount').textContent = wonCount || 0;
 
@@ -683,25 +683,26 @@
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
                 const { data: earnData } = await sb
                   .from('quotes')
-                  .select('amount')
-                  .eq('contractor_id', currentUser.id)
+                  .select('total_price')
+                  .eq('contractor_id', contractor.id)
                   .in('status', ['awarded', 'completed'])
                   .gte('created_at', monthStart);
-                const totalEarnings = (earnData || []).reduce((sum, q) => sum + (q.amount || 0), 0);
+                const totalEarnings = (earnData || []).reduce((sum, q) => sum + (q.total_price || 0), 0);
                 document.getElementById('earningsAmount').textContent = '$' + totalEarnings.toLocaleString();
 
-                // Load won/active projects — quotes this contractor won, joined with claim details
-                const { data: wonQuotes } = await sb
+                // Load all projects — submitted bids, won jobs, and completed jobs
+                const { data: allQuotes } = await sb
                   .from('quotes')
                   .select('id, claim_id, total_price, status, created_at, claims(id, address_line1, address_city, address_state, address_zip, damage_type, material_product, rcv_amount)')
-                  .eq('contractor_id', currentUser.id)
-                  .in('status', ['awarded', 'completed'])
+                  .eq('contractor_id', contractor.id)
+                  .in('status', ['submitted', 'awarded', 'completed'])
                   .order('created_at', { ascending: false })
                   .limit(20);
 
-                if (wonQuotes && wonQuotes.length > 0) {
-                  allLeads = wonQuotes.map(q => {
+                if (allQuotes && allQuotes.length > 0) {
+                  allLeads = allQuotes.map(q => {
                     const claim = q.claims || {};
+                    const statusMap = { submitted: 'Bid Pending', awarded: 'Won', completed: 'Completed' };
                     return {
                       id: claim.id ? String(claim.id).slice(0, 8) : q.claim_id?.slice(0, 8) || '—',
                       fullId: q.claim_id,
@@ -709,7 +710,7 @@
                       damageType: claim.damage_type || 'Unknown',
                       material: claim.material_product || 'Not specified',
                       estimatedValue: q.total_price ? '$' + Number(q.total_price).toLocaleString() : (claim.rcv_amount ? '$' + Number(claim.rcv_amount).toLocaleString() : '—'),
-                      status: q.status === 'completed' ? 'Completed' : 'Won',
+                      status: statusMap[q.status] || q.status,
                     };
                   });
                 }
