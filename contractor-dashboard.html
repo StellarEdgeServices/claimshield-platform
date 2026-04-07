@@ -606,8 +606,7 @@
                 // Load opportunities count — must match contractor-opportunities.html logic exactly
                 let availableCount = 0;
                 try {
-                  console.log('[OQ_DEBUG] Starting claims query, sb auth:', !!(await sb.auth.getSession())?.data?.session);
-                  const { data: oppClaims, error: oppError } = await sb
+                  const { data: oppClaims } = await sb
                     .from('claims')
                     .select('*')
                     .eq('ready_for_bids', true)
@@ -615,7 +614,6 @@
                     .order('created_at', { ascending: false })
                     .limit(50);
 
-                  console.log('[OQ_DEBUG] Claims result:', oppClaims ? oppClaims.length : 'null', 'error:', JSON.stringify(oppError));
                   if (oppClaims && oppClaims.length > 0) {
                     let filteredOpps = oppClaims;
 
@@ -658,12 +656,10 @@
                     }
 
                     availableCount = filteredOpps.length;
-                    console.log('[OQ_DEBUG] After all filters:', availableCount);
                   }
                 } catch (err) {
-                  console.error('[OQ_DEBUG] Error loading opportunity count:', err.message, err.stack);
+                  console.error('Error loading opportunity count:', err);
                 }
-                console.log('[OQ_DEBUG] Setting availableLeadsCount to:', availableCount);
                 document.getElementById('availableLeadsCount').textContent = availableCount;
 
                 // Load active bids count (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
@@ -833,13 +829,27 @@
             }
         }
 
-        // Initialize on load
+        // Initialize on load — wait for Supabase auth to be fully ready
+        // before running init(). The INITIAL_SESSION event fires once the
+        // client has restored the session from localStorage AND set the
+        // auth header on the REST client.  Without this, queries that
+        // depend on RLS (like the claims/opportunities count) can silently
+        // return empty results because the JWT hasn't been attached yet.
         document.addEventListener('DOMContentLoaded', () => {
             // Ensure Supabase client is initialized (fixes race condition with config.js)
             if (!sb && typeof supabase !== 'undefined') {
               sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
             }
-            init();
+            if (sb) {
+              const { data: { subscription } } = sb.auth.onAuthStateChange((event) => {
+                if (event === 'INITIAL_SESSION') {
+                  subscription.unsubscribe();
+                  init();
+                }
+              });
+            } else {
+              init(); // fallback if sb not available
+            }
         });
     </script>
 </body>

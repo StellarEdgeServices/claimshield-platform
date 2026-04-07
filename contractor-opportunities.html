@@ -509,11 +509,29 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            init().then(() => {
-              ['jobTypeFilter','tradeFilter','materialFilter','distanceFilter','sortFilter'].forEach(id => {
-                  document.getElementById(id).addEventListener('change', applyFilters);
+            // Ensure Supabase client is initialized
+            if (!sb && typeof supabase !== 'undefined') {
+              sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
+            }
+            const startInit = () => {
+              init().then(() => {
+                ['jobTypeFilter','tradeFilter','materialFilter','distanceFilter','sortFilter'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', applyFilters);
+                });
               });
-            });
+            };
+            // Wait for Supabase auth to fully initialize (INITIAL_SESSION)
+            // before querying RLS-protected tables
+            if (sb) {
+              const { data: { subscription } } = sb.auth.onAuthStateChange((event) => {
+                if (event === 'INITIAL_SESSION') {
+                  subscription.unsubscribe();
+                  startInit();
+                }
+              });
+            } else {
+              startInit();
+            }
         });
     </script>
 </body>
