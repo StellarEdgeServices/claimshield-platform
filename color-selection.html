@@ -317,6 +317,82 @@
       display: block;
     }
 
+    /* Always-visible in-person color samples section */
+    .in-person-section {
+      background: rgba(20, 184, 166, 0.06);
+      border: 1px solid rgba(20, 184, 166, 0.25);
+      border-left: 4px solid #14B8A6;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      margin-bottom: var(--sp-8);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-6);
+      animation: fadeUp 0.6s var(--ease) 0.25s both;
+    }
+
+    .in-person-icon {
+      font-size: 2.2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .in-person-content {
+      flex: 1;
+    }
+
+    .in-person-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--white);
+      margin: 0 0 var(--sp-2);
+    }
+
+    .in-person-description {
+      color: var(--slate);
+      margin: 0 0 var(--sp-5);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* OC Design EyeQ widget container */
+    #oc-widget-container {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      min-height: 420px;
+      background: rgba(0, 0, 0, 0.15);
+      margin-bottom: var(--sp-4);
+    }
+
+    /* Unknown brand state */
+    .brand-unknown-state {
+      text-align: center;
+      padding: var(--sp-10) var(--sp-8);
+      background: rgba(255,255,255,0.02);
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(255,255,255,0.1);
+    }
+
+    .brand-unknown-icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--sp-3);
+    }
+
+    .brand-unknown-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: var(--sp-2);
+    }
+
+    .brand-unknown-text {
+      color: var(--slate);
+      font-size: 0.9rem;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .color-page-main {
@@ -329,6 +405,11 @@
 
       .no-rush-banner {
         flex-direction: column;
+      }
+
+      .in-person-section {
+        flex-direction: column;
+        gap: var(--sp-4);
       }
     }
   </style>
@@ -367,6 +448,19 @@
           <div class="visualizer-title">See It On Your House</div>
           <div id="visualizer-container">
             <!-- Brand-specific visualizer inserted here -->
+          </div>
+        </div>
+
+        <!-- Always-visible: Request In-Person Color Samples (D-085) -->
+        <div class="in-person-section" id="inperson-section">
+          <div class="in-person-icon">🏠</div>
+          <div class="in-person-content">
+            <h3 class="in-person-title">Prefer to See Colors In Person?</h3>
+            <p class="in-person-description">Request physical color boards. Your contractor will bring shingle samples to your home so you can see the real colors in your own lighting and against your exterior.</p>
+            <button class="btn btn-secondary" id="inperson-btn" onclick="ColorSelection.requestColorBoardVisit()">
+              Request In-Person Color Samples
+            </button>
+            <div class="color-board-confirmation" id="inperson-confirmation"></div>
           </div>
         </div>
 
@@ -434,6 +528,7 @@
       claimId: null,
       contractorId: null,
       brand: null,
+      zipCode: null,
       contractorName: null,
       contractorPhone: null,
       contractorEmail: null,
@@ -492,6 +587,7 @@
         this.contractorId = 'demo-contractor-001';
         this.contractorName = 'Hoosier Roofing Co.';
         this.brand = 'GAF';
+        this.zipCode = '46077';
 
         // Update subtitle
         const subtitle = document.getElementById('color-subtitle');
@@ -529,6 +625,7 @@
               id,
               homeowner_id,
               selected_contractor_id,
+              property_address,
               contractor:contractors(id, name, preferred_brand, phone, notification_phones, email),
               color_brand,
               color_name,
@@ -547,7 +644,21 @@
 
           this.contractorId = data.selected_contractor_id;
           this.contractorName = data.contractor?.name || 'Your Contractor';
-          this.brand = data.contractor?.preferred_brand || 'Owens Corning';
+
+          // Normalize brand — treat 'OC' as 'Owens Corning'; leave unknown brands as null
+          let rawBrand = data.contractor?.preferred_brand || null;
+          if (rawBrand) {
+            const t = rawBrand.trim();
+            if (t.toUpperCase() === 'OC' || /owens\s*corning/i.test(t)) {
+              rawBrand = 'Owens Corning';
+            }
+          }
+          this.brand = rawBrand;
+
+          // Extract 5-digit ZIP from property address for the OC widget
+          const zipMatch = data.property_address?.match(/\b(\d{5})\b/);
+          this.zipCode = zipMatch ? zipMatch[1] : '46077';
+
           // Primary contact phone: first notification_phone or fallback to phone
           const phones = data.contractor?.notification_phones;
           this.contractorPhone = (phones && phones.length > 0) ? phones[0] : (data.contractor?.phone || null);
@@ -556,13 +667,17 @@
           // Update subtitle
           const subtitle = document.getElementById('color-subtitle');
           if (subtitle) {
-            subtitle.textContent = `Your contractor ${this.contractorName} uses ${this.brand}. Let's pick the perfect color for your home.`;
+            if (this.brand) {
+              subtitle.textContent = `Your contractor ${this.contractorName} uses ${this.brand}. Let's pick the perfect color for your home.`;
+            } else {
+              subtitle.textContent = `Your contractor ${this.contractorName} will confirm the brand. Let's pick the perfect color for your home.`;
+            }
           }
 
           // Update brand display
           const brandDisplay = document.getElementById('brand-display-value');
           if (brandDisplay) {
-            brandDisplay.textContent = this.brand;
+            brandDisplay.textContent = this.brand || 'To be confirmed';
           }
 
           // If color already selected, show it
@@ -657,21 +772,30 @@
       },
 
       /**
-       * Render brand-specific visualizer
+       * Render brand-specific visualizer (D-051, D-056, D-057)
+       * OC: embedded Design EyeQ widget
+       * GAF / CertainTeed / TAMKO / Atlas / IKO: link-out buttons
+       * Unknown / unlisted brand: generic "brand not confirmed" message
        */
       renderVisualizer() {
         const section = document.getElementById('visualizer-section');
         if (!section) return;
 
-        // Show visualizer section only for brands with tools
-        const hasVisualizer = ['Owens Corning', 'GAF', 'CertainTeed', 'TAMKO', 'Atlas', 'IKO'].includes(this.brand);
-        if (!hasVisualizer) {
-          section.style.display = 'none';
-          return;
-        }
-
+        const knownBrands = ['Owens Corning', 'GAF', 'CertainTeed', 'TAMKO', 'Atlas', 'IKO'];
         section.style.display = 'block';
         const container = document.getElementById('visualizer-container');
+
+        if (!this.brand || !knownBrands.includes(this.brand)) {
+          // Unknown or not-yet-confirmed brand
+          container.innerHTML = `
+            <div class="brand-unknown-state">
+              <div class="brand-unknown-icon">🔍</div>
+              <div class="brand-unknown-title">Brand Not Yet Confirmed</div>
+              <p class="brand-unknown-text">Your contractor hasn't specified a shingle brand yet. Once confirmed, the right color visualization tool will appear here. In the meantime, you can request in-person color samples below.</p>
+            </div>
+          `;
+          return;
+        }
 
         switch (this.brand) {
           case 'Owens Corning':
@@ -696,14 +820,18 @@
       },
 
       /**
-       * Owens Corning Design EyeQ embed
+       * Owens Corning Design EyeQ widget embed (D-051)
+       * Uses the official OC embed API: apis.owenscorning.com/client/widget.js
+       * On mobile: link-out only (widget not optimal on small screens)
        */
       renderOCVisualizer(container) {
         const isMobile = window.innerWidth <= 768;
+        const zip = this.zipCode || '46077';
+
         if (isMobile) {
           container.innerHTML = `
             <div style="padding: var(--sp-6); background: rgba(255,255,255,0.03); border-radius: var(--radius-md);">
-              <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning colors in real time.</p>
+              <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning shingle colors in real time.</p>
               <a href="https://designeyeq.owenscorning.com/" target="_blank" rel="noopener" class="btn btn-primary">
                 Open OC Design EyeQ
                 <span style="margin-left: 4px;">↗</span>
@@ -715,18 +843,22 @@
           `;
         } else {
           container.innerHTML = `
-            <div style="margin-bottom: var(--sp-4);">
-              <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning colors in real time.</p>
-              <iframe
-                src="https://designeyeq.owenscorning.com/"
-                style="width: 100%; height: 600px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1);"
-                allow="camera"
-              ></iframe>
+            <p style="color: var(--slate); margin-bottom: var(--sp-4);">Upload a photo of your home and try on different Owens Corning shingle colors in real time.</p>
+            <div id="oc-widget-container">
+              <div id="visualizer" data-zip="${zip}"></div>
             </div>
             <div class="color-option-note">
-              <strong>After visualizing:</strong> Once you've tried on colors you like, come back here and enter your selection in the form below.
+              <strong>After visualizing:</strong> Once you've found a color you like, enter it in the form below to lock it in.
             </div>
           `;
+
+          // Inject the OC widget script once (guard against double-load)
+          if (!document.querySelector('script[src*="apis.owenscorning.com/client/widget.js"]')) {
+            const script = document.createElement('script');
+            script.src = 'https://apis.owenscorning.com/client/widget.js';
+            script.async = true;
+            document.body.appendChild(script);
+          }
         }
       },
 
@@ -755,7 +887,7 @@
         container.innerHTML = `
           <div style="padding: var(--sp-6); background: rgba(255,255,255,0.03); border-radius: var(--radius-md);">
             <p style="color: var(--slate); margin-bottom: var(--sp-4);">Explore CertainTeed color options with their interactive ColorView visualizer.</p>
-            <a href="https://colorview.certainteed.com" target="_blank" rel="noopener" class="btn btn-primary">
+            <a href="https://www.certainteed.com/colorview" target="_blank" rel="noopener" class="btn btn-primary">
               Open CertainTeed ColorView
               <span class="external-icon" style="margin-left: 4px;">↗</span>
             </a>
@@ -821,9 +953,14 @@
       },
 
       /**
-       * Request color board visit
+       * Request color board visit (D-085)
+       * Creates a notification record in Supabase and shows inline confirmation.
+       * Falls back to mailto:info@otterquote.com if Supabase is unavailable.
        */
       async requestColorBoardVisit() {
+        const btn = document.getElementById('inperson-btn');
+        const confirmEl = document.getElementById('inperson-confirmation');
+
         try {
           // Check if already requested
           const { data: existing } = await sb
@@ -834,7 +971,12 @@
             .maybeSingle();
 
           if (existing) {
-            alert('You\'ve already requested a color board visit. Your contractor will reach out soon.');
+            if (confirmEl) {
+              confirmEl.innerHTML = '<strong>✓ Already requested.</strong> Your contractor will reach out soon with physical color samples.';
+              confirmEl.classList.add('active');
+            } else {
+              alert('You\'ve already requested a color board visit. Your contractor will reach out soon.');
+            }
             return;
           }
 
@@ -851,23 +993,27 @@
 
           if (error) throw error;
 
-          // Show confirmation
-          const confirmElement = document.getElementById('confirmation-section');
           const phoneHtml = this.contractorPhone
-            ? `<br><br>To reach them directly: <strong><a href="tel:${this.contractorPhone}" style="color:inherit;">${this.contractorPhone}</a></strong>`
+            ? ` To reach them directly: <strong><a href="tel:${this.contractorPhone}" style="color:inherit;">${this.contractorPhone}</a></strong>`
             : '';
 
-          const messageEl = document.createElement('div');
-          messageEl.className = 'color-board-confirmation active';
-          messageEl.innerHTML = `
-            <strong>✓ Color board visit requested!</strong> We've notified ${this.contractorName} to schedule a visit with physical color boards. They'll reach out to you within 48 hours.${phoneHtml}
-          `;
-          confirmElement.insertBefore(messageEl, confirmElement.firstChild);
+          const confirmMsg = `<strong>✓ Visit requested!</strong> We've notified ${this.contractorName} to schedule a color board visit. They'll reach out within 48 hours.${phoneHtml}`;
+
+          // Show confirmation in persistent in-person section
+          if (confirmEl) {
+            confirmEl.innerHTML = confirmMsg;
+            confirmEl.classList.add('active');
+          }
+          if (btn) btn.disabled = true;
 
           gtag('event', 'color_board_request', { claim_id: this.claimId, contractor: this.contractorName });
+
         } catch (err) {
           console.error('Error requesting color board visit:', err);
-          alert('Error requesting color board visit. Please try again.');
+          // Fallback: open mailto to OtterQuote support
+          const subject = encodeURIComponent('Color Board Visit Request');
+          const body = encodeURIComponent(`I would like to request an in-person color board visit.\n\nClaim ID: ${this.claimId || 'unknown'}\nContractor: ${this.contractorName || 'unknown'}`);
+          window.location.href = `mailto:info@otterquote.com?subject=${subject}&body=${body}`;
         }
       },
 
