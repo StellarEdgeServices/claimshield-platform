@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+  <title>Contractor Profile — OtterQuote</title>
+  <meta name="description" content="Learn more about this contractor — their experience, certifications, license, and bid for your project.">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/nav.css">
+
+  <style>
+    /* ─── Layout ─── */
+    .about-layout { min-height: calc(100vh - 64px); display: flex; flex-direction: column; }
+    .about-main { flex: 1; padding: var(--sp-10) 0 var(--sp-16); }
+
+    /* ─── Back Button ─── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: var(--sp-2);
+      color: var(--amber); font-weight: 600; font-size: 0.95rem;
+      text-decoration: none; margin-bottom: var(--sp-8);
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-body); transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--white); }
+
+    /* ─── Loading / Error ─── */
+    .loading-state { text-align: center; padding: var(--sp-20) var(--sp-8); }
+    .loading-spinner { width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto var(--sp-6); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-state { text-align: center; padding: var(--sp-16) var(--sp-8); }
+    .error-icon { font-size: 3rem; margin-bottom: var(--sp-4); opacity: 0.5; }
+
+    /* ─── Hero Card ─── */
+    .hero-card {
+      background: var(--navy-2); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: var(--sp-10);
+      margin-bottom: var(--sp-8); display: flex; gap: var(--sp-8); align-items: flex-start;
+    }
+    .hero-avatar {
+      width: 110px; height: 110px; border-radius: var(--radius-lg);
+      background: var(--mid); display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 700; color: var(--amber);
+      flex-shrink: 0; overflow: hidden;
+    }
+    .hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-info { flex: 1; min-width: 0; }
+    .hero-info h1 { font-size: clamp(1.4rem, 3vw, 2rem); margin-bottom: var(--sp-2); }
+    .hero-info .hero-subtitle { color: var(--slate); margin-bottom: var(--sp-5); line-height: 1.7; font-size: 0.95rem; }
+    .hero-badges { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+    /* ─── Insurance / Insurance Verification Badges ─── */
+    .insurance-badges { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-4); }
+    .ins-badge {
+      display: flex; align-items: center; gap: var(--sp-2);
+      font-size: 0.8rem; font-weight: 700; padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-md); border: 1px solid;
+    }
+    .ins-badge.verified { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); color: #6EE7B7; }
+    .ins-badge.unverified { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.2); color: var(--slate); }
+    .ins-badge .ins-icon { font-size: 1rem; }
+
+    /* ─── Bid Summary (highlighted) ─── */
+    .bid-summary-card {
+      background: var(--amber-glow); border: 1px solid var(--amber);
+      border-radius: var(--radius-lg); padding: var(--sp-8); margin-bottom: var(--sp-8);
+    }
+    .bid-summary-card h2 {
+      font-family: var(--font-body); font-size: 1.1rem; font-weight: 700;
+      color: var(--amber); margin-bottom: var(--sp-6); display: flex; align-items: center; gap: var(--sp-2);
+    }
+    .bid-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--sp-4); }
+    .bid-metric { display: flex; flex-direction: column; gap: 2px; }
+    .bid-metric-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--slate); }
+    .bid-metric-value { font-size: 1rem; font-weight: 700; color: var(--white); }
+    .bid-metric-value.price { font-size: 1.35rem; color: var(--amber); }
+    .bid-message {
+      background: rgba(255,255,255,0.04); border-radius: var(--radius-sm);
+      padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-5);
+      font-size: 0.9rem; color: var(--slate); line-height: 1.6;
+      font-style: italic; border-left: 3px solid var(--amber);
+    }
+
+    /* ─── Two-Column Grid ─── */
+    .about-grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+    .about-main-col { display: flex; flex-direction: column; gap: var(--sp-6); }
+    .about-sidebar { display: flex; flex-direction: column; gap: var(--sp-6); }
+
+    /* ─── Section Cards ─── */
+    .section-card {
+      background: var(--navy-2); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: var(--sp-8);
+    }
+    .section-card h3 {
+      font-size: 1.05rem; font-weight: 700; margin-bottom: var(--sp-5);
+      padding-bottom: var(--sp-3); border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* ─── Info Grid ─── */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+    .info-item { display: flex; flex-direction: column; gap: 2px; }
+    .info-item-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--slate); }
+    .info-item-value { font-size: 0.95rem; font-weight: 600; color: var(--white); }
+
+    /* ─── About / Why Choose ─── */
+    .bio-text { color: var(--slate); line-height: 1.8; font-size: 0.95rem; margin-bottom: var(--sp-5); }
+    .why-choose-text { color: var(--slate); line-height: 1.8; font-size: 0.95rem; }
+    .subsection-title { font-size: 0.9rem; font-weight: 700; color: var(--white); margin-bottom: var(--sp-3); }
+
+    /* ─── Service Area Tags ─── */
+    .county-tags { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); }
+    .county-tag { font-size: 0.78rem; font-weight: 600; padding: 3px 10px; border-radius: var(--radius-full); background: rgba(255,255,255,0.06); color: var(--slate); }
+
+    /* ─── License Table ─── */
+    .license-table { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .license-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);
+      padding: var(--sp-3); background: rgba(255,255,255,0.03);
+      border-radius: var(--radius-sm);
+    }
+    .license-row .license-field { font-size: 0.85rem; }
+    .license-row .license-field span { display: block; }
+    .license-row .license-field .lf-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--slate); margin-bottom: 2px; }
+    .license-row .license-field .lf-value { color: var(--white); font-weight: 600; }
+
+    /* ─── Team Section ─── */
+    .team-items { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .team-item { display: flex; align-items: center; gap: var(--sp-3); font-size: 0.95rem; color: var(--slate); }
+    .team-item strong { color: var(--white); }
+    .team-icon { font-size: 1.2rem; width: 32px; text-align: center; }
+
+    /* ─── Stats ─── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--amber); display: block; margin-bottom: 2px; }
+    .stat-label { font-size: 0.7rem; color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ─── Certifications ─── */
+    .cert-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .cert-item { display: flex; align-items: center; gap: var(--sp-3); }
+    .cert-badge { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--amber-glow); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+    .cert-name { font-size: 0.88rem; color: var(--white); font-weight: 500; }
+
+    /* ─── Review Sites ─── */
+    .review-links { display: flex; flex-direction: column; gap: var(--sp-3); }
+    .review-link {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-3) var(--sp-4); background: rgba(255,255,255,0.03);
+      border-radius: var(--radius-sm); color: var(--white); text-decoration: none;
+      font-weight: 600; font-size: 0.9rem; transition: all 0.2s;
+    }
+    .review-link:hover { background: rgba(255,255,255,0.06); color: var(--amber); }
+    .review-link .rl-rating { color: var(--amber); font-size: 0.85rem; }
+
+    /* ─── Gallery ─── */
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--sp-3); }
+    .gallery-item { aspect-ratio: 4/3; border-radius: var(--radius-sm); overflow: hidden; background: var(--mid); }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-placeholder-msg { color: var(--slate); font-size: 0.9rem; line-height: 1.6; }
+
+    /* ─── Reviews ─── */
+    .review-cards { display: flex; flex-direction: column; gap: var(--sp-4); }
+    .review-card { background: rgba(255,255,255,0.03); border-radius: var(--radius-md); padding: var(--sp-5); border-left: 3px solid var(--amber); }
+    .review-text { color: var(--slate); font-style: italic; line-height: 1.7; margin-bottom: var(--sp-3); font-size: 0.92rem; }
+    .review-author { display: flex; align-items: center; justify-content: space-between; }
+    .review-author-name { color: var(--white); font-weight: 600; font-size: 0.85rem; }
+    .review-stars { color: var(--amber); font-size: 0.85rem; }
+    .review-placeholder-msg { color: var(--slate); font-size: 0.9rem; line-height: 1.6; }
+
+    /* ─── Select CTA ─── */
+    .select-cta-card {
+      background: var(--navy-2); border: 2px solid var(--amber);
+      border-radius: var(--radius-lg); padding: var(--sp-10);
+      text-align: center;
+    }
+    .select-cta-card h2 { font-family: var(--font-body); font-size: 1.4rem; font-weight: 700; margin-bottom: var(--sp-3); }
+    .select-cta-card p { color: var(--slate); max-width: 520px; margin: 0 auto var(--sp-6); line-height: 1.7; font-size: 0.95rem; }
+    .select-cta-actions { display: flex; gap: var(--sp-4); justify-content: center; flex-wrap: wrap; }
+
+    /* ─── Guarantee Pill ─── */
+    .guarantee-pill {
+      display: inline-flex; align-items: center; gap: var(--sp-2);
+      background: var(--amber-glow); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius-full); padding: var(--sp-2) var(--sp-4);
+      font-size: 0.8rem; font-weight: 600; color: var(--amber); margin-bottom: var(--sp-5);
+    }
+
+    /* ─── Confirmation Modal ─── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: var(--sp-6); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-card { background: var(--navy-2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--sp-10); max-width: 480px; width: 100%; text-align: center; transform: translateY(12px); transition: transform 0.25s ease; }
+    .modal-overlay.active .modal-card { transform: translateY(0); }
+    .modal-icon { font-size: 3rem; margin-bottom: var(--sp-4); }
+    .modal-card h3 { font-size: 1.2rem; margin-bottom: var(--sp-3); color: var(--white); }
+    .modal-card p { color: var(--slate); line-height: 1.7; margin-bottom: var(--sp-8); font-size: 0.95rem; }
+    .contractor-highlight { color: var(--amber); font-weight: 700; }
+    .modal-actions { display: flex; gap: var(--sp-3); justify-content: center; }
+    .modal-actions .btn { min-width: 140px; }
+    .modal-spinner { display: none; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 900px) {
+      .about-grid { grid-template-columns: 1fr; }
+      .hero-card { flex-direction: column; align-items: center; text-align: center; padding: var(--sp-6); }
+      .hero-badges { justify-content: center; }
+      .insurance-badges { justify-content: center; }
+      .bid-metrics { grid-template-columns: 1fr 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 500px) {
+      .bid-metrics { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .select-cta-actions { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header id="site-header" data-active=""></header>
+
+  <div class="about-layout">
+    <div class="about-main">
+      <div class="container">
+
+        <!-- Loading -->
+        <div id="loadingState" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p style="color:var(--slate);">Loading contractor profile…</p>
+        </div>
+
+        <!-- Error -->
+        <div id="errorState" class="error-state" style="display:none;">
+          <div class="error-icon">⚠️</div>
+          <h2 id="errorTitle">Something went wrong</h2>
+          <p id="errorMsg" style="color:var(--slate);margin:var(--sp-4) auto var(--sp-6);max-width:400px;"></p>
+          <a id="errorBackLink" href="bids.html" class="btn btn-secondary">← Back to Bids</a>
+        </div>
+
+        <!-- Page Content -->
+        <div id="pageContent" style="display:none;">
+
+          <!-- Back Button -->
+          <a id="backLink" href="bids.html" class="back-btn">← Back to All Bids</a>
+
+          <!-- ── Hero ── -->
+          <div class="hero-card">
+            <div class="hero-avatar" id="heroAvatar"></div>
+            <div class="hero-info">
+              <h1 id="heroName"></h1>
+              <p class="hero-subtitle" id="heroBio"></p>
+              <div class="hero-badges" id="heroBadges"></div>
+              <div class="insurance-badges" id="heroInsurance"></div>
+            </div>
+          </div>
+
+          <!-- ── Bid Summary (only shown if claim_id + bid exist) ── -->
+          <div class="bid-summary-card" id="bidSummaryCard" style="display:none;">
+            <h2>📋 Their Bid for Your Project</h2>
+            <div class="bid-metrics" id="bidMetrics"></div>
+            <div id="bidMessage"></div>
+          </div>
+
+          <!-- ── Main Grid ── -->
+          <div class="about-grid">
+
+            <!-- Left Column -->
+            <div class="about-main-col">
+
+              <!-- About -->
+              <div class="section-card" id="sectionAbout">
+                <h3>About the Company</h3>
+                <div class="info-grid" id="aboutInfoGrid"></div>
+                <div id="aboutBioBlock"></div>
+              </div>
+
+              <!-- Why Choose Us -->
+              <div class="section-card" id="sectionWhy" style="display:none;">
+                <h3>Why Choose This Contractor</h3>
+                <div class="why-choose-text" id="whyChooseText"></div>
+              </div>
+
+              <!-- Team -->
+              <div class="section-card" id="sectionTeam">
+                <h3>Team & Operations</h3>
+                <div class="team-items" id="teamItems"></div>
+              </div>
+
+              <!-- Gallery -->
+              <div class="section-card" id="sectionGallery">
+                <h3>Past Work</h3>
+                <div id="galleryContent"></div>
+              </div>
+
+              <!-- Reviews -->
+              <div class="section-card" id="sectionReviews">
+                <h3>Customer Reviews</h3>
+                <div id="reviewsContent"></div>
+              </div>
+
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="about-sidebar">
+
+              <!-- Quick Stats -->
+              <div class="section-card">
+                <h3>Quick Stats</h3>
+                <div class="stats-grid" id="quickStats"></div>
+              </div>
+
+              <!-- Review Sites -->
+              <div class="section-card" id="sectionReviewSites">
+                <h3>Review Sites</h3>
+                <div class="review-links" id="reviewLinks"></div>
+              </div>
+
+              <!-- Certifications -->
+              <div class="section-card" id="sectionCerts">
+                <h3>Certifications</h3>
+                <div id="certsContent"></div>
+              </div>
+
+              <!-- License & Insurance -->
+              <div class="section-card" id="sectionLicense">
+                <h3>License &amp; Insurance</h3>
+                <div id="licenseContent"></div>
+              </div>
+
+              <!-- Service Area -->
+              <div class="section-card" id="sectionArea">
+                <h3>Service Area</h3>
+                <div id="areaContent"></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Select CTA ── -->
+          <div class="select-cta-card" id="selectCTA">
+            <div class="guarantee-pill">🛡 OtterQuote Guarantee</div>
+            <h2 id="ctaTitle">Ready to Move Forward?</h2>
+            <p id="ctaBody">Selecting this contractor starts the contract signing process. You can switch to another OtterQuote contractor at no cost up to 3 days before installation.</p>
+            <div class="select-cta-actions">
+              <a id="ctaBackBtn" href="bids.html" class="btn btn-secondary">← Compare All Bids</a>
+              <button id="ctaSelectBtn" class="btn btn-primary btn-lg" onclick="openSelectModal()" style="display:none;">Select This Contractor</button>
+            </div>
+          </div>
+
+        </div><!-- /pageContent -->
+      </div>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card">
+      <div class="modal-icon">🦦</div>
+      <h3 id="modalTitle">Confirm Your Selection</h3>
+      <p id="modalBody"></p>
+      <div class="modal-actions" id="modalActions">
+        <button class="btn btn-sm btn-ghost" onclick="closeModal()">Go Back</button>
+        <button class="btn btn-sm btn-primary" id="modalConfirmBtn" onclick="confirmSelection()">Yes, Continue</button>
+      </div>
+      <div class="modal-spinner" id="modalSpinner"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/nav.js"></script>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ── State ──
+    let currentUser = null;
+    let contractorId = null;
+    let claimId = null;
+    let contractor = null;
+    let licenses = [];
+    let certifications = [];
+    let bid = null;
+    let claim = null;
+
+    // ── Init ──
+    async function init() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        contractorId = params.get('contractor_id');
+        claimId = params.get('claim_id');
+
+        if (!contractorId) {
+          showError('Contractor Not Found', 'No contractor ID was provided. Please return to your bids page.');
+          return;
+        }
+
+        currentUser = await Auth.requireAuth();
+        if (!currentUser) return; // requireAuth handles redirect
+
+        // Set back link
+        const backUrl = claimId ? `bids.html?claim_id=${encodeURIComponent(claimId)}` : 'bids.html';
+        document.getElementById('backLink').href = backUrl;
+        document.getElementById('ctaBackBtn').href = backUrl;
+        document.getElementById('errorBackLink').href = backUrl;
+
+        // Load all data in parallel
+        await Promise.all([
+          loadContractor(),
+          loadLicenses(),
+          loadCertifications(),
+          claimId ? loadBid() : Promise.resolve(),
+        ]);
+
+        if (!contractor) {
+          showError('Contractor Not Found', 'We couldn\'t find this contractor. They may no longer be active on OtterQuote.');
+          return;
+        }
+
+        render();
+
+        gtag('event', 'view_contractor_profile_page', {
+          contractor_id: contractorId,
+          company_name: contractor.company_name,
+          claim_id: claimId || 'none',
+        });
+
+      } catch (err) {
+        console.error('contractor-about init error:', err);
+        showError('Something Went Wrong', 'There was a problem loading this profile. Please try again.');
+      }
+    }
+
+    // ── Data Loaders ──
+    async function loadContractor() {
+      if (!sb) return;
+      const { data, error } = await sb
+        .from('contractors')
+        .select(`
+          id, company_name, contact_name, owner_photo_url, about_us, years_in_business,
+          service_area_description, service_counties, license_number, verified,
+          has_workers_comp, has_general_liability,
+          google_reviews_url, rating, review_count, bbb_url, angi_url, yelp_url,
+          specialties, why_choose_us, num_employees, trades, website_url
+        `)
+        .eq('id', contractorId)
+        .maybeSingle();
+
+      if (!error && data) contractor = data;
+    }
+
+    async function loadLicenses() {
+      if (!sb) return;
+      const { data } = await sb
+        .from('contractor_licenses')
+        .select('municipality, license_number, license_type')
+        .eq('contractor_id', contractorId)
+        .order('created_at', { ascending: true });
+      if (data) licenses = data;
+    }
+
+    async function loadCertifications() {
+      if (!sb) return;
+      const { data } = await sb
+        .from('contractor_certifications')
+        .select('certification_name, issued_by, year_earned')
+        .eq('contractor_id', contractorId)
+        .order('created_at', { ascending: true });
+      if (data) certifications = data;
+    }
+
+    async function loadBid() {
+      if (!sb || !claimId) return;
+      // Load the bid AND verify the claim belongs to this user
+      const [bidResult, claimResult] = await Promise.all([
+        sb.from('quotes')
+          .select('*')
+          .eq('claim_id', claimId)
+          .eq('contractor_id', contractorId)
+          .maybeSingle(),
+        sb.from('claims')
+          .select('id, status, property_address, job_type, funding_type, policy_type')
+          .eq('id', claimId)
+          .eq('user_id', currentUser.id)
+          .maybeSingle(),
+      ]);
+      if (!bidResult.error && bidResult.data) bid = bidResult.data;
+      if (!claimResult.error && claimResult.data) claim = claimResult.data;
+    }
+
+    // ── Render ──
+    function render() {
+      const c = contractor;
+      const initials = (c.company_name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+      // Document title
+      document.title = `${esc(c.company_name)} — OtterQuote`;
+
+      // ── Hero ──
+      document.getElementById('heroAvatar').innerHTML = c.owner_photo_url
+        ? `<img src="${esc(c.owner_photo_url)}" alt="${esc(c.company_name)}">`
+        : initials;
+
+      document.getElementById('heroName').textContent = c.company_name || 'Contractor';
+
+      document.getElementById('heroBio').textContent = c.about_us
+        ? c.about_us
+        : `${c.company_name} is a licensed contractor serving ${c.service_area_description || 'the local area'}.`;
+
+      // Hero badges
+      const badgesHtml = [
+        c.years_in_business ? `<span class="badge badge-amber">${c.years_in_business} Years in Business</span>` : '',
+        c.verified ? '<span class="badge badge-green">✓ Verified Contractor</span>' : '',
+        (c.trades && parseCerts(c.trades).length > 0)
+          ? parseCerts(c.trades).map(t => `<span class="badge badge-navy">${esc(t)}</span>`).join('')
+          : '',
+      ].join('');
+      document.getElementById('heroBadges').innerHTML = badgesHtml;
+
+      // Insurance verification badges
+      const wcVerified = c.has_workers_comp === true;
+      const glVerified = c.has_general_liability === true;
+      document.getElementById('heroInsurance').innerHTML = `
+        <div class="ins-badge ${wcVerified ? 'verified' : 'unverified'}">
+          <span class="ins-icon">${wcVerified ? '✓' : '○'}</span>
+          Workers' Compensation${wcVerified ? ' — Verified' : ' — Not on file'}
+        </div>
+        <div class="ins-badge ${glVerified ? 'verified' : 'unverified'}">
+          <span class="ins-icon">${glVerified ? '✓' : '○'}</span>
+          General Liability${glVerified ? ' — Verified' : ' — Not on file'}
+        </div>
+      `;
+
+      // ── Bid Summary ──
+      if (bid) {
+        document.getElementById('bidSummaryCard').style.display = 'block';
+
+        document.getElementById('bidMetrics').innerHTML = `
+          <div class="bid-metric">
+            <span class="bid-metric-label">Total Price</span>
+            <span class="bid-metric-value price">$${(bid.total_price || 0).toLocaleString()}</span>
+          </div>
+          <div class="bid-metric">
+            <span class="bid-metric-label">Start Date</span>
+            <span class="bid-metric-value">${bid.estimated_start_date ? formatDate(bid.estimated_start_date) : 'TBD'}</span>
+          </div>
+          <div class="bid-metric">
+            <span class="bid-metric-label">Completion</span>
+            <span class="bid-metric-value">${esc(bid.estimated_completion_time || 'TBD')}</span>
+          </div>
+          <div class="bid-metric">
+            <span class="bid-metric-label">Warranty</span>
+            <span class="bid-metric-value">${formatWarranty(bid)}</span>
+          </div>
+          <div class="bid-metric">
+            <span class="bid-metric-label">Brand</span>
+            <span class="bid-metric-value">${esc(bid.brand || 'TBD')}</span>
+          </div>
+          <div class="bid-metric">
+            <span class="bid-metric-label">Product</span>
+            <span class="bid-metric-value">${esc(bid.product_line || 'TBD')}</span>
+          </div>
+          ${bid.deckingPricePerSheet ? `
+          <div class="bid-metric">
+            <span class="bid-metric-label">Decking Contingency</span>
+            <span class="bid-metric-value" style="font-size:0.85rem;">$${bid.deckingPricePerSheet}/sheet | $${(bid.fullRedeckPrice || 0).toLocaleString()} full</span>
+          </div>
+          ` : ''}
+        `;
+
+        if (bid.contractor_message) {
+          document.getElementById('bidMessage').innerHTML =
+            `<div class="bid-message">"${esc(bid.contractor_message)}"</div>`;
+        }
+
+        // Show "Select This Contractor" if claim is still in bidding (not yet awarded)
+        if (claim && claim.status !== 'awarded') {
+          const ctaBtn = document.getElementById('ctaSelectBtn');
+          ctaBtn.style.display = 'inline-flex';
+          ctaBtn.textContent = `Select ${esc(c.company_name)}`;
+        }
+
+        document.getElementById('ctaTitle').textContent = `Ready to Choose ${c.company_name}?`;
+        document.getElementById('ctaBody').textContent =
+          `Selecting ${c.company_name} will begin the contract signing process. You can switch to another OtterQuote contractor at no cost up to 3 days before installation.`;
+      }
+
+      // ── About Section ──
+      document.getElementById('aboutInfoGrid').innerHTML = `
+        <div class="info-item">
+          <span class="info-item-label">Contact</span>
+          <span class="info-item-value">${esc(c.contact_name || 'Not provided')}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-item-label">Years in Business</span>
+          <span class="info-item-value">${c.years_in_business ? c.years_in_business + ' years' : 'N/A'}</span>
+        </div>
+        ${c.website_url ? `
+        <div class="info-item">
+          <span class="info-item-label">Website</span>
+          <span class="info-item-value"><a href="${esc(c.website_url)}" target="_blank" rel="noopener" style="color:var(--amber);text-decoration:none;">${esc(c.website_url.replace(/^https?:\/\//, ''))}</a></span>
+        </div>
+        ` : ''}
+        <div class="info-item">
+          <span class="info-item-label">Verification Status</span>
+          <span class="info-item-value" style="color:${c.verified ? '#6EE7B7' : 'var(--slate)'};">${c.verified ? '✓ Verified' : 'Pending'}</span>
+        </div>
+      `;
+
+      // ── Why Choose Section ──
+      if (c.why_choose_us) {
+        document.getElementById('sectionWhy').style.display = 'block';
+        document.getElementById('whyChooseText').textContent = c.why_choose_us;
+      }
+
+      // ── Team Section ──
+      document.getElementById('teamItems').innerHTML = `
+        <div class="team-item">
+          <span class="team-icon">👷</span>
+          <span><strong>Team Size:</strong> ${c.num_employees ? c.num_employees + ' employees' : 'Not provided'}</span>
+        </div>
+        ${c.trades && parseCerts(c.trades).length > 0 ? `
+        <div class="team-item">
+          <span class="team-icon">🔧</span>
+          <span><strong>Trades:</strong> ${parseCerts(c.trades).map(t => esc(t)).join(', ')}</span>
+        </div>
+        ` : ''}
+      `;
+
+      // ── Gallery ──
+      document.getElementById('galleryContent').innerHTML =
+        `<p class="gallery-placeholder-msg">No photos uploaded yet. Photos will appear here as the contractor adds them to their profile.</p>`;
+
+      // ── Reviews (from `reviews` table — placeholder until built) ──
+      document.getElementById('reviewsContent').innerHTML =
+        `<p class="review-placeholder-msg">No OtterQuote reviews yet. Reviews from homeowners who complete projects with this contractor will appear here.</p>`;
+
+      // ── Quick Stats ──
+      document.getElementById('quickStats').innerHTML = `
+        <div class="stat-item">
+          <span class="stat-value">${c.years_in_business || '--'}</span>
+          <span class="stat-label">Years in Business</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${c.rating ? '★ ' + c.rating : '--'}</span>
+          <span class="stat-label">Rating</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${c.review_count || '0'}</span>
+          <span class="stat-label">Reviews</span>
+        </div>
+      `;
+
+      // ── Review Sites ──
+      const reviewLinksHtml = [
+        c.google_reviews_url
+          ? `<a href="${esc(c.google_reviews_url)}" target="_blank" rel="noopener" class="review-link"><span>Google Reviews</span><span class="rl-rating">${c.rating ? '★ ' + c.rating : 'View →'}</span></a>`
+          : '',
+        c.bbb_url
+          ? `<a href="${esc(c.bbb_url)}" target="_blank" rel="noopener" class="review-link"><span>BBB Profile</span><span class="rl-rating">View →</span></a>`
+          : '',
+        c.angi_url
+          ? `<a href="${esc(c.angi_url)}" target="_blank" rel="noopener" class="review-link"><span>Angi</span><span class="rl-rating">View →</span></a>`
+          : '',
+        c.yelp_url
+          ? `<a href="${esc(c.yelp_url)}" target="_blank" rel="noopener" class="review-link"><span>Yelp</span><span class="rl-rating">View →</span></a>`
+          : '',
+      ].filter(Boolean).join('');
+
+      document.getElementById('reviewLinks').innerHTML = reviewLinksHtml ||
+        '<p style="color:var(--slate);font-size:0.9rem;">No review profiles linked yet.</p>';
+
+      // ── Certifications (from contractor_certifications table + specialties fallback) ──
+      let allCerts = [];
+      if (certifications.length > 0) {
+        allCerts = certifications.map(cert => ({
+          name: cert.certification_name,
+          issued_by: cert.issued_by,
+          year: cert.year_earned,
+        }));
+      } else if (c.specialties) {
+        // Fall back to specialties field (comma/JSON list)
+        allCerts = parseCerts(c.specialties).map(s => ({ name: s, issued_by: null, year: null }));
+      }
+
+      if (allCerts.length > 0) {
+        document.getElementById('certsContent').innerHTML = `
+          <div class="cert-list">
+            ${allCerts.map(cert => `
+              <div class="cert-item">
+                <div class="cert-badge">🏆</div>
+                <div>
+                  <div class="cert-name">${esc(cert.name)}</div>
+                  ${cert.issued_by ? `<div style="font-size:0.75rem;color:var(--slate);">${esc(cert.issued_by)}${cert.year ? ' · ' + cert.year : ''}</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        document.getElementById('certsContent').innerHTML =
+          '<p style="color:var(--slate);font-size:0.9rem;">No certifications listed yet.</p>';
+      }
+
+      // ── License & Insurance ──
+      let licenseHtml = '';
+      if (licenses.length > 0) {
+        licenseHtml = `
+          <div class="license-table">
+            ${licenses.map(lic => `
+              <div class="license-row">
+                <div class="license-field">
+                  <span class="lf-label">License #</span>
+                  <span class="lf-value">${esc(lic.license_number || 'On file')}</span>
+                </div>
+                <div class="license-field">
+                  <span class="lf-label">Type</span>
+                  <span class="lf-value">${esc(lic.license_type || 'General')}</span>
+                </div>
+                ${lic.municipality ? `
+                <div class="license-field" style="grid-column:1/-1;">
+                  <span class="lf-label">Jurisdiction</span>
+                  <span class="lf-value">${esc(lic.municipality)}</span>
+                </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (c.license_number) {
+        // Fallback to main contractors.license_number column
+        licenseHtml = `
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            <div class="team-item">
+              <span class="bid-badge ${c.verified ? 'verified' : 'warning'}" style="font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;">
+                ${c.verified ? '✓ Verified Contractor' : '⚠ Pending Verification'}
+              </span>
+            </div>
+            <div class="team-item" style="font-size:0.88rem;color:var(--slate);">
+              License #: <strong style="color:var(--white);">${esc(c.license_number)}</strong>
+            </div>
+          </div>
+        `;
+      } else {
+        licenseHtml = `<p style="color:var(--slate);font-size:0.9rem;">License information on file and verified by OtterQuote.</p>`;
+      }
+
+      // Append insurance summary to license section
+      licenseHtml += `
+        <div style="margin-top:var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-2);">
+          <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--slate);margin-bottom:var(--sp-1);">Insurance</div>
+          <div style="font-size:0.85rem;color:${c.has_workers_comp ? '#6EE7B7' : 'var(--slate)'};">
+            ${c.has_workers_comp ? '✓' : '○'} Workers' Compensation
+          </div>
+          <div style="font-size:0.85rem;color:${c.has_general_liability ? '#6EE7B7' : 'var(--slate)'};">
+            ${c.has_general_liability ? '✓' : '○'} General Liability
+          </div>
+        </div>
+      `;
+
+      document.getElementById('licenseContent').innerHTML = licenseHtml;
+
+      // ── Service Area ──
+      let areaHtml = '';
+      if (c.service_area_description) {
+        areaHtml += `<p style="color:var(--white);font-size:0.9rem;margin-bottom:var(--sp-3);">${esc(c.service_area_description)}</p>`;
+      }
+      const counties = parseServiceCounties(c.service_counties);
+      if (counties.length > 0) {
+        areaHtml += `
+          <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--slate);margin-bottom:var(--sp-2);">Counties Served</div>
+          <div class="county-tags">
+            ${counties.map(cn => `<span class="county-tag">${esc(cn)}</span>`).join('')}
+          </div>
+        `;
+      }
+      if (!areaHtml) {
+        areaHtml = '<p style="color:var(--slate);font-size:0.9rem;">Service area information not provided.</p>';
+      }
+      document.getElementById('areaContent').innerHTML = areaHtml;
+
+      // Show page
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('pageContent').style.display = 'block';
+    }
+
+    // ── Select Contractor Flow ──
+    window.openSelectModal = function() {
+      if (!bid) return;
+      const c = contractor;
+      document.getElementById('modalTitle').textContent = 'Confirm Your Selection';
+      document.getElementById('modalBody').innerHTML =
+        `You're selecting <span class="contractor-highlight">${esc(c.company_name || 'this contractor')}</span>. They'll be notified and your contract will be prepared. Continue?`;
+      document.getElementById('modalActions').style.display = 'flex';
+      document.getElementById('modalSpinner').style.display = 'none';
+      document.getElementById('modalConfirmBtn').disabled = false;
+      document.getElementById('confirmModal').classList.add('active');
+    };
+
+    window.closeModal = function() {
+      document.getElementById('confirmModal').classList.remove('active');
+    };
+
+    window.confirmSelection = async function() {
+      if (!bid || !claim) return;
+
+      // Check if already awarded
+      if (claim.status === 'awarded') {
+        document.getElementById('modalTitle').textContent = 'Already Awarded';
+        document.getElementById('modalBody').textContent = 'This project has already been awarded to a contractor.';
+        document.getElementById('modalActions').style.display = 'none';
+        return;
+      }
+
+      // Loading state
+      document.getElementById('modalConfirmBtn').disabled = true;
+      document.getElementById('modalActions').style.display = 'none';
+      document.getElementById('modalSpinner').style.display = 'block';
+      document.getElementById('modalTitle').textContent = 'Processing…';
+      document.getElementById('modalBody').textContent = 'Awarding the project and notifying the contractor…';
+
+      try {
+        // 1. Award claim
+        const { error: claimErr } = await sb
+          .from('claims')
+          .update({
+            selected_contractor_id: bid.contractor_id,
+            selected_bid_amount: bid.total_price,
+            status: 'awarded',
+          })
+          .eq('id', claimId);
+        if (claimErr) throw claimErr;
+
+        // 2. Mark winning quote
+        const { error: winErr } = await sb
+          .from('quotes')
+          .update({ status: 'awarded' })
+          .eq('id', bid.id);
+        if (winErr) throw winErr;
+
+        // 3. Decline other quotes
+        const { error: rejectErr } = await sb
+          .from('quotes')
+          .update({ status: 'declined' })
+          .eq('claim_id', claimId)
+          .neq('id', bid.id);
+        if (rejectErr) throw rejectErr;
+
+        gtag('event', 'contractor_selected', {
+          bid_id: bid.id,
+          contractor_id: bid.contractor_id,
+          price: bid.total_price,
+          source: 'contractor_about_page',
+        });
+
+        // 4. Redirect to contract signing
+        window.location.href =
+          `contract-signing.html?claim_id=${encodeURIComponent(claimId)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bid.id)}`;
+
+      } catch (err) {
+        console.error('Selection error:', err);
+        document.getElementById('modalTitle').textContent = 'Something Went Wrong';
+        document.getElementById('modalBody').textContent = 'There was a problem awarding this project. Please try again.';
+        document.getElementById('modalSpinner').style.display = 'none';
+        document.getElementById('modalActions').style.display = 'flex';
+        document.getElementById('modalConfirmBtn').disabled = false;
+        document.getElementById('modalTitle').textContent = 'Confirm Your Selection';
+      }
+    };
+
+    // ── Helpers ──
+    function showError(title, msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMsg').textContent = msg;
+    }
+
+    function esc(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    function formatWarranty(b) {
+      const parts = [];
+      if (b.workmanship_warranty_years) parts.push(`${b.workmanship_warranty_years}yr workmanship`);
+      if (b.manufacturer_warranty_years) parts.push(`${b.manufacturer_warranty_years}yr manufacturer`);
+      return parts.length > 0 ? parts.join(' + ') : (b.warranty_summary || 'TBD');
+    }
+
+    function parseCerts(val) {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      try { return JSON.parse(val); } catch { return String(val).split(',').map(s => s.trim()).filter(Boolean); }
+    }
+
+    function parseServiceCounties(val) {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      try { return JSON.parse(val); } catch { return String(val).split(',').map(s => s.trim()).filter(Boolean); }
+    }
+
+    // ── Boot ──
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+
+</body>
+</html>

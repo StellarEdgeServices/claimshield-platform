@@ -742,7 +742,7 @@
             ${bid.contractor_message ? `<div class="bid-message">"${esc(bid.contractor_message)}"</div>` : ''}
 
             <div class="bid-card-actions">
-              <button class="btn btn-sm btn-secondary" onclick="viewProfile('${bid.contractor_id}', '${bid.id}')">About This Contractor</button>
+              <a href="contractor-about.html?contractor_id=${bid.contractor_id}&claim_id=${currentClaim ? currentClaim.id : ''}" class="btn btn-sm btn-secondary">View Full Profile</a>
               <button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>
             </div>
           </div>
