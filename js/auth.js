@@ -23,16 +23,22 @@ window.Auth = {
    * @param {string} email
    * @param {string} role - 'homeowner' (default), 'contractor', 're_agent',
    *                        'insurance_agent', or 'home_inspector'
+   * @param {string|null} redirectTo - Optional override for the redirect URL path
+   *   (e.g. '/dashboard.html'). When provided, ignores role-based routing.
+   *   Use this for returning-user login flows where the user already has a claim.
    */
-  async sendMagicLink(email, role = 'homeowner') {
+  async sendMagicLink(email, role = 'homeowner', redirectTo = null) {
     if (!sb) throw new Error('Supabase not initialized');
-    // Redirect URL depends on role — auth callback page handles final routing
+    // Redirect URL depends on role — auth callback page handles final routing.
+    // New users go to trade-selector (intake). Returning users should pass
+    // redirectTo='/dashboard.html' to bypass the intake flow.
     const partnerRoles = ['re_agent', 'insurance_agent', 'home_inspector'];
-    const redirectPage = role === 'contractor'
+    const defaultRedirectPage = role === 'contractor'
       ? '/contractor-dashboard.html'
       : partnerRoles.includes(role)
         ? '/partner-dashboard.html'
         : '/trade-selector.html';
+    const redirectPage = redirectTo || defaultRedirectPage;
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: {

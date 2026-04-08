@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<title>Sign In — OtterQuote</title>
+<meta name="description" content="Sign in to your OtterQuote account to view your project status and contractor bids.">
+<link rel="canonical" href="https://otterquote.com/login.html">
+<meta property="og:title" content="Sign In — OtterQuote">
+<meta property="og:description" content="Sign in to your OtterQuote account to view your project status and contractor bids.">
+<meta property="og:url" content="https://otterquote.com/login.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OtterQuote">
+<meta property="og:image" content="https://otterquote.com/img/otter-logo.svg">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/nav.css">
+
+<style>
+.login-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - 64px);
+}
+
+.login-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-12) var(--sp-8);
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 440px;
+}
+
+.login-form-wrap h1 {
+  font-size: 2rem;
+  margin-bottom: var(--sp-2);
+}
+
+.login-form-wrap .subtitle {
+  color: var(--slate);
+  font-size: 1rem;
+  margin-bottom: var(--sp-8);
+  line-height: 1.6;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+/* Magic link sent state */
+.magic-link-sent {
+  display: none;
+  text-align: center;
+  padding: var(--sp-8) 0;
+}
+.magic-link-sent.active { display: block; }
+.login-form.hidden { display: none; }
+
+.magic-link-icon {
+  font-size: 3rem;
+  margin-bottom: var(--sp-4);
+}
+.magic-link-sent h2 {
+  font-size: 1.5rem;
+  margin-bottom: var(--sp-3);
+}
+.magic-link-sent p { max-width: 340px; margin: 0 auto; }
+.magic-link-email {
+  display: inline-block;
+  background: var(--amber-glow);
+  color: var(--amber);
+  font-weight: 700;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  margin: var(--sp-3) 0;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+/* Loading */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(11,25,41,0.3);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Right panel */
+.login-right {
+  background: var(--navy-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-12) var(--sp-8);
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+
+.login-info {
+  max-width: 380px;
+}
+
+.login-info h2 {
+  font-size: 1.5rem;
+  margin-bottom: var(--sp-6);
+}
+
+.info-item {
+  display: flex;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+.info-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--amber-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.info-text h4 {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: var(--sp-1);
+}
+.info-text p { font-size: 0.85rem; }
+
+@media (max-width: 768px) {
+  .login-layout { grid-template-columns: 1fr; }
+  .login-right {
+    border-left: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: var(--sp-6);
+    order: -1;
+  }
+  .login-info h2 { font-size: 1.25rem; margin-bottom: var(--sp-4); }
+  .login-left { padding: var(--sp-8) var(--sp-6); }
+}
+</style>
+</head>
+<body>
+
+<header id="site-header" data-active=""></header>
+
+<div class="login-layout">
+  <!-- Left: Form -->
+  <div class="login-left">
+    <div class="login-form-wrap">
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Enter your email and we'll send you a secure link to access your project dashboard. No password needed.</p>
+
+      <!-- Form -->
+      <form class="login-form" id="login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input type="email" id="email" class="form-input" required autocomplete="email" placeholder="jane@example.com">
+          <span class="form-hint">We'll send a one-click login link to this address.</span>
+        </div>
+
+        <div id="form-error" class="form-error" style="display:none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-full" id="submit-btn">
+          Send Login Link
+        </button>
+
+        <p class="text-sm text-center" style="color: var(--gray);">
+          Don't have an account yet?
+          <a href="get-started.html" style="color: var(--amber); font-weight: 600;">Create one free</a>
+        </p>
+
+        <p class="text-sm text-center" style="color: var(--gray);">
+          Are you a contractor?
+          <a href="contractor-login.html" style="color: var(--amber); font-weight: 600;">Go to contractor portal</a>
+        </p>
+      </form>
+
+      <!-- Magic Link Sent -->
+      <div class="magic-link-sent" id="magic-link-sent">
+        <div class="magic-link-icon">&#x2709;&#xFE0F;</div>
+        <h2>Check Your Email</h2>
+        <p>We sent a secure login link to:</p>
+        <div class="magic-link-email" id="sent-email"></div>
+        <p style="margin-top: var(--sp-4);">Click the link to go straight to your dashboard. The link expires in 1 hour.</p>
+        <p style="margin-top: var(--sp-6);"><a href="#" id="resend-link">Didn't get it? Send again</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Info panel -->
+  <div class="login-right">
+    <div class="login-info">
+      <h2>Your Project Dashboard</h2>
+
+      <div class="info-item">
+        <div class="info-icon">&#x1F4CA;</div>
+        <div class="info-text">
+          <h4>Track your project</h4>
+          <p>See your project status, uploaded documents, and material selections in one place.</p>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">&#x1F4B0;</div>
+        <div class="info-text">
+          <h4>Review incoming bids</h4>
+          <p>Compare bids from qualified contractors and select the best offer for your project.</p>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">&#x1F4DD;</div>
+        <div class="info-text">
+          <h4>Sign your contract</h4>
+          <p>E-sign your contractor agreement securely — no printing, scanning, or faxing required.</p>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">&#x1F512;</div>
+        <div class="info-text">
+          <h4>No password to remember</h4>
+          <p>We use secure magic links instead of passwords. Just click and you're in.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+
+<script>
+(function() {
+  const form = document.getElementById('login-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const errorEl = document.getElementById('form-error');
+  const sentSection = document.getElementById('magic-link-sent');
+  const sentEmail = document.getElementById('sent-email');
+
+  // Form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.style.display = 'none';
+
+    const email = document.getElementById('email').value.trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    submitBtn.classList.add('btn-loading');
+    submitBtn.disabled = true;
+
+    try {
+      // Send magic link that redirects to dashboard directly (not trade-selector)
+      // cs_auth_role is NOT set here — returning users already have profiles
+      localStorage.setItem('cs_auth_role', 'homeowner');
+      await Auth.sendMagicLink(email, 'homeowner', '/dashboard.html');
+
+      form.classList.add('hidden');
+      sentEmail.textContent = email;
+      sentSection.classList.add('active');
+
+      gtag('event', 'login', { method: 'magic_link' });
+
+    } catch (err) {
+      console.error('Login error:', err);
+      errorEl.textContent = 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+    } finally {
+      submitBtn.classList.remove('btn-loading');
+      submitBtn.disabled = false;
+    }
+  });
+
+  // Resend
+  document.getElementById('resend-link').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = sentEmail.textContent;
+    if (email) {
+      try {
+        await Auth.sendMagicLink(email, 'homeowner', '/dashboard.html');
+        alert('Login link resent! Check your email.');
+      } catch (err) {
+        alert('Could not resend. Please try again in a moment.');
+      }
+    }
+  });
+
+  // If already logged in, go to dashboard
+  Auth.getUser().then(async user => {
+    if (user) {
+      await Auth.redirectToDashboard();
+    }
+  });
+})();
+</script>
+
+<footer id="site-footer"></footer>
+
+</body>
+</html>

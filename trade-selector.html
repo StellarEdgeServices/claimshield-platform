@@ -1333,6 +1333,27 @@
         if (!user && !CONFIG?.DEMO_MODE) {
           return; // Auth module will handle redirect
         }
+
+        // Returning-user guard: if this user already has a claim, skip the intake
+        // wizard and go straight to their dashboard. This prevents a returning user
+        // who clicks a magic link (which lands here) from having to redo the intake.
+        if (user && !CONFIG?.DEMO_MODE && window.sb) {
+          try {
+            const { data: existingClaim } = await window.sb
+              .from('claims')
+              .select('id')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            if (existingClaim) {
+              window.location.href = '/dashboard.html';
+              return;
+            }
+          } catch (e) {
+            // PGRST116 = no rows — new user, proceed with intake
+          }
+        }
       } catch (error) {
         console.error('Auth error:', error);
       }

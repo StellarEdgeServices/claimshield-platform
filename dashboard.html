@@ -588,10 +588,10 @@
         <!-- Status banner (shown when project is submitted) -->
         <div id="status-banner" class="status-banner">
           <div class="status-banner-text">
-            <div class="status-banner-icon">✓</div>
+            <div class="status-banner-icon" id="status-banner-icon">✓</div>
             <div>
-              <strong>Your project is live!</strong>
-              <p style="margin: 0; font-size: 0.95rem;">Contractors are reviewing your details. You'll get notified of incoming bids.</p>
+              <strong id="status-banner-title">Your project is live!</strong>
+              <p style="margin: 0; font-size: 0.95rem;" id="status-banner-text">Contractors are reviewing your details. You'll be notified of incoming bids.</p>
             </div>
           </div>
           <a href="bids.html" class="btn btn-sm btn-secondary" id="viewBidsLinkTop">View Bids</a>
@@ -886,6 +886,7 @@
           renderChecklist();
           updateSubmitButton();
           updateProgressBar();
+          await updateStatusBanner();
 
           // 3. Set up event listeners
           setupEventListeners();
@@ -1053,6 +1054,28 @@
         const display = document.getElementById('claim-display');
         const form = document.getElementById('claim-edit-form');
 
+        // ── Project summary rows (read-only, always shown at top) ──
+        const trades = Array.isArray(currentClaim.trades) && currentClaim.trades.length
+          ? currentClaim.trades.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')
+          : null;
+        const fundingLabel = currentClaim.funding_type === 'insurance'
+          ? (currentClaim.policy_type === 'acv' ? 'Insurance (ACV)' : 'Insurance (RCV)')
+          : currentClaim.funding_type === 'cash' ? 'Cash / Out-of-Pocket' : currentClaim.funding_type || null;
+        const propertyAddr = currentClaim.property_address || null;
+
+        const summaryRows = [
+          { label: 'Property Address', value: propertyAddr },
+          { label: 'Project Type', value: trades },
+          { label: 'Funding', value: fundingLabel },
+        ].filter(r => r.value);
+
+        const summaryHtml = summaryRows.length ? summaryRows.map(r => `
+          <div class="claim-field">
+            <div class="claim-field-label">${r.label}</div>
+            <div class="claim-field-value">${r.value}</div>
+          </div>
+        `).join('') : '';
+
         // Fields to display
         const fields = [
           { key: 'carrier_id', label: 'Insurance Carrier', type: 'select' },
@@ -1087,6 +1110,9 @@
             </div>
           `;
         }).join('');
+
+        // Prepend summary rows (property address, trades, funding)
+        display.innerHTML = summaryHtml + display.innerHTML;
 
         // Edit form
         form.innerHTML = fields.map(field => {
@@ -1249,6 +1275,57 @@
           const submitLink = document.getElementById('viewBidsLinkSubmit');
           if (topLink) topLink.href = bidsUrl;
           if (submitLink) submitLink.href = bidsUrl;
+        }
+      }
+
+      /**
+       * Update the status banner with smart messaging based on claim status
+       * and actual bid count. Runs after loadClaimData() so currentClaim is set.
+       */
+      async function updateStatusBanner() {
+        if (!currentClaim?.ready_for_bids) return; // banner only shows when ready_for_bids=true
+
+        const banner = document.getElementById('status-banner');
+        const iconEl = document.getElementById('status-banner-icon');
+        const titleEl = document.getElementById('status-banner-title');
+        const textEl = document.getElementById('status-banner-text');
+
+        const status = currentClaim?.status;
+
+        // Contract already signed — highest priority message
+        if (status === 'contract_signed') {
+          if (iconEl) iconEl.textContent = '🎉';
+          if (titleEl) titleEl.textContent = 'Contract signed!';
+          if (textEl) textEl.textContent = 'Your contractor agreement has been signed. Your project is in progress.';
+          return;
+        }
+
+        // Try to get bid count — non-blocking, graceful fallback
+        let bidCount = 0;
+        try {
+          if (sb && currentClaim?.id && !CONFIG.DEMO_MODE) {
+            const { count } = await sb
+              .from('quotes')
+              .select('id', { count: 'exact', head: true })
+              .eq('claim_id', currentClaim.id)
+              .in('status', ['submitted', 'selected', 'awarded']);
+            bidCount = count || 0;
+          }
+        } catch (e) {
+          // Non-fatal — fall back to generic message
+        }
+
+        if (bidCount > 0) {
+          if (iconEl) iconEl.textContent = '🏆';
+          if (titleEl) titleEl.textContent = bidCount === 1
+            ? 'You have 1 bid!'
+            : `You have ${bidCount} bids!`;
+          if (textEl) textEl.textContent = 'Review the bids from qualified contractors and select the best offer for your project.';
+        } else {
+          // Default: submitted, waiting for bids
+          if (iconEl) iconEl.textContent = '✓';
+          if (titleEl) titleEl.textContent = 'Your project is live!';
+          if (textEl) textEl.textContent = 'Contractors are reviewing your details. You\'ll be notified of incoming bids.';
         }
       }
 
