@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-<title>OtterQuote — Your Project, Your Terms</title>
-<meta name="description" content="OtterQuote helps homeowners get the best deal on roofing and exterior projects — insurance or out-of-pocket. Upload your documents, pick your materials, and let contractors compete for your job. Zero cost to you.">
+<title>OtterQuote — Get Competing Quotes on Your Home Repair, Free for Homeowners</title>
+<meta name="description" content="OtterQuote helps homeowners get competing quotes from licensed contractors — for insurance claims or out-of-pocket projects. You compare, you choose, you pay nothing.">
 <link rel="canonical" href="https://otterquote.com/">
-<meta property="og:title" content="OtterQuote — Competing Contractor Quotes for Your Roofing Project">
-<meta property="og:description" content="OtterQuote helps homeowners get the best deal on roofing and exterior projects — insurance or out-of-pocket. Upload your documents, pick your materials, and let contractors compete for your job. Zero cost to you.">
+<meta property="og:title" content="OtterQuote — Competing Contractor Quotes for Your Home Repair">
+<meta property="og:description" content="OtterQuote helps homeowners get competing quotes from licensed contractors — for insurance claims or out-of-pocket projects. You compare, you choose, you pay nothing.">
 <meta property="og:url" content="https://otterquote.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OtterQuote">
@@ -42,10 +42,10 @@
   "name": "OtterQuote",
   "url": "https://otterquote.com",
   "logo": "https://otterquote.com/img/otter-logo.svg",
-  "description": "OtterQuote helps homeowners get competitive quotes from background-checked and licensed roofing contractors for insurance and retail roofing projects — at zero cost to homeowners.",
+  "description": "OtterQuote helps homeowners get competing quotes from licensed and insured roofing contractors — for insurance claims and out-of-pocket projects — at zero cost to homeowners.",
   "contactPoint": {
     "@type": "ContactPoint",
-    "email": "dustinstohler1@gmail.com",
+    "email": "info@otterquote.com",
     "contactType": "customer service"
   },
   "areaServed": "US",
@@ -70,7 +70,7 @@
 /* ── Hero ── */
 .hero {
   position: relative;
-  padding: var(--sp-24) 0 var(--sp-20);
+  padding: var(--sp-20) 0 var(--sp-20);
   overflow: hidden;
   text-align: center;
 }
@@ -81,6 +81,14 @@
   inset: 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.08) 0%, transparent 60%);
   pointer-events: none;
+}
+
+.hero-logo {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto var(--sp-5);
+  display: block;
+  animation: fadeUp 0.5s var(--ease) both;
 }
 
 .hero-badge {
@@ -95,12 +103,12 @@
   font-weight: 600;
   color: var(--amber);
   margin-bottom: var(--sp-6);
-  animation: fadeUp 0.6s var(--ease) both;
+  animation: fadeUp 0.6s var(--ease) 0.05s both;
 }
 
 .hero h1 {
-  max-width: 800px;
-  margin: 0 auto var(--sp-6);
+  max-width: 820px;
+  margin: 0 auto var(--sp-5);
   animation: fadeUp 0.6s var(--ease) 0.1s both;
 }
 
@@ -109,13 +117,22 @@
   color: var(--amber);
 }
 
+.hero-callout {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--teal, #14b8a6);
+  margin: 0 auto var(--sp-6);
+  animation: fadeUp 0.6s var(--ease) 0.18s both;
+  letter-spacing: -0.01em;
+}
+
 .hero-subtitle {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   color: var(--slate);
-  max-width: 600px;
+  max-width: 580px;
   margin: 0 auto var(--sp-8);
   line-height: 1.7;
-  animation: fadeUp 0.6s var(--ease) 0.2s both;
+  animation: fadeUp 0.6s var(--ease) 0.22s both;
 }
 
 .hero-cta {
@@ -150,7 +167,7 @@
 /* ── How It Works ── */
 .steps-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--sp-6);
   counter-reset: step;
 }
@@ -178,7 +195,7 @@
 
 .step-card h3 {
   font-family: var(--font-body);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   margin-bottom: var(--sp-3);
   color: var(--white);
@@ -187,6 +204,18 @@
 .step-card p {
   font-size: 0.95rem;
   color: var(--slate);
+  line-height: 1.65;
+}
+
+.step-privacy-note {
+  margin-top: var(--sp-3);
+  font-size: 0.875rem;
+  color: var(--green, #10b981);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
 }
 
 /* ── Value Props ── */
@@ -213,6 +242,73 @@
   margin-bottom: var(--sp-3);
 }
 
+.value-card p {
+  font-size: 0.95rem;
+  color: var(--slate);
+  line-height: 1.65;
+}
+
+/* ── Problem Section ── */
+.problem-section {
+  text-align: center;
+  padding: var(--sp-16) 0;
+}
+
+.problem-section h2 {
+  margin-bottom: var(--sp-6);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.problem-section p {
+  max-width: 640px;
+  margin: 0 auto var(--sp-5);
+  font-size: 1.05rem;
+  color: var(--slate);
+  line-height: 1.75;
+}
+
+/* ── Mid-page CTA ── */
+.mid-cta {
+  text-align: center;
+  padding: var(--sp-12) 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.mid-cta p {
+  font-size: 1.1rem;
+  color: var(--slate);
+  margin-bottom: var(--sp-6);
+}
+
+/* ── FAQ Section ── */
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-6);
+}
+
+.faq-item {
+  padding: var(--sp-7) var(--sp-7);
+}
+
+.faq-item h3 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: var(--sp-3);
+  line-height: 1.4;
+}
+
+.faq-item p {
+  font-size: 0.92rem;
+  color: var(--slate);
+  line-height: 1.7;
+}
+
 /* ── CTA Section ── */
 .cta-section {
   text-align: center;
@@ -225,7 +321,7 @@
 }
 
 .cta-section p {
-  max-width: 500px;
+  max-width: 540px;
   margin: 0 auto var(--sp-8);
   font-size: 1.1rem;
 }
@@ -233,27 +329,38 @@
 /* ── Guarantee Banner ── */
 .guarantee-banner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-6);
+  padding: var(--sp-5) var(--sp-6);
   background: rgba(16,185,129,0.08);
   border: 1px solid rgba(16,185,129,0.2);
   border-radius: var(--radius-lg);
-  max-width: 700px;
+  max-width: 780px;
   margin: var(--sp-8) auto 0;
+  text-align: left;
+}
+
+.guarantee-banner .guarantee-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .guarantee-banner p {
-  color: var(--green);
+  color: var(--green, #10b981);
   font-size: 0.95rem;
   font-weight: 500;
+  margin: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 768px) {
   .hero { padding: var(--sp-16) 0 var(--sp-12); }
+  .hero-logo { width: 72px; height: 72px; }
   .hero-trust { gap: var(--sp-4); }
-  .guarantee-banner { flex-direction: column; text-align: center; }
+  .guarantee-banner { flex-direction: column; text-align: center; align-items: center; }
+  .hero-callout { font-size: 1.15rem; }
 }
 </style>
 </head>
@@ -262,17 +369,20 @@
 <!-- Header -->
 <header id="site-header" data-active="home"></header>
 
-<!-- Hero -->
+<!-- ═══════════════════════════════════════ -->
+<!-- 1. HERO                                -->
+<!-- ═══════════════════════════════════════ -->
 <section class="hero">
   <div class="container">
-    <div class="hero-badge">Serving Homeowners Nationwide</div>
-    <h1>Your project. <em>Your terms.</em></h1>
+    <img src="/img/otter-logo.svg" alt="OtterQuote" class="hero-logo">
+    <div class="hero-badge">&#x1F30E; Serving Homeowners Nationwide</div>
+    <h1>Get competing quotes on your home repair — <em>without the runaround.</em></h1>
+    <div class="hero-callout">You compare, you choose, you pay nothing.</div>
     <p class="hero-subtitle">
-      Whether it's an insurance claim or an out-of-pocket project, we help homeowners get the best deal from
-      qualified contractors — and we handle everything up to a signed agreement. OtterQuote is 100% free for homeowners — contractors pay a small fee only when they earn your business.
+      Whether you have an insurance claim or are paying out of pocket, OtterQuote brings qualified, licensed contractors to you — competing for your business with their best quote. We handle everything up to a signed agreement.
     </p>
     <div class="hero-cta">
-      <a href="get-started.html" class="btn btn-primary btn-lg">I'm a Homeowner</a>
+      <a href="get-started.html" class="btn btn-primary btn-lg">Get Started Free</a>
       <a href="contractor-login.html" class="btn btn-secondary btn-lg">I'm a Contractor</a>
     </div>
     <div class="hero-trust">
@@ -292,100 +402,195 @@
   </div>
 </section>
 
-<!-- Value Props -->
+<!-- ═══════════════════════════════════════ -->
+<!-- 2. WHY OTTERQUOTE — Value Cards        -->
+<!-- ═══════════════════════════════════════ -->
 <section class="section" style="background: var(--navy-2);">
   <div class="container">
-    <h2 class="text-center" style="margin-bottom: var(--sp-12);">Why Homeowners Choose OtterQuote</h2>
+    <h2 class="text-center" style="margin-bottom: var(--sp-4);">Why Homeowners Choose OtterQuote</h2>
+    <p class="text-center" style="max-width: 600px; margin: 0 auto var(--sp-12); color: var(--slate); font-size: 1.05rem;">
+      Works for insurance claims and out-of-pocket projects alike.
+    </p>
     <div class="value-grid">
+
       <div class="value-card card">
         <div class="value-icon">&#x1F4B0;</div>
         <h3>Contractors Compete for You</h3>
-        <p>Multiple licensed contractors bid on your job. Competition means better pricing, better warranties, and better service — for you.</p>
+        <p>Multiple licensed contractors submit their best quote on your project. Competition means better pricing, better warranties, and better service — for you.</p>
       </div>
+
       <div class="value-card card">
         <div class="value-icon">&#x1F4CB;</div>
         <h3>We Handle the Paperwork</h3>
-        <p>Insurance estimate, measurements, material selection — our "Help Me" tools walk you through everything step by step, whether you're filing a claim or paying out-of-pocket.</p>
+        <p>Insurance estimate, measurements, material selection — our tools walk you through every step. Whether you have a claim already filed or are paying out of pocket, we gather what contractors need so you don't have to.</p>
       </div>
+
       <div class="value-card card">
         <div class="value-icon">&#x1F50D;</div>
-        <h3>Background-Checked &amp; Licensed Contractors</h3>
-        <p>Every contractor in our network provides proof of licensing, workers' comp, and general liability insurance. See their credentials, reviews, and years of experience before you commit.</p>
+        <h3>Contractor Information, All in One Place</h3>
+        <p>We gather each contractor's licensing, proof of insurance, and customer reviews — so you can see the full picture before you decide. No digging required.</p>
       </div>
+
       <div class="value-card card">
         <div class="value-icon">&#x1F504;</div>
         <h3>Switch Contractors Anytime</h3>
-        <p>Not happy with your choice? Switch to another OtterQuote contractor at no cost up to 3 days before installation. No hassle, no penalty.</p>
+        <p>If a contractor doesn't show up on time or doesn't meet your expectations, you can switch to another OtterQuote contractor at no cost — up to 3 days before installation. No hassle, no penalty.</p>
       </div>
+
       <div class="value-card card">
         <div class="value-icon">&#x1F3E0;</div>
         <h3>Your Property, On File</h3>
-        <p>Get professional 3D measurements of your property. Keep your Hover report forever — use it for future projects like siding, gutters, or windows.</p>
+        <p>Your home measurements and documents stay on file — ready when you need them for future repairs, renovations, or even resale. You'll never have to start from scratch on the next project.</p>
       </div>
+
       <div class="value-card card">
-        <div class="value-icon">&#x1F4F1;</div>
-        <h3>We Follow Up For You</h3>
-        <p>After you sign, we check in at every milestone — scheduling, installation, completion. If something goes wrong, one tap brings us back in to help.</p>
+        <div class="value-icon">&#x1F4AC;</div>
+        <h3>We Stay Reachable</h3>
+        <p>Questions or concerns? We're reachable and responsive throughout your project. You're not handed off and forgotten — we stay in the loop so you never feel like you're on your own.</p>
       </div>
+
     </div>
   </div>
 </section>
 
-<!-- How It Works -->
-<section class="section">
+<!-- ═══════════════════════════════════════ -->
+<!-- MID-PAGE CTA (after value cards)       -->
+<!-- ═══════════════════════════════════════ -->
+<section class="mid-cta">
+  <div class="container">
+    <p>Ready to see what contractors in your area will offer?</p>
+    <a href="get-started.html" class="btn btn-primary btn-lg">Describe Your Project — It's Free</a>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 3. PROBLEM / TRUST SECTION             -->
+<!-- ═══════════════════════════════════════ -->
+<section class="problem-section section">
+  <div class="container">
+    <h2>Finding a contractor you can trust shouldn't be this hard.</h2>
+    <p>
+      Most homeowners have no way to know if they're getting a fair price on a roofing or exterior project — or which contractors are actually licensed, insured, and worth trusting. Without a way to compare, it's easy to overpay or end up with someone who disappears mid-job.
+    </p>
+    <p>
+      OtterQuote was built to answer those questions before you sign anything. We gather the information, create the competition, and give you the tools to make a confident decision — on your schedule, at no cost to you.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 4. HOW IT WORKS (5 steps)              -->
+<!-- ═══════════════════════════════════════ -->
+<section class="section" style="background: var(--navy-2);">
   <div class="container">
     <h2 class="text-center" style="margin-bottom: var(--sp-4);">How It Works</h2>
-    <p class="text-center" style="max-width: 600px; margin: 0 auto var(--sp-12);">
-      Four simple steps from project start to a signed contract with a contractor you trust.
+    <p class="text-center" style="max-width: 600px; margin: 0 auto var(--sp-12); color: var(--slate);">
+      Five straightforward steps from project description to a contractor you trust, ready to start work.
     </p>
     <div class="steps-grid">
+
       <div class="step-card card">
         <div class="step-number">1</div>
-        <h3>Tell Us About Your Project</h3>
-        <p>Enter your name and address, and tell us how your project is being funded — insurance or out-of-pocket. We'll help you gather everything else.</p>
+        <h3>Describe Your Project</h3>
+        <p>Tell us about your home and what needs to be done. Let us know whether you have an insurance claim already filed or are paying out of pocket. No commitment required — we'll help you figure out the rest.</p>
       </div>
+
       <div class="step-card card">
         <div class="step-number">2</div>
-        <h3>We Match You With Contractors</h3>
-        <p>Your project details go to background-checked and licensed contractors in your area — only those you approve, with your permission. They compete for your business with their best quote.</p>
+        <h3>We Gather What's Needed</h3>
+        <p>We collect measurements, project documents, and material options — everything contractors need to give you an accurate quote. Our tools walk you through each item step by step.</p>
       </div>
+
       <div class="step-card card">
         <div class="step-number">3</div>
-        <h3>Compare & Choose</h3>
-        <p>Review quotes side-by-side. See pricing, warranty, reviews, and insurance verification. Pick the contractor that's right for you.</p>
+        <h3>Contractors Submit Their Best Quote</h3>
+        <p>Licensed, insured contractors in your area review your project and compete for your business. Your personal information is never shared with contractors unless you choose one.</p>
+        <div class="step-privacy-note">&#x1F512; Your information stays private until you decide.</div>
       </div>
+
       <div class="step-card card">
         <div class="step-number">4</div>
-        <h3>Sign & Relax</h3>
-        <p>Sign your contract electronically. Your contractor reaches out within 48 hours. We follow up to make sure everything goes smoothly.</p>
+        <h3>Compare Your Options</h3>
+        <p>Review quotes side by side. See each contractor's pricing, warranty terms, years in business, licensing status, and customer reviews — all gathered in one place so you don't have to dig.</p>
       </div>
+
+      <div class="step-card card">
+        <div class="step-number">5</div>
+        <h3>Move Forward on Your Terms</h3>
+        <p>Choose the contractor that's right for you and move forward at your own pace. We handle the agreement and follow up at every milestone — scheduling, installation, and completion.</p>
+      </div>
+
     </div>
   </div>
 </section>
 
-<!-- CTA — Homeowner -->
+<!-- ═══════════════════════════════════════ -->
+<!-- FAQ SECTION                            -->
+<!-- ═══════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <h2 class="text-center" style="margin-bottom: var(--sp-12);">Common Questions</h2>
+    <div class="faq-grid">
+
+      <div class="faq-item card">
+        <h3>How fast will I receive quotes?</h3>
+        <p>Most homeowners receive their first quote within 24–48 hours of submitting their project details. Timing can vary depending on your location and project type.</p>
+      </div>
+
+      <div class="faq-item card">
+        <h3>Do you handle my insurance claim?</h3>
+        <p>No — OtterQuote does not file or manage your insurance claim. What we do is help you get competitive contractor quotes once your claim has been filed, so you're not navigating the contractor search on your own.</p>
+      </div>
+
+      <div class="faq-item card">
+        <h3>Who sees my personal information?</h3>
+        <p>We never sell or share your contact information with contractors, advertisers, or third parties. The only people who see your information are the OtterQuote team and the contractor you select.</p>
+      </div>
+
+      <div class="faq-item card">
+        <h3>What if I'm not happy with my contractor?</h3>
+        <p>You can switch to another OtterQuote contractor at no cost, as long as it's more than 3 days before your installation date. We handle the transition — you don't have to manage it yourself.</p>
+      </div>
+
+      <div class="faq-item card">
+        <h3>Does OtterQuote work for my type of project?</h3>
+        <p>Yes. OtterQuote works for insurance claims (whether your policy covers full replacement cost or a depreciated amount) and for projects you're paying out of pocket. If you're not sure which applies to you, we'll help you figure it out.</p>
+      </div>
+
+      <div class="faq-item card">
+        <h3>How do contractors pay? Is there a catch?</h3>
+        <p>OtterQuote is completely free for homeowners. Contractors pay a small percentage-based fee only when they earn your business. That's the model — no hidden fees, no subscriptions, no surprises for you.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 5. CTA — Homeowner                     -->
+<!-- ═══════════════════════════════════════ -->
 <section class="cta-section">
   <div class="container">
-    <h2>Ready to Get the Best Deal on Your Repair?</h2>
-    <p>It takes less than 2 minutes to get started. We'll walk you through the rest.</p>
+    <h2>Get Your Best Deal on Home Repairs</h2>
+    <p>It takes less than 2 minutes to describe your project. We'll walk you through the rest — and it costs you nothing.</p>
     <a href="get-started.html" class="btn btn-primary btn-lg">Get Started Free</a>
     <div class="guarantee-banner">
-      <span style="font-size: 1.5rem;">&#x1F9A6;</span>
+      <div class="guarantee-emoji">&#x1F9A6;</div>
       <p>
-        <strong>Our guarantee:</strong> You can switch to a different OtterQuote contractor at no cost
-        up to 3 days before your installation date.
+        <strong>Our guarantee:</strong> If a contractor doesn't show up on time or doesn't meet your expectations, you can switch to another OtterQuote contractor at no cost — up to 3 days before your installation date. We handle the transition.
       </p>
     </div>
   </div>
 </section>
 
-<!-- CTA — Contractor -->
+<!-- ═══════════════════════════════════════ -->
+<!-- 6. CTA — Contractor                    -->
+<!-- ═══════════════════════════════════════ -->
 <section class="section" style="text-align: center; padding-bottom: var(--sp-24);">
   <div class="container">
     <h2 style="margin-bottom: var(--sp-4);">Are You a Contractor?</h2>
     <p style="max-width: 560px; margin: 0 auto var(--sp-8); font-size: 1.1rem; color: var(--slate);">
-      Think of us as a sales rep that doesn't need a truck, a manager, or an advance — and we always update your CRM.
-      We handle everything up to a signed, ready-to-install agreement, complete with project documentation and trade-specific measurements. You only pay when you win.
+      We deliver contract-ready projects — complete with aerial measurements, project documentation, and homeowner material selections. You review the opportunity, submit your best quote, and pay only when you win the job.
     </p>
     <div style="display: flex; justify-content: center; gap: var(--sp-4); flex-wrap: wrap;">
       <a href="contractor-login.html" class="btn btn-primary btn-lg">Contractor Login</a>
