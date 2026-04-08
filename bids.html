@@ -647,17 +647,28 @@
       }
 
       // Show RCV disclaimer if this is an RCV job
-      if (currentClaim && currentClaim.jobType === 'insurance_rcv') {
+      if (currentClaim && currentClaim.job_type === 'insurance_rcv') {
         document.getElementById('rcvDisclaimer').style.display = 'block';
       } else {
         document.getElementById('rcvDisclaimer').style.display = 'none';
       }
 
-      // Update status
+      // Update status dot and text based on claim status and bid count
       const bidCount = bids.length;
       const statusText = document.getElementById('statusText');
-      if (bidCount > 0) {
-        statusText.textContent = `${bidCount} bid${bidCount > 1 ? 's' : ''} received — bidding remains open`;
+      const statusDot = document.getElementById('statusDot');
+      const claimStatus = currentClaim ? currentClaim.status : null;
+
+      if (claimStatus === 'contract_signed') {
+        statusDot.className = 'bids-status-dot closed';
+        statusText.textContent = 'Contract signed — your project is underway';
+      } else if (claimStatus === 'awarded') {
+        statusDot.className = 'bids-status-dot closed';
+        statusText.textContent = 'Contractor selected — awaiting contract signature';
+      } else if (bidCount > 0) {
+        statusText.textContent = `${bidCount} bid${bidCount > 1 ? 's' : ''} received — bidding open`;
+      } else {
+        statusText.textContent = 'Bidding open — contractors are reviewing your project';
       }
     }
 
@@ -743,7 +754,13 @@
 
             <div class="bid-card-actions">
               <a href="contractor-about.html?contractor_id=${bid.contractor_id}&claim_id=${currentClaim ? currentClaim.id : ''}" class="btn btn-sm btn-secondary">View Full Profile</a>
-              <button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>
+              ${(function() {
+                const cs = currentClaim ? currentClaim.status : null;
+                if (cs === 'contract_signed') return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-ghost" style="border:1px solid var(--green);color:var(--green);">✓ Contract Signed</a>`;
+                if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">Sign Contract →</a>`;
+                if (cs === 'awarded') return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
+                return `<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
+              })()}
             </div>
           </div>
         `;
@@ -936,6 +953,15 @@
       const bid = bids.find(b => b.id === bidId);
       if (!bid) return;
 
+      // Guard: already awarded or signed — should not reach here via button, but protect anyway
+      if (currentClaim && (currentClaim.status === 'awarded' || currentClaim.status === 'contract_signed')) {
+        document.getElementById('modalTitle').textContent = 'Project Already Awarded';
+        document.getElementById('modalBody').textContent = 'This project has already been awarded to a contractor.';
+        document.getElementById('modalActions').style.display = 'none';
+        document.getElementById('confirmModal').classList.add('active');
+        return;
+      }
+
       const c = contractors[bid.contractor_id] || {};
       pendingBidId = bidId;
 
@@ -958,10 +984,12 @@
       const bid = bids.find(b => b.id === bidId);
       if (!bid) return;
 
-      // Check if claim is already awarded — show a specific message instead of a generic error
-      if (currentClaim && currentClaim.status === 'awarded') {
-        document.getElementById('modalTitle').textContent = 'Project Already Awarded';
-        document.getElementById('modalBody').textContent = 'This project has already been awarded to a contractor.';
+      // Check if claim is already awarded or signed — show a specific message instead of a generic error
+      if (currentClaim && (currentClaim.status === 'awarded' || currentClaim.status === 'contract_signed')) {
+        document.getElementById('modalTitle').textContent = currentClaim.status === 'contract_signed' ? 'Contract Already Signed' : 'Project Already Awarded';
+        document.getElementById('modalBody').textContent = currentClaim.status === 'contract_signed'
+          ? 'This project has already been awarded and the contract has been signed.'
+          : 'This project has already been awarded to a contractor.';
         document.getElementById('modalActions').style.display = 'none';
         document.getElementById('modalSpinner').style.display = 'none';
         return;

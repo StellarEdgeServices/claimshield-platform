@@ -71,6 +71,19 @@ window.Auth = {
         : '/get-started.html';
       return null;
     }
+    // Enforce role if specified — prevent homeowners on contractor pages and vice versa
+    if (requiredRole) {
+      const role = await this.getRole();
+      if (role && role !== requiredRole) {
+        // Redirect to the correct dashboard for this user's actual role
+        if (role === 'contractor') {
+          window.location.href = '/contractor-dashboard.html';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
+        return null;
+      }
+    }
     return user;
   },
 
@@ -242,26 +255,43 @@ window.Auth = {
             .single();
 
           if (!existing) {
-            await sb.from('contractors').insert({
-              user_id: user.id,
-              company_name: data.company_name,
-              contact_name: data.contact_name,
-              email: data.email,
-              phone: data.phone,
-              address_line1: data.address_line1,
-              address_city: data.address_city,
-              address_state: data.address_state,
-              address_zip: data.address_zip,
-              website_url: data.website_url,
-              years_in_business: data.years_in_business,
-              num_employees: data.num_employees,
-              no_license_required: data.no_license_required,
-            });
+            // Insert contractor record and get the new record's PK (id)
+            const { data: newContractor, error: insertError } = await sb
+              .from('contractors')
+              .insert({
+                user_id: user.id,
+                company_name: data.company_name,
+                contact_name: data.contact_name,
+                email: data.email,
+                phone: data.phone,
+                address_line1: data.address_line1,
+                address_city: data.address_city,
+                address_state: data.address_state,
+                address_zip: data.address_zip,
+                website_url: data.website_url,
+                years_in_business: data.years_in_business,
+                num_employees: data.num_employees,
+                no_license_required: data.no_license_required,
+                // Signup fields stored in localStorage under different key names
+                service_counties: data.service_counties || [],
+                trades: data.trade_types || [],
+                preferred_brands: data.shingle_brands || [],
+                // Insurance flags derived from signup data
+                has_workers_comp: !!(data.insurance_wc_carrier),
+                has_general_liability: !!(data.insurance_gl_carrier),
+              })
+              .select('id')
+              .single();
 
-            // Insert licenses if provided
-            if (data.licenses && data.licenses.length > 0) {
+            if (insertError) {
+              console.error('Error inserting contractor record:', insertError);
+            }
+
+            // Insert licenses using the contractor record's PK (not user.id)
+            const contractorPk = newContractor?.id;
+            if (contractorPk && data.licenses && data.licenses.length > 0) {
               const licenseRecords = data.licenses.map(lic => ({
-                contractor_id: user.id,
+                contractor_id: contractorPk,
                 municipality: lic.municipality,
                 license_number: lic.number,
                 expiration_date: lic.expDate,

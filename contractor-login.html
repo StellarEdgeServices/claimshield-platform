@@ -353,10 +353,17 @@
     }
   });
 
-  // Check if user is already logged in — redirect to contractor dashboard
+  // Check if user is already logged in — redirect based on role
   Auth.getUser().then(async user => {
     if (user) {
-      window.location.href = '/contractor-dashboard.html';
+      const role = await Auth.getRole();
+      if (role === 'contractor') {
+        window.location.href = '/contractor-dashboard.html';
+      } else if (role === 'homeowner') {
+        // Homeowner accidentally landed on contractor login — send them home
+        window.location.href = '/dashboard.html';
+      }
+      // If role is null/unknown, stay on page to let them log in
     }
   });
 })();
