@@ -104,6 +104,14 @@
         .empty-state-text { font-family: var(--font-body); font-size: 1rem; color: var(--slate); margin-bottom: var(--sp-6); }
         .results-count { font-family: var(--font-body); font-size: 0.95rem; color: var(--slate); margin-bottom: var(--sp-6); }
 
+        /* ── Scope Toggle ── */
+        .scope-toggle-row { margin-bottom: var(--sp-4); }
+        .btn-scope { background: none; border: 1px solid #D1D5DB; border-radius: var(--radius-md); padding: var(--sp-2) var(--sp-4); font-family: var(--font-body); font-size: 0.875rem; font-weight: 600; color: var(--navy); cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-2); transition: all 0.2s; }
+        .btn-scope:hover { border-color: var(--amber); background: #FFFBEB; }
+        .scope-content { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-md); padding: var(--sp-4); margin-bottom: var(--sp-4); }
+        .scope-label { font-size: 0.75rem; font-weight: 700; color: #15803D; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: var(--sp-2); }
+        .scope-text { font-family: var(--font-body); font-size: 0.875rem; color: #065F46; white-space: pre-wrap; margin: 0; line-height: 1.65; }
+
         @media (max-width: 768px) {
             main { padding: var(--sp-4) var(--sp-3); }
             .page-header h1 { font-size: 1.75rem; }
@@ -284,6 +292,7 @@
                     urgencyDeadline: claim.urgency_deadline,
                     urgencyReason: claim.urgency_reason,
                     homeownerNotes: claim.homeowner_notes,
+                    contractorScopeSummary: claim.contractor_scope_summary || null,
                     fundingType: claim.funding_type || (claim.job_type?.startsWith('insurance') ? 'insurance' : 'cash'),
                   };
                 });
@@ -468,6 +477,20 @@
                     notes = '<div class="homeowner-notes"><strong>Homeowner Notes</strong>' + t + '</div>';
                 }
 
+                let scopeHtml = '';
+                if (o.contractorScopeSummary) {
+                    const safeId = String(o.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                    scopeHtml = '<div class="scope-toggle-row">'
+                        + '<button class="btn-scope" id="scope-btn-' + safeId + '" onclick="toggleScope(\'' + safeId + '\')">'
+                        + '&#x1F4CB; View Scope <span id="scope-arrow-' + safeId + '">&#x25BC;</span>'
+                        + '</button>'
+                        + '</div>'
+                        + '<div class="scope-content" id="scope-' + safeId + '" style="display:none;">'
+                        + '<span class="scope-label">Insurance Scope of Work</span>'
+                        + '<div class="scope-text">' + escHtml(o.contractorScopeSummary) + '</div>'
+                        + '</div>';
+                }
+
                 let feeHtml = '';
                 if (fees) {
                     feeHtml = '<div class="fee-breakdown"><span class="fee-breakdown-title">Estimated Platform Fees</span>'
@@ -493,11 +516,30 @@
                     + (o.measurementsAvailable ? '<span class="badge badge-available">Measurements &#x2713;</span>' : '<span class="badge badge-pending">Measurements Pending</span>')
                     + '</div>'
                     + notes
+                    + scopeHtml
                     + '<div class="info-block" style="margin-bottom:var(--sp-6)"><span class="info-label">Submitted</span><span class="info-value">' + new Date(o.claimFiledDate).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + '</span></div>'
                     + feeHtml
                     + '<div class="actions-row"><button class="btn btn-secondary" onclick="showDetails(\'' + o.id + '\')">Details</button><a href="contractor-bid-form.html?project=' + o.id + '" class="btn btn-primary">Submit Bid</a></div>'
                     + '</div>';
             }).join('');
+        }
+
+        // ── Scope Toggle ──
+        function toggleScope(safeId) {
+            const content = document.getElementById('scope-' + safeId);
+            const arrow = document.getElementById('scope-arrow-' + safeId);
+            if (!content) return;
+            const isOpen = content.style.display !== 'none';
+            content.style.display = isOpen ? 'none' : 'block';
+            if (arrow) arrow.innerHTML = isOpen ? '&#x25BC;' : '&#x25B2;';
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         // ── Details Modal (Bug 3 fix) ──

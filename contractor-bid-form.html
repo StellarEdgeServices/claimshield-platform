@@ -441,6 +441,147 @@
         text-align: right;
       }
     }
+
+    /* ── Insurance Line Items Panel ── */
+    .line-items-panel {
+      background: var(--white);
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      margin-bottom: var(--sp-8);
+    }
+
+    .line-items-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--sp-4);
+      gap: var(--sp-4);
+      flex-wrap: wrap;
+    }
+
+    .line-items-title {
+      font-family: var(--font-heading);
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .line-items-meta {
+      font-size: 0.8rem;
+      color: var(--slate);
+      font-style: italic;
+    }
+
+    .line-items-info-bar {
+      display: flex;
+      gap: var(--sp-6);
+      flex-wrap: wrap;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: var(--sp-3) var(--sp-4);
+      margin-bottom: var(--sp-6);
+      font-size: 0.875rem;
+    }
+
+    .line-items-info-bar span { color: var(--navy); }
+    .line-items-info-bar strong { color: var(--navy); font-weight: 600; }
+
+    .section-group { margin-bottom: var(--sp-6); }
+
+    .section-group-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: var(--sp-3);
+      padding-bottom: var(--sp-1);
+      border-bottom: 2px solid #E2E8F0;
+    }
+
+    .line-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .line-items-table thead th {
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: var(--sp-2) var(--sp-3);
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .line-items-table thead th.num { text-align: right; }
+
+    .line-items-table tbody tr:nth-child(even) { background: #F8FAFC; }
+
+    .line-items-table tbody td {
+      padding: var(--sp-2) var(--sp-3);
+      color: var(--navy);
+      vertical-align: top;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .line-items-table tbody td.num {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .line-items-table td.desc { max-width: 320px; }
+    .line-items-table .item-note { font-size: 0.75rem; color: var(--slate); display: block; margin-top: 2px; }
+
+    .line-items-subtotal {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--sp-8);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--navy);
+      padding: var(--sp-2) var(--sp-3);
+      background: #EFF6FF;
+      border-radius: var(--radius-sm);
+      margin-top: var(--sp-2);
+    }
+
+    .line-items-totals {
+      background: var(--navy);
+      color: var(--white);
+      border-radius: var(--radius-md);
+      padding: var(--sp-4) var(--sp-6);
+      margin-top: var(--sp-4);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--sp-4);
+    }
+
+    .totals-item { display: flex; flex-direction: column; gap: 2px; }
+    .totals-label { font-size: 0.7rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .totals-value { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; color: var(--white); }
+    .totals-value.amber { color: var(--amber); }
+
+    .line-items-readonly-note {
+      font-size: 0.8rem;
+      color: var(--slate);
+      text-align: center;
+      margin-top: var(--sp-4);
+      font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+      .line-items-table thead th, .line-items-table tbody td { padding: var(--sp-1) var(--sp-2); }
+      .line-items-totals { grid-template-columns: 1fr 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -477,6 +618,9 @@
         ✓ This homeowner has selected <strong>GAF Architectural Shingles, Class 4 Impact Resistant</strong>
       </div>
     </div>
+
+    <!-- Insurance Line Items Panel (shown when parsed_line_items exists) -->
+    <div id="insuranceLineItemsPanel" style="display:none;"></div>
 
     <!-- Trade Selection (for multi-trade projects) -->
     <div class="form-card" id="tradeSelectionCard" style="display:none;">
@@ -731,6 +875,8 @@
             currentClaim = data;
             // Populate claim summary from real data
             updateClaimSummary();
+            // Render insurance line items if parsed data exists
+            renderInsuranceLineItems();
           }
         } catch (err) {
           console.error('Error loading claim:', err);
@@ -748,6 +894,8 @@
 
           if (!error && data) {
             currentContractor = data;
+            // Re-render line items now that we know the contractor's trades
+            renderInsuranceLineItems();
           }
         } catch (err) {
           console.error('Error loading contractor:', err);
@@ -791,6 +939,173 @@
           </div>
         `;
       }
+    }
+
+    // ── Insurance Line Items Panel ──
+    // Trade-to-keyword mapping for filtering parsed line items
+    const TRADE_SECTION_KEYWORDS = {
+      roofing:  ['roof', 'roofplan', 'shingle', 'underlayment', 'decking', 'exterior plan', 'vents', 'flashings', 'debris'],
+      gutters:  ['gutter', 'downspout', 'fascia'],
+      siding:   ['siding', 'wall', 'exterior'],
+      windows:  ['window', 'glass']
+    };
+
+    const TRADE_DESC_KEYWORDS = {
+      roofing:  ['shingle', 'felt', 'underlayment', 'ice', 'ridge', 'deck', 'plywood', 'osb', 'flashing', 'roof', 'drip', 'cap sheet', 'starter', 'penetration', 'chimney', 'skylight', 'soffit', 'eave', 'valley', 'hip', 'vent', 'debris', 'haul', 'dumpster'],
+      gutters:  ['gutter', 'downspout', 'fascia', 'leader', 'elbow', 'end cap'],
+      siding:   ['siding', 'trim', 'soffit', 'vinyl', 'panel', 'house wrap', 'furring'],
+      windows:  ['window', 'glass', 'screen', 'glazing', 'sash']
+    };
+
+    function matchesTrade(sectionName, description, trades) {
+      const sn = (sectionName || '').toLowerCase();
+      const ds = (description || '').toLowerCase();
+      return (trades || []).some(trade => {
+        const sk = TRADE_SECTION_KEYWORDS[trade] || [];
+        const dk = TRADE_DESC_KEYWORDS[trade] || [];
+        return sk.some(kw => sn.includes(kw)) || dk.some(kw => ds.includes(kw));
+      });
+    }
+
+    function fmtMoney(v) {
+      if (v == null || v === '' || isNaN(Number(v))) return '—';
+      return Number(v).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtQty(qty, unit) {
+      if (qty == null) return '—';
+      return qty + (unit ? ' ' + unit : '');
+    }
+
+    function renderInsuranceLineItems() {
+      const panel = document.getElementById('insuranceLineItemsPanel');
+      if (!panel) return;
+
+      // Need parsed line items on the claim
+      if (!currentClaim || !currentClaim.parsed_line_items) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      const parsed = typeof currentClaim.parsed_line_items === 'string'
+        ? JSON.parse(currentClaim.parsed_line_items)
+        : currentClaim.parsed_line_items;
+
+      if (!parsed || !parsed.sections || !parsed.sections.length) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      // Determine contractor trades — fall back to all sections if no contractor loaded yet
+      const contractorTrades = (currentContractor && currentContractor.trades && currentContractor.trades.length > 0)
+        ? currentContractor.trades.map(t => t.toLowerCase())
+        : null; // null means show everything (no trade filter yet)
+
+      // Filter sections and line items
+      const filteredSections = [];
+      (parsed.sections || []).forEach(section => {
+        const items = (section.line_items || []).filter(item => {
+          if (!contractorTrades) return true; // show all until trades known
+          return matchesTrade(section.section_name, item.description, contractorTrades);
+        });
+        if (items.length > 0) {
+          filteredSections.push({ ...section, line_items: items });
+        }
+      });
+
+      if (filteredSections.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      // Build info bar
+      const carrierDisplay = parsed.carrier_name || 'Unknown Carrier';
+      const dolDisplay = parsed.date_of_loss ? 'Date of Loss: ' + parsed.date_of_loss : '';
+      const dbDisplay = parsed.pricing_database ? 'Pricing DB: ' + parsed.pricing_database : '';
+      const tradeNote = contractorTrades
+        ? 'Showing items relevant to: ' + contractorTrades.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')
+        : 'Showing all line items';
+
+      let infoBarHtml = '<div class="line-items-info-bar">'
+        + '<span><strong>Carrier:</strong> ' + escHtmlBid(carrierDisplay) + '</span>'
+        + (dolDisplay ? '<span>' + escHtmlBid(dolDisplay) + '</span>' : '')
+        + (dbDisplay ? '<span>' + escHtmlBid(dbDisplay) + '</span>' : '')
+        + '<span style="color:var(--slate);font-style:italic;">' + escHtmlBid(tradeNote) + '</span>'
+        + '</div>';
+
+      // Build section tables
+      let sectionsHtml = '';
+      filteredSections.forEach(section => {
+        const sectionLabel = [section.section_name, section.area_name].filter(Boolean).join(' — ');
+
+        let rowsHtml = section.line_items.map(item => {
+          const noteHtml = item.notes ? '<span class="item-note">' + escHtmlBid(item.notes) + '</span>' : '';
+          return '<tr>'
+            + '<td class="desc">' + escHtmlBid(item.description || '') + noteHtml + '</td>'
+            + '<td class="num">' + escHtmlBid(fmtQty(item.quantity, item.unit)) + '</td>'
+            + '<td class="num">' + fmtMoney(item.rc) + '</td>'
+            + '<td class="num">' + fmtMoney(item.depreciation) + '</td>'
+            + '<td class="num">' + fmtMoney(item.acv) + '</td>'
+            + '</tr>';
+        }).join('');
+
+        let subtotalHtml = '';
+        if (section.subtotal_rc != null || section.subtotal_acv != null) {
+          subtotalHtml = '<div class="line-items-subtotal">'
+            + (section.subtotal_rc != null ? '<span>Section RC: ' + fmtMoney(section.subtotal_rc) + '</span>' : '')
+            + (section.subtotal_acv != null ? '<span>Section ACV: ' + fmtMoney(section.subtotal_acv) + '</span>' : '')
+            + '</div>';
+        }
+
+        sectionsHtml += '<div class="section-group">'
+          + '<div class="section-group-title">' + escHtmlBid(sectionLabel) + '</div>'
+          + '<table class="line-items-table">'
+          + '<thead><tr>'
+          + '<th>Description</th>'
+          + '<th class="num">Qty + Unit</th>'
+          + '<th class="num">RC</th>'
+          + '<th class="num">Depreciation</th>'
+          + '<th class="num">ACV</th>'
+          + '</tr></thead>'
+          + '<tbody>' + rowsHtml + '</tbody>'
+          + '</table>'
+          + subtotalHtml
+          + '</div>';
+      });
+
+      // Build totals bar from summary
+      let totalsHtml = '';
+      const s = parsed.summary;
+      if (s) {
+        totalsHtml = '<div class="line-items-totals">'
+          + (s.rcv != null ? '<div class="totals-item"><span class="totals-label">RCV (Full)</span><span class="totals-value amber">' + fmtMoney(s.rcv) + '</span></div>' : '')
+          + (s.total_depreciation != null ? '<div class="totals-item"><span class="totals-label">Total Depreciation</span><span class="totals-value">' + fmtMoney(s.total_depreciation) + '</span></div>' : '')
+          + (s.acv != null ? '<div class="totals-item"><span class="totals-label">ACV (Paid)</span><span class="totals-value">' + fmtMoney(s.acv) + '</span></div>' : '')
+          + (s.deductible != null ? '<div class="totals-item"><span class="totals-label">Deductible</span><span class="totals-value">' + fmtMoney(s.deductible) + '</span></div>' : '')
+          + (s.net_estimate != null ? '<div class="totals-item"><span class="totals-label">Net Estimate</span><span class="totals-value">' + fmtMoney(s.net_estimate) + '</span></div>' : '')
+          + '</div>';
+      }
+
+      panel.innerHTML = '<div class="line-items-panel">'
+        + '<div class="line-items-header">'
+        + '<div class="line-items-title">📋 Insurance Line Items — Your Trades</div>'
+        + '<div class="line-items-meta">Read-only reference — does not affect your bid price</div>'
+        + '</div>'
+        + infoBarHtml
+        + sectionsHtml
+        + totalsHtml
+        + '<p class="line-items-readonly-note">These line items are from the homeowner\'s insurance estimate. Use them as a reference when pricing your bid. Your bid price is entered below and is not pre-filled from this data.</p>'
+        + '</div>';
+
+      panel.style.display = 'block';
+    }
+
+    function escHtmlBid(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
 
     // Update fee calculator
