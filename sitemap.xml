@@ -103,6 +103,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://otterquote.com/partner-inspectors.html</loc>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://otterquote.com/blog/</loc>
     <lastmod>2026-03-24</lastmod>
     <changefreq>weekly</changefreq>
@@ -110,6 +116,12 @@
   </url>
   <url>
     <loc>https://otterquote.com/blog/what-to-do-after-storm-damages-roof.html</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://otterquote.com/blog/how-to-negotiate-better-roof-repair-insurance-claim.html</loc>
     <lastmod>2026-03-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
