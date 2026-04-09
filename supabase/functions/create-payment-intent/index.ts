@@ -34,7 +34,14 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { amount, currency, description, metadata } = await req.json();
+    const {
+      amount,
+      currency,
+      description,
+      metadata,
+      contractor_id,
+      off_session,
+    } = await req.json();
 
     // Validate required fields
     if (
@@ -92,6 +99,22 @@ serve(async (req) => {
       );
     }
 
+    // For platform_fee type, contractor_id and off_session are required
+    if (metadata.type === "platform_fee" && off_session) {
+      if (!contractor_id) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Missing contractor_id for off-session platform fee charge.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
     // ========== RATE LIMIT CHECK ==========
     const { data: rateLimitResult, error: rlError } = await supabase.rpc(
       "check_rate_limit",
@@ -142,53 +165,154 @@ serve(async (req) => {
       );
     }
 
-    // ========== CREATE PAYMENT INTENT ==========
-    const basicAuth = btoa(`${stripeSecretKey}:`);
+    // ========== HANDLE OFF-SESSION CHARGING (Contractor Platform Fees) ==========
+    let paymentIntentData;
 
-    // Build URL-encoded form data
-    const formData = new URLSearchParams();
-    formData.append("amount", String(amount));
-    formData.append("currency", currency);
-    formData.append("description", description || "");
-    formData.append("metadata[claim_id]", metadata.claim_id);
-    formData.append("metadata[type]", metadata.type);
-    formData.append("automatic_payment_methods[enabled]", "true");
+    if (metadata.type === "platform_fee" && off_session && contractor_id) {
+      // Look up contractor's saved payment method
+      const { data: contractorData, error: contractorError } = await supabase
+        .from("contractors")
+        .select("stripe_payment_method_id, stripe_customer_id")
+        .eq("id", contractor_id)
+        .single();
 
-    console.log(
-      "Creating Stripe PaymentIntent for",
-      metadata.type,
-      "claim:",
-      metadata.claim_id,
-      "amount:",
-      amount,
-      currency
-    );
-
-    const paymentIntentResponse = await fetch(
-      `${STRIPE_API_BASE}/payment_intents`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
+      if (contractorError || !contractorData) {
+        throw new Error(
+          `Failed to look up contractor payment method: ${
+            contractorError?.message || "contractor not found"
+          }`
+        );
       }
-    );
 
-    if (!paymentIntentResponse.ok) {
-      const errorData = await paymentIntentResponse.text();
-      console.error(
-        "Stripe PaymentIntent creation failed:",
-        paymentIntentResponse.status,
-        errorData
+      if (
+        !contractorData.stripe_payment_method_id ||
+        !contractorData.stripe_customer_id
+      ) {
+        throw new Error(
+          "Contractor does not have a payment method on file. Charge cannot proceed."
+        );
+      }
+
+      console.log(
+        "Creating off-session PaymentIntent for contractor",
+        contractor_id,
+        "amount:",
+        amount,
+        currency
       );
-      throw new Error(
-        `Stripe API error (HTTP ${paymentIntentResponse.status}): ${errorData}`
+
+      // Build URL-encoded form data for off-session charge
+      const offSessionFormData = new URLSearchParams();
+      offSessionFormData.append("amount", String(amount));
+      offSessionFormData.append("currency", currency);
+      offSessionFormData.append("customer", contractorData.stripe_customer_id);
+      offSessionFormData.append(
+        "payment_method",
+        contractorData.stripe_payment_method_id
       );
+      offSessionFormData.append("off_session", "true");
+      offSessionFormData.append("confirm", "true"); // Automatically confirm the payment
+      offSessionFormData.append("description", description || "");
+      offSessionFormData.append("metadata[claim_id]", metadata.claim_id);
+      offSessionFormData.append("metadata[type]", metadata.type);
+      offSessionFormData.append("metadata[contractor_id]", contractor_id);
+
+      const basicAuth = btoa(`${stripeSecretKey}:`);
+
+      const offSessionResponse = await fetch(
+        `${STRIPE_API_BASE}/payment_intents`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicAuth}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: offSessionFormData.toString(),
+        }
+      );
+
+      if (!offSessionResponse.ok) {
+        const errorData = await offSessionResponse.text();
+        console.error(
+          "Stripe off-session PaymentIntent failed:",
+          offSessionResponse.status,
+          errorData
+        );
+        throw new Error(
+          `Stripe off-session charge failed (HTTP ${offSessionResponse.status}): ${errorData}`
+        );
+      }
+
+      paymentIntentData = await offSessionResponse.json();
+
+      // Check payment intent status
+      if (paymentIntentData.status === "requires_action") {
+        throw new Error(
+          "Payment requires additional authentication. Please update your payment method."
+        );
+      }
+
+      if (paymentIntentData.status === "requires_payment_method") {
+        throw new Error(
+          "Payment method failed. Please update your payment method and try again."
+        );
+      }
+
+      console.log(
+        "Off-session PaymentIntent status:",
+        paymentIntentData.status,
+        "ID:",
+        paymentIntentData.id
+      );
+    } else {
+      // ========== CREATE PAYMENT INTENT (Standard flow for homeowner/measurement fees) ==========
+      const basicAuth = btoa(`${stripeSecretKey}:`);
+
+      // Build URL-encoded form data
+      const formData = new URLSearchParams();
+      formData.append("amount", String(amount));
+      formData.append("currency", currency);
+      formData.append("description", description || "");
+      formData.append("metadata[claim_id]", metadata.claim_id);
+      formData.append("metadata[type]", metadata.type);
+      formData.append("automatic_payment_methods[enabled]", "true");
+
+      console.log(
+        "Creating Stripe PaymentIntent for",
+        metadata.type,
+        "claim:",
+        metadata.claim_id,
+        "amount:",
+        amount,
+        currency
+      );
+
+      const paymentIntentResponse = await fetch(
+        `${STRIPE_API_BASE}/payment_intents`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicAuth}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
+
+      if (!paymentIntentResponse.ok) {
+        const errorData = await paymentIntentResponse.text();
+        console.error(
+          "Stripe PaymentIntent creation failed:",
+          paymentIntentResponse.status,
+          errorData
+        );
+        throw new Error(
+          `Stripe API error (HTTP ${paymentIntentResponse.status}): ${errorData}`
+        );
+      }
+
+      paymentIntentData = await paymentIntentResponse.json();
     }
-
-    const paymentIntentData = await paymentIntentResponse.json();
     /*
      * paymentIntentData shape:
      * {
@@ -203,17 +327,23 @@ serve(async (req) => {
      */
 
     console.log(
-      "Stripe PaymentIntent created. ID:",
+      "Stripe PaymentIntent created/confirmed. ID:",
       paymentIntentData.id,
       "Status:",
       paymentIntentData.status
     );
 
+    // For off-session charges, success status is 'succeeded' or 'processing'
+    // For standard intents awaiting client action, status is 'requires_payment_method'
+    const successStatuses = ["succeeded", "processing"];
+    const isSuccessful = successStatuses.includes(paymentIntentData.status);
+
     return new Response(
       JSON.stringify({
-        client_secret: paymentIntentData.client_secret,
+        client_secret: paymentIntentData.client_secret || null,
         payment_intent_id: paymentIntentData.id,
         status: paymentIntentData.status,
+        succeeded: isSuccessful,
         amount: paymentIntentData.amount,
         currency: paymentIntentData.currency,
         rate_limit_counts: rateLimitResult?.counts,
