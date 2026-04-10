@@ -1924,5 +1924,40 @@
     })();
   </script>
 
+  <!--
+    ============================================================================
+    FUTURE ANALYTICS: Referral Source Dashboard
+    ============================================================================
+    As of v26 (2026-04-10, ClickUp 86e0v8cce), claims now capture:
+      - referral_source TEXT  — channel from ?ref= URL param (e.g. 'inspector',
+                                're-agent', 'direct', 'facebook', 'nextdoor')
+      - referral_agent_id UUID — FK to referral_agents (from ?partner_id= param)
+
+    When building an admin analytics view, surface the following metrics:
+
+    1. Claims by Referral Source (bar chart or table)
+       SELECT referral_source, COUNT(*) AS total_claims,
+              COUNT(*) FILTER (WHERE status = 'contract_signed') AS contracts_signed
+       FROM claims
+       GROUP BY referral_source ORDER BY total_claims DESC;
+
+    2. Per-Agent Referral Performance
+       SELECT ra.first_name, ra.last_name, ra.agent_type, ra.email,
+              COUNT(c.id) AS total_claims,
+              COUNT(c.id) FILTER (WHERE c.status = 'contract_signed') AS contracts_signed,
+              ra.total_commission_earned
+       FROM referral_agents ra
+       LEFT JOIN claims c ON c.referral_agent_id = ra.id
+       GROUP BY ra.id ORDER BY contracts_signed DESC;
+
+    3. Conversion Rate by Channel
+       Divide contracts_signed / total_claims per referral_source to identify
+       highest-ROI acquisition channels.
+
+    Suggested admin page: admin-dashboard.html (does not yet exist as of v26).
+    Alternatively, add a "Referral ROI" tab to the existing admin/partner views.
+    ============================================================================
+  -->
+
 </body>
 </html>

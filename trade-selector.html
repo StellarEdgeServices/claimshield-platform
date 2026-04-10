@@ -1208,6 +1208,51 @@
       });
     }
 
+    // ── Referral Attribution ──
+    // Capture ?ref= and ?partner_id= URL params at page load and persist to
+    // sessionStorage so they survive any in-page navigation. Values are written
+    // to the claim record (referral_source / referral_agent_id) on INSERT.
+    function captureReferralParams() {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      const partnerId = params.get('partner_id');
+      if (ref) sessionStorage.setItem('oq_referral_source', ref.trim().toLowerCase());
+      if (partnerId) sessionStorage.setItem('oq_partner_id', partnerId.trim());
+    }
+
+    // Look up a referral agent by unique_code or UUID and return their id.
+    // Returns null if not found or on any error.
+    async function resolveReferralAgentId(partnerIdParam) {
+      if (!partnerIdParam || !window.sb) return null;
+      try {
+        // Try unique_code match first (the value partners share in URLs)
+        let { data } = await window.sb
+          .from('referral_agents')
+          .select('id')
+          .eq('unique_code', partnerIdParam.toUpperCase())
+          .eq('status', 'active')
+          .limit(1)
+          .single();
+        if (data) return data.id;
+
+        // Fall back to direct UUID match
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidPattern.test(partnerIdParam)) {
+          const { data: byId } = await window.sb
+            .from('referral_agents')
+            .select('id')
+            .eq('id', partnerIdParam)
+            .eq('status', 'active')
+            .limit(1)
+            .single();
+          if (byId) return byId.id;
+        }
+      } catch (e) {
+        // No match — leave referral_agent_id null
+      }
+      return null;
+    }
+
     // ── Completion ──
     async function completeSelection() {
       try {
@@ -1269,13 +1314,21 @@
               .limit(1)
               .single();
 
+            // Build referral attribution fields from sessionStorage
+            const referralSource = sessionStorage.getItem('oq_referral_source') || null;
+            const partnerIdParam = sessionStorage.getItem('oq_partner_id') || null;
+            const referralAgentId = await resolveReferralAgentId(partnerIdParam);
+
             const claimData = {
               funding_type: state.fundingType,
               policy_type: state.policyType,
               trades: selections.trades.map(t => t.trade),
               job_type: jobType,
               property_address: propertyAddress,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              // Referral attribution — null if no ?ref= or ?partner_id= was present
+              ...(referralSource && { referral_source: referralSource }),
+              ...(referralAgentId && { referral_agent_id: referralAgentId })
             };
 
             if (existingClaim) {
@@ -1325,6 +1378,9 @@
     // ── Init on page load ──
     async function initPage() {
       try {
+        // Capture referral params before any redirects can strip the URL
+        captureReferralParams();
+
         // Build initial 3-step indicator (default to cash path)
         buildStepIndicator();
 
