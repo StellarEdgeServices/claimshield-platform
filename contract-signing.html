@@ -1507,9 +1507,10 @@
         envelope_id: state.envelopeId,
       });
 
-      // Auto-advance to confirmation after a brief pause
+      // Redirect to project-confirmation.html after a brief pause
+      // Two-document flow: contract first, then project confirmation (D-110)
       setTimeout(() => {
-        goToStep(3);
+        window.location.href = `/project-confirmation.html?claim_id=${state.claimId}`;
       }, 1500);
     }
 

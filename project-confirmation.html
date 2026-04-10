@@ -1039,7 +1039,14 @@
             <div class="success-wrapper">
               <div class="success-icon">&#x2705;</div>
               <h2 class="success-title">Confirmation Submitted!</h2>
-              <p class="success-subtitle">Confirmation submitted — your contractor will receive the details. They'll be in touch to confirm your installation schedule.</p>
+              <p class="success-subtitle">Your project details have been saved and sent to your contractor for signature. They'll be in touch to confirm your installation schedule.</p>
+
+              <!-- Envelope ID (shown when DocuSign envelope is created) -->
+              <div id="envelopeIdSection" style="display: none; margin-top: var(--sp-6); padding: var(--sp-4) var(--sp-5); background: rgba(20, 184, 166, 0.08); border: 1px solid rgba(20, 184, 166, 0.25); border-radius: var(--radius-md); text-align: left;">
+                <p style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--teal); margin-bottom: var(--sp-1);">DocuSign Confirmation</p>
+                <p style="font-size: 0.85rem; color: var(--slate); margin-bottom: var(--sp-1);">Envelope ID:</p>
+                <p id="envelopeIdDisplay" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--white); word-break: break-all;"></p>
+              </div>
 
               <div style="margin-top: var(--sp-8);">
                 <a href="/dashboard.html" class="button button-primary button-large">Go to My Dashboard &rarr;</a>
@@ -1072,10 +1079,10 @@
      *   2. Load claim, contractor, parsed_line_items
      *   3. Homeowner fills scope/material/notes form
      *   4. On submit: save project_confirmation JSONB to claims table
-     *   5. Stub DocuSign call (Step 3 — Edge Function extension)
+     *   5. Call create-docusign-envelope Edge Function (document_type: 'project_confirmation')
+     *   6. Show success screen with confirmation envelope ID
      *
-     * DocuSign stub: console.log + success message.
-     * Real Edge Function call wired in Step 3 (ClickUp 86e0vc0hv).
+     * DocuSign call: real Edge Function invoke (wired Session 106, ClickUp 86e0vc0hv + 86e0vc0p7).
      */
 
     // ── State ──
@@ -1085,6 +1092,7 @@
       contractorId: null,
       contractor: null,
       currentUser: null,
+      homeownerName: null,
       parsedLineItems: [],
     };
 
@@ -1237,19 +1245,38 @@
       };
     }
 
-    // ── DocuSign stub (Step 3 will wire the real Edge Function) ──
+    // ── Trigger project confirmation DocuSign envelope ──
     async function triggerProjectConfirmationDocuSign(claimId, payload) {
-      console.log('[OtterQuote] DocuSign project confirmation stub — claim:', claimId, 'payload:', payload);
-      console.log('[OtterQuote] Step 3 (ClickUp 86e0vc0hv) will extend create-docusign-envelope Edge Function to handle document_type: "project_confirmation".');
-      // TODO (Step 3): Replace stub with:
-      // const { data, error } = await sb.functions.invoke('create-docusign-envelope', {
-      //   body: {
-      //     claim_id: claimId,
-      //     document_type: 'project_confirmation',
-      //     confirmation_data: payload,
-      //   }
-      // });
-      return { stubbed: true };
+      console.log('[OtterQuote] Creating project confirmation DocuSign envelope — claim:', claimId);
+
+      const signerEmail = state.currentUser?.email;
+      const signerName = state.homeownerName || signerEmail || 'Homeowner';
+
+      if (!signerEmail) {
+        throw new Error('Unable to determine homeowner email for DocuSign envelope.');
+      }
+      if (!state.contractorId) {
+        throw new Error('No contractor ID found — cannot create envelope.');
+      }
+
+      const { data, error } = await sb.functions.invoke('create-docusign-envelope', {
+        body: {
+          claim_id: claimId,
+          document_type: 'project_confirmation',
+          contractor_id: state.contractorId,
+          signer: {
+            email: signerEmail,
+            name: signerName,
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create project confirmation envelope.');
+      }
+
+      console.log('[OtterQuote] Project confirmation envelope created:', data?.envelope_id);
+      return data;
     }
 
     // ── Submit Handler ──
@@ -1272,12 +1299,30 @@
 
         if (saveError) throw new Error('Failed to save project confirmation: ' + saveError.message);
 
-        // 2. Stub DocuSign call (Step 3 wires the real Edge Function)
-        await triggerProjectConfirmationDocuSign(state.claimId, payload);
+        // 2. Create project confirmation DocuSign envelope
+        submitBtn.textContent = 'Sending for signature...';
+        let envelopeResult = null;
+        try {
+          envelopeResult = await triggerProjectConfirmationDocuSign(state.claimId, payload);
+        } catch (dsErr) {
+          // DocuSign envelope creation is non-fatal — data is saved; log and continue
+          console.error('[OtterQuote] DocuSign envelope error (non-fatal):', dsErr.message);
+        }
 
         // 3. Show success
         document.getElementById('confirmationForm').style.display = 'none';
-        document.getElementById('successScreen').style.display = 'block';
+        const successScreen = document.getElementById('successScreen');
+        successScreen.style.display = 'block';
+
+        // Display envelope ID if available
+        if (envelopeResult?.envelope_id) {
+          const envelopeSection = document.getElementById('envelopeIdSection');
+          const envelopeDisplay = document.getElementById('envelopeIdDisplay');
+          if (envelopeSection && envelopeDisplay) {
+            envelopeDisplay.textContent = envelopeResult.envelope_id;
+            envelopeSection.style.display = 'block';
+          }
+        }
 
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1334,6 +1379,8 @@
           .select('user_id, full_name')
           .eq('user_id', user.id)
           .single();
+
+        state.homeownerName = profile?.full_name || null;
 
         if (claimData.user_id !== user.id) {
           showError('Access Denied', 'You do not have permission to access this project.');

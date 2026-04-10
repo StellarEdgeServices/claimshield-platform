@@ -3,7 +3,7 @@
  * Creates a DocuSign envelope for contract signing with JWT Grant auth flow.
  * Auto-populates contractor templates with claim data using anchor-based tabs.
  * Rate-limited via Supabase check_rate_limit() RPC.
- * Supports document types: "contract" and "color_confirmation"
+ * Supports document types: "contract", "color_confirmation", "project_confirmation"
  *
  * Environment variables:
  *   DOCUSIGN_INTEGRATION_KEY
@@ -220,6 +220,23 @@ async function getTemplateFromStorage(
   }
 }
 
+/**
+ * Fetch a PDF template from a public Supabase Storage URL.
+ * Used for project_confirmation templates whose paths include timestamps
+ * (e.g. {contractorId}/project_confirmation_template_{timestamp}.pdf).
+ */
+async function fetchTemplateFromUrl(url: string): Promise<string> {
+  console.log(`Fetching template PDF from URL: ${url}`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch template from URL (${response.status} ${response.statusText}): ${url}`
+    );
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return base64EncodeBinary(new Uint8Array(arrayBuffer));
+}
+
 function base64EncodeBinary(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -293,7 +310,7 @@ function buildTextTabs(
     contractor_email: "Contractor Email:",
     contractor_address: "Contractor Address:",
     contractor_license: "License #:",
-    // Color confirmation fields
+    // Color / project confirmation fields
     shingle_manufacturer: "Single Manufacture",
     shingle_type: "Shingle Type:",
     shingle_color: "Shingle Color:",
@@ -301,6 +318,15 @@ function buildTextTabs(
     vents: "Vents",
     satellite: "Satellite",
     skylights: "Skylights",
+    // Project confirmation extended fields
+    num_structures: "Structures:",
+    structure_names: "Structure Names:",
+    valley_type: "Valley Type:",
+    gutter_guards: "Gutter Guards:",
+    bad_decking: "Bad Decking:",
+    work_not_done: "Work Not Done:",
+    non_recoverable: "Non-Recoverable Dep:",
+    project_notes: "Project Notes:",
   };
 
   const tabs: TextTab[] = [];
@@ -354,6 +380,16 @@ function buildSignerTabs(documentId: string, signerType: "homeowner" | "contract
   };
 }
 
+// ========== DOCUMENT LABEL HELPERS ==========
+function getDocumentLabel(documentType: string): string {
+  switch (documentType) {
+    case "contract": return "Repair Contract";
+    case "color_confirmation": return "Color Confirmation";
+    case "project_confirmation": return "Project Confirmation";
+    default: return "Document";
+  }
+}
+
 // ========== MAIN HANDLER ==========
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -372,6 +408,7 @@ serve(async (req) => {
       contractor_id,
       signer,
       fields,
+      return_url,  // Optional: override the returnUrl after signing
     } = requestBody;
 
     // ========== INPUT VALIDATION ==========
@@ -385,10 +422,10 @@ serve(async (req) => {
       );
     }
 
-    if (!["contract", "color_confirmation"].includes(document_type)) {
+    if (!["contract", "color_confirmation", "project_confirmation"].includes(document_type)) {
       return new Response(
         JSON.stringify({
-          error: 'document_type must be "contract" or "color_confirmation"',
+          error: 'document_type must be "contract", "color_confirmation", or "project_confirmation"',
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -439,14 +476,17 @@ serve(async (req) => {
     // ========== LOAD CLAIM + CONTRACTOR DATA ==========
     // If fields not provided, auto-populate from claim and contractor records
     let autoFields = fields || {};
+    let claimData: any = null;
+    let contractorData: any = null;
+
     if (!fields || Object.keys(fields).length === 0) {
-      const { data: claimData } = await supabase
+      const { data: fetchedClaim } = await supabase
         .from("claims")
         .select("*")
         .eq("id", claim_id)
         .single();
 
-      const { data: contractorData } = await supabase
+      const { data: fetchedContractor } = await supabase
         .from("contractors")
         .select("*")
         .eq("id", contractor_id)
@@ -458,6 +498,9 @@ serve(async (req) => {
         .eq("claim_id", claim_id)
         .eq("contractor_id", contractor_id)
         .single();
+
+      claimData = fetchedClaim;
+      contractorData = fetchedContractor;
 
       if (claimData && signer) {
         autoFields = {
@@ -501,11 +544,74 @@ serve(async (req) => {
           }
         }
       }
+
+      // ── Project Confirmation: merge scope/material fields from project_confirmation JSONB ──
+      if (document_type === "project_confirmation" && claimData?.project_confirmation) {
+        const pc = claimData.project_confirmation;
+        Object.assign(autoFields, {
+          shingle_manufacturer: pc.shingleManufacturer || "",
+          shingle_type: pc.shingleType || "",
+          shingle_color: pc.shingleColor || "",
+          drip_edge_color: pc.dripEdgeColor || "",
+          skylights: pc.skylightsAction ? `${pc.skylightsAction} (${pc.skylightCount || 0})` : "",
+          satellite: pc.satelliteDish || "",
+          valley_type: pc.valleyType || "",
+          gutter_guards: pc.gutterGuards || "",
+          num_structures: pc.numStructures || "",
+          structure_names: pc.structureNames || "",
+          bad_decking: pc.badDeckingExpected || "",
+          work_not_done: pc.workNotBeingDone || "",
+          non_recoverable: pc.nonRecoverableDepreciation != null ? `$${Number(pc.nonRecoverableDepreciation).toLocaleString()}` : "",
+          project_notes: pc.homeownerNotes || "",
+        });
+      }
+    } else {
+      // fields were provided by caller — we still may need claim/contractor data
+      // for project_confirmation template retrieval (handled below)
+      if (document_type === "project_confirmation") {
+        const { data: fetchedClaim } = await supabase
+          .from("claims")
+          .select("project_confirmation, property_address")
+          .eq("id", claim_id)
+          .single();
+        claimData = fetchedClaim;
+
+        const { data: fetchedContractor } = await supabase
+          .from("contractors")
+          .select("color_confirmation_template, company_name, email")
+          .eq("id", contractor_id)
+          .single();
+        contractorData = fetchedContractor;
+      }
     }
 
     // ========== FETCH TEMPLATE PDF ==========
-    console.log(`Fetching template: ${contractor_id}/${document_type}.pdf`);
-    const templateBase64 = await getTemplateFromStorage(supabase, contractor_id, document_type);
+    let templateBase64: string;
+
+    if (document_type === "project_confirmation") {
+      // project_confirmation uses the contractor's color_confirmation_template URL
+      // (uploaded via contractor-profile.html, stored in contractors.color_confirmation_template)
+      const templateContractor = contractorData || await (async () => {
+        const { data } = await supabase
+          .from("contractors")
+          .select("color_confirmation_template, company_name")
+          .eq("id", contractor_id)
+          .single();
+        return data;
+      })();
+
+      const templateUrl = templateContractor?.color_confirmation_template;
+      if (!templateUrl) {
+        throw new Error(
+          "No project confirmation template on file. The contractor must upload a Project Confirmation Template in their profile before this document can be created."
+        );
+      }
+      console.log(`Fetching project confirmation template for contractor ${contractor_id}`);
+      templateBase64 = await fetchTemplateFromUrl(templateUrl);
+    } else {
+      console.log(`Fetching template: ${contractor_id}/${document_type}.pdf`);
+      templateBase64 = await getTemplateFromStorage(supabase, contractor_id, document_type);
+    }
 
     // ========== GET ACCESS TOKEN + ACCOUNT INFO ==========
     console.log("Acquiring DocuSign access token");
@@ -534,17 +640,14 @@ serve(async (req) => {
       contractorName = autoFields.contractor_name;
     }
 
+    const docLabel = getDocumentLabel(document_type);
+
     const envelopeDefinition = {
-      emailSubject: `${
-        document_type === "contract" ? "Repair Contract" : "Color Confirmation"
-      } — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
+      emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
       documents: [
         {
           documentBase64: templateBase64,
-          name:
-            document_type === "contract"
-              ? "Repair Contract"
-              : "Color Confirmation Form",
+          name: docLabel,
           fileExtension: "pdf",
           documentId,
         },
@@ -610,6 +713,13 @@ serve(async (req) => {
 
     // ========== GENERATE EMBEDDED SIGNING URL ==========
     console.log("Generating embedded signing URL for homeowner");
+
+    // Default returnUrl by document type; caller can override with return_url param
+    const defaultReturnUrl = document_type === "project_confirmation"
+      ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
+      : "https://otterquote.com/contract-signing.html?signed=true";
+    const signingReturnUrl = return_url || defaultReturnUrl;
+
     const recipientViewResponse = await fetch(
       `${RESOLVED_BASE_URI}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
       {
@@ -619,7 +729,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          returnUrl: "https://otterquote.com/contract-signing.html?signed=true",
+          returnUrl: signingReturnUrl,
           authenticationMethod: "none",
           email: signer.email,
           userName: signer.name,
@@ -654,6 +764,8 @@ serve(async (req) => {
       updateData.docusign_envelope_id = envelopeId;
     } else if (document_type === "color_confirmation") {
       updateData.color_confirmation_envelope_id = envelopeId;
+    } else if (document_type === "project_confirmation") {
+      updateData.project_confirmation_envelope_id = envelopeId;
     }
 
     const { error: updateError } = await supabase
@@ -662,8 +774,8 @@ serve(async (req) => {
       .eq("id", claim_id);
 
     if (updateError) {
+      // Non-fatal: log but don't fail the request — envelope was created successfully
       console.error("Failed to update claim:", updateError);
-      throw new Error(`Failed to update claim: ${updateError.message}`);
     }
 
     // ========== SUCCESS RESPONSE ==========
