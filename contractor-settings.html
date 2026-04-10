@@ -683,7 +683,7 @@
           <div class="autobid-summary-title">Your Auto-Bid Will Match On:</div>
           <div class="autobid-summary-item">
             <span class="check">&#10003;</span>
-            <span><strong>Funding type:</strong> Insurance claims only</span>
+            <span><strong>Funding type:</strong> RCV insurance claims only</span>
           </div>
           <div class="autobid-summary-item">
             <span class="check">&#10003;</span>
@@ -754,8 +754,8 @@
         <!-- Auto-Bid Value Adds: distinguishing features for insurance jobs -->
         <div style="margin-top: var(--sp-6); border-top: 1px solid var(--light); padding-top: var(--sp-6);">
           <div style="font-size: 1rem; font-weight: 600; color: var(--navy); margin-bottom: var(--sp-2);">What's Included With Every Auto-Bid?</div>
-          <p style="font-size: 0.85rem; color: #6B7280; margin-bottom: var(--sp-4);">
-            For every full roof replacement covered by an insurance RCV policy, tell homeowners what you offer. This information will appear on every auto-bid you submit. You can always review and update your bid before the homeowner signs.
+          <p style="font-size: 0.85rem; color: #92400E; background: #FFFBEB; border-left: 3px solid var(--amber); border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); line-height: 1.6;">
+            <strong>THESE ARE THE TERMS YOU OFFER CLIENTS FOR ANY FULL RCV ROOF.</strong> THE CLIENT WILL HAVE THE OPPORTUNITY TO ACCEPT YOUR CONTRACT WITH THESE TERMS. Do not include a benefit unless it is available for all roofs paid for by RCV policies. You can customize your offerings for specific jobs manually after reviewing the details of the job.
           </p>
 
           <!-- Gutters -->
@@ -817,10 +817,10 @@
             </div>
           </div>
 
-          <!-- Other Shingles Available at No Additional OOP -->
+          <!-- Other Shingles Available -->
           <div style="margin-bottom: var(--sp-4); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--navy);">Other Shingles Available at No Additional OOP</h4>
-            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-4); line-height:1.5;">Select every shingle you're willing to install at the insurance-covered price. Homeowners who prefer one of these shingles still receive your standard offer at no additional out-of-pocket cost to them.</p>
+            <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--navy);">Other Shingles Available</h4>
+            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-4); line-height:1.5;">These shingles are available for install at no additional charge. Warranty terms may be different from those offered for the contractor's Preferred Shingle. Most other shingles are available for an additional cost.</p>
             <!-- GAF -->
             <div style="margin-bottom:var(--sp-4);">
               <div style="font-size:0.85rem;font-weight:700;color:var(--navy);margin-bottom:var(--sp-2);padding-bottom:var(--sp-1);border-bottom:1px solid var(--light);">GAF</div>
@@ -1045,49 +1045,69 @@
             <textarea name="abOtherOffers" id="abOtherOffers" placeholder="e.g., 0% financing for 12 months, free annual inspection for 5 years..." style="width:100%; min-height:80px; padding: var(--sp-3); border:1px solid var(--light); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.875rem; resize: vertical;" maxlength="2000"></textarea>
           </div>
 
+          <!-- Other Trades Covered by Insurance -->
+          <div style="margin-bottom: var(--sp-4); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
+            <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--navy);">Other Trades Covered by Insurance</h4>
+            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-3); line-height:1.5;">Which trades are you willing to perform if covered by insurance? These will appear on your bid so homeowners know what you can handle.</p>
+            <div style="display:flex; flex-direction:column; gap:var(--sp-2);">
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradeSidingFull" name="abOtherTrades" value="siding_full" style="width:16px;height:16px;accent-color:var(--amber);">
+                Siding (full replace)
+              </label>
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradeSidingRepair" name="abOtherTrades" value="siding_repair" style="width:16px;height:16px;accent-color:var(--amber);">
+                Siding (repair)
+              </label>
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradeGuttersFull" name="abOtherTrades" value="gutters_full" style="width:16px;height:16px;accent-color:var(--amber);">
+                Gutters (full replace)
+              </label>
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradeGuttersRepair" name="abOtherTrades" value="gutters_repair" style="width:16px;height:16px;accent-color:var(--amber);">
+                Gutters (repair)
+              </label>
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradeInterior" name="abOtherTrades" value="interior_repairs" style="width:16px;height:16px;accent-color:var(--amber);">
+                Interior repairs
+              </label>
+              <label style="display:flex; align-items:center; gap:var(--sp-2); font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" id="abTradePaint" name="abOtherTrades" value="paint" style="width:16px;height:16px;accent-color:var(--amber);">
+                Paint
+              </label>
+            </div>
+          </div>
+
           <!-- Review Sites -->
           <div style="margin-bottom: var(--sp-4); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
             <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--navy);">Your Reviews</h4>
-            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-4); line-height:1.5;">Enter your ratings and review links for each platform. These will appear on your bid so homeowners can verify your reputation before signing. Leave a row blank to hide that platform.</p>
-            <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-1);align-items:center;font-size:0.75rem;font-weight:600;color:var(--slate);margin-bottom:var(--sp-2);">
-              <span>Platform</span><span>Rating</span><span>Reviews</span><span>Link URL</span>
+            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-4); line-height:1.5;">Add a link to your reviews on each platform. Homeowners will be able to visit your review page directly from your bid. Leave a row blank to hide that platform.</p>
+            <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-1);align-items:center;font-size:0.75rem;font-weight:600;color:var(--slate);margin-bottom:var(--sp-2);">
+              <span>Platform</span><span>Review Page Link</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">Google</span>
-                <input type="number" id="reviewGoogleRating" placeholder="4.7" min="1" max="5" step="0.1" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewGoogleCount" placeholder="350" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewGoogleUrl" placeholder="https://g.page/your-business" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewGoogleUrl" placeholder="https://g.page/your-business" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">Yelp</span>
-                <input type="number" id="reviewYelpRating" placeholder="4.5" min="1" max="5" step="0.5" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewYelpCount" placeholder="120" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewYelpUrl" placeholder="https://yelp.com/biz/your-business" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewYelpUrl" placeholder="https://yelp.com/biz/your-business" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">BBB</span>
-                <input type="text" id="reviewBbbRating" placeholder="A+" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewBbbCount" placeholder="50" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewBbbUrl" placeholder="https://bbb.org/us/..." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewBbbUrl" placeholder="https://bbb.org/us/..." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">Facebook</span>
-                <input type="number" id="reviewFbRating" placeholder="4.8" min="1" max="5" step="0.1" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewFbCount" placeholder="200" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewFbUrl" placeholder="https://facebook.com/your-page" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewFbUrl" placeholder="https://facebook.com/your-page" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">Angi</span>
-                <input type="number" id="reviewAngiRating" placeholder="4.6" min="1" max="5" step="0.1" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewAngiCount" placeholder="80" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewAngiUrl" placeholder="https://angi.com/companylist/..." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewAngiUrl" placeholder="https://angi.com/companylist/..." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
-              <div style="display:grid;grid-template-columns:110px 70px 90px 1fr;gap:var(--sp-2);align-items:center;">
+              <div style="display:grid;grid-template-columns:110px 1fr;gap:var(--sp-2);align-items:center;">
                 <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">HomeAdvisor</span>
-                <input type="number" id="reviewHaRating" placeholder="4.5" min="1" max="5" step="0.1" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="number" id="reviewHaCount" placeholder="60" min="0" style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
-                <input type="url" id="reviewHaUrl" placeholder="https://homeadvisor.com/rated...." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;">
+                <input type="url" id="reviewHaUrl" placeholder="https://homeadvisor.com/rated...." style="padding:6px 8px;border:1px solid var(--light);border-radius:var(--radius-md);font-size:0.8rem;width:100%;">
               </div>
             </div>
           </div>
@@ -1190,19 +1210,6 @@
         <div class="fee-summary-amount">5% of job value</div>
         <div class="fee-summary-note">Charged when a homeowner signs a contract with you through OtterQuote</div>
       </div>
-      <p style="font-size:0.8rem; color:var(--slate); margin-top:var(--sp-4); text-align:center;">Additional fee tiers (color selection, deductible collection) coming soon as those services roll out.</p>
-
-      <!-- Future Tier Preview -->
-      <div class="future-tier-card">
-        <div class="future-tier-label">
-          Full Service — CRM Integration
-          <span class="badge coming-soon">Coming Soon</span>
-        </div>
-        <div class="future-tier-description">
-          We upload everything to your CRM, coordinate scheduling, and collect the ACV check. You just hit "submit order."
-        </div>
-        <div class="tier-fee">Fee: ~20% total</div>
-      </div>
     </div>
 
     <!-- ═══════════════════════════════════════ -->
@@ -1249,9 +1256,10 @@
             <label style="display:flex; align-items:center; gap:var(--sp-2); cursor:pointer;">
               <input type="radio" name="diagnosticFee" id="diagnosticFeeYes" value="yes" style="accent-color:var(--amber);"> Yes
             </label>
-            <span id="diagnosticFeeAmountWrap" style="display:none; align-items:center; gap:var(--sp-2);">
-              $<input type="number" id="diagnosticFeeAmount" min="0" step="1" placeholder="0" style="width:90px; padding:var(--sp-2) var(--sp-3); border:1px solid #CBD5E1; border-radius:var(--radius-md); font-size:0.875rem; font-family:var(--font-body);">
-            </span>
+          </div>
+          <div id="diagnosticFeeAmountWrap" style="display:none; align-items:center; gap:var(--sp-2); margin-top:var(--sp-3);">
+            <label style="font-size:0.875rem; font-weight:600; color:var(--navy);">Fee Amount:</label>
+            $<input type="number" id="diagnosticFeeAmount" min="0" step="1" placeholder="0" style="width:100px; padding:var(--sp-2) var(--sp-3); border:1px solid #CBD5E1; border-radius:var(--radius-md); font-size:0.875rem; font-family:var(--font-body);">
           </div>
         </div>
 
@@ -1640,6 +1648,12 @@
                 if (cb) cb.checked = true;
               });
             }
+            if (va.other_trades && Array.isArray(va.other_trades)) {
+              va.other_trades.forEach(v => {
+                const cb = document.querySelector(`input[name="abOtherTrades"][value="${v}"]`);
+                if (cb) cb.checked = true;
+              });
+            }
             if (va.underlayment) { const r = document.querySelector(`input[name="abUnderlayment"][value="${va.underlayment}"]`); if (r) r.checked = true; }
             if (va.starter_strip) { const r = document.querySelector(`input[name="abStarterStrip"][value="${va.starter_strip}"]`); if (r) r.checked = true; }
             if (va.repair_settings) {
@@ -1654,12 +1668,12 @@
             if (va.review_sites) {
               const rv = va.review_sites;
               const sr = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-              sr('reviewGoogleRating', rv.google?.rating); sr('reviewGoogleCount', rv.google?.count); sr('reviewGoogleUrl', rv.google?.url);
-              sr('reviewYelpRating', rv.yelp?.rating); sr('reviewYelpCount', rv.yelp?.count); sr('reviewYelpUrl', rv.yelp?.url);
-              sr('reviewBbbRating', rv.bbb?.rating); sr('reviewBbbCount', rv.bbb?.count); sr('reviewBbbUrl', rv.bbb?.url);
-              sr('reviewFbRating', rv.facebook?.rating); sr('reviewFbCount', rv.facebook?.count); sr('reviewFbUrl', rv.facebook?.url);
-              sr('reviewAngiRating', rv.angi?.rating); sr('reviewAngiCount', rv.angi?.count); sr('reviewAngiUrl', rv.angi?.url);
-              sr('reviewHaRating', rv.homeadvisor?.rating); sr('reviewHaCount', rv.homeadvisor?.count); sr('reviewHaUrl', rv.homeadvisor?.url);
+              sr('reviewGoogleUrl', rv.google?.url);
+              sr('reviewYelpUrl', rv.yelp?.url);
+              sr('reviewBbbUrl', rv.bbb?.url);
+              sr('reviewFbUrl', rv.facebook?.url);
+              sr('reviewAngiUrl', rv.angi?.url);
+              sr('reviewHaUrl', rv.homeadvisor?.url);
             }
             if (va.ventilation) {
               if (va.ventilation.free_ridge_vent && document.getElementById('abVentRidgeUpgrade')) document.getElementById('abVentRidgeUpgrade').checked = va.ventilation.free_ridge_vent;
@@ -1854,18 +1868,19 @@
             notes: document.getElementById('abWarrNotes')?.value?.trim() || null,
           },
           other_offers: document.getElementById('abOtherOffers')?.value?.trim() || null,
+          other_trades: Array.from(document.querySelectorAll('input[name="abOtherTrades"]:checked')).map(cb => cb.value),
           repair_settings: {
             diagnostic_fee: diagFeeVal === 'yes',
             diagnostic_fee_amount: diagFeeVal === 'yes' ? (parseFloat(document.getElementById('diagnosticFeeAmount')?.value) || null) : null,
             notes_to_customer: document.getElementById('repairNotesToCustomer')?.value?.trim() || null,
           },
           review_sites: {
-            google: { rating: document.getElementById('reviewGoogleRating')?.value || null, count: document.getElementById('reviewGoogleCount')?.value || null, url: document.getElementById('reviewGoogleUrl')?.value?.trim() || null },
-            yelp: { rating: document.getElementById('reviewYelpRating')?.value || null, count: document.getElementById('reviewYelpCount')?.value || null, url: document.getElementById('reviewYelpUrl')?.value?.trim() || null },
-            bbb: { rating: document.getElementById('reviewBbbRating')?.value || null, count: document.getElementById('reviewBbbCount')?.value || null, url: document.getElementById('reviewBbbUrl')?.value?.trim() || null },
-            facebook: { rating: document.getElementById('reviewFbRating')?.value || null, count: document.getElementById('reviewFbCount')?.value || null, url: document.getElementById('reviewFbUrl')?.value?.trim() || null },
-            angi: { rating: document.getElementById('reviewAngiRating')?.value || null, count: document.getElementById('reviewAngiCount')?.value || null, url: document.getElementById('reviewAngiUrl')?.value?.trim() || null },
-            homeadvisor: { rating: document.getElementById('reviewHaRating')?.value || null, count: document.getElementById('reviewHaCount')?.value || null, url: document.getElementById('reviewHaUrl')?.value?.trim() || null },
+            google: { url: document.getElementById('reviewGoogleUrl')?.value?.trim() || null },
+            yelp: { url: document.getElementById('reviewYelpUrl')?.value?.trim() || null },
+            bbb: { url: document.getElementById('reviewBbbUrl')?.value?.trim() || null },
+            facebook: { url: document.getElementById('reviewFbUrl')?.value?.trim() || null },
+            angi: { url: document.getElementById('reviewAngiUrl')?.value?.trim() || null },
+            homeadvisor: { url: document.getElementById('reviewHaUrl')?.value?.trim() || null },
           },
         };
       }
@@ -1981,27 +1996,35 @@
       // Other offers
       const otherOffers = document.getElementById('abOtherOffers')?.value?.trim();
       if (otherOffers) items.push('🎁 ' + otherOffers);
+      // Other Trades Covered by Insurance
+      const tradeLabels = {
+        siding_full: 'Siding (full replace)',
+        siding_repair: 'Siding (repair)',
+        gutters_full: 'Gutters (full replace)',
+        gutters_repair: 'Gutters (repair)',
+        interior_repairs: 'Interior repairs',
+        paint: 'Paint'
+      };
+      const selectedTrades = Array.from(document.querySelectorAll('input[name="abOtherTrades"]:checked')).map(el => tradeLabels[el.value] || el.value);
+      if (selectedTrades.length) items.push('🏠 Other Trades (if covered by insurance): ' + selectedTrades.join(', '));
 
       document.getElementById('previewIncludesList').innerHTML = items.length ? items.map(i => '<div>' + i + '</div>').join('') : '<div style="color:var(--slate);">No items configured yet — fill out the sections above.</div>';
 
       // Reviews in bid preview
       const rvPlatforms = [
-        { name: 'Google', rating: document.getElementById('reviewGoogleRating')?.value, count: document.getElementById('reviewGoogleCount')?.value, url: document.getElementById('reviewGoogleUrl')?.value?.trim() },
-        { name: 'Yelp', rating: document.getElementById('reviewYelpRating')?.value, count: document.getElementById('reviewYelpCount')?.value, url: document.getElementById('reviewYelpUrl')?.value?.trim() },
-        { name: 'BBB', rating: document.getElementById('reviewBbbRating')?.value, count: document.getElementById('reviewBbbCount')?.value, url: document.getElementById('reviewBbbUrl')?.value?.trim() },
-        { name: 'Facebook', rating: document.getElementById('reviewFbRating')?.value, count: document.getElementById('reviewFbCount')?.value, url: document.getElementById('reviewFbUrl')?.value?.trim() },
-        { name: 'Angi', rating: document.getElementById('reviewAngiRating')?.value, count: document.getElementById('reviewAngiCount')?.value, url: document.getElementById('reviewAngiUrl')?.value?.trim() },
-        { name: 'HomeAdvisor', rating: document.getElementById('reviewHaRating')?.value, count: document.getElementById('reviewHaCount')?.value, url: document.getElementById('reviewHaUrl')?.value?.trim() },
-      ].filter(p => p.rating && String(p.rating).trim());
+        { name: 'Google', url: document.getElementById('reviewGoogleUrl')?.value?.trim() },
+        { name: 'Yelp', url: document.getElementById('reviewYelpUrl')?.value?.trim() },
+        { name: 'BBB', url: document.getElementById('reviewBbbUrl')?.value?.trim() },
+        { name: 'Facebook', url: document.getElementById('reviewFbUrl')?.value?.trim() },
+        { name: 'Angi', url: document.getElementById('reviewAngiUrl')?.value?.trim() },
+        { name: 'HomeAdvisor', url: document.getElementById('reviewHaUrl')?.value?.trim() },
+      ].filter(p => p.url);
       const rvSection = document.getElementById('previewReviewsSection');
       const rvList = document.getElementById('previewReviewsList');
       if (rvPlatforms.length && rvSection && rvList) {
         rvSection.style.display = 'block';
         rvList.innerHTML = rvPlatforms.map(p => {
-          const info = p.rating + (p.count ? ' (' + Number(p.count).toLocaleString() + ' reviews)' : '');
-          const inner = `<strong>${p.name}</strong> ${info}`;
-          const tag = p.url ? `<a href="${p.url}" target="_blank" rel="noopener" style="text-decoration:none;color:var(--navy);">${inner}</a>` : inner;
-          return `<span style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;display:inline-block;">${tag}</span>`;
+          return `<a href="${p.url}" target="_blank" rel="noopener" style="text-decoration:none;"><span style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;display:inline-block;color:var(--navy);font-weight:600;">See Our ${p.name} Reviews →</span></a>`;
         }).join('');
       } else if (rvSection) {
         rvSection.style.display = 'none';

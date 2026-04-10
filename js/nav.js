@@ -20,7 +20,7 @@ const Nav = {
     const isContractor = this._isContractorPage();
 
     const links = isContractor ? [
-      { href: '/index.html',                    label: 'Home',         id: 'home' },
+      { href: '/contractor-dashboard.html',      label: 'Home',         id: 'home' },
       { href: '/contractor-how-it-works.html',   label: 'How It Works', id: 'how-it-works' },
       { href: '/contractor-faq.html',            label: 'FAQ',          id: 'faq' },
     ] : [
@@ -31,7 +31,7 @@ const Nav = {
 
     nav.innerHTML = `
       <div class="nav-inner container">
-        <a href="/index.html" class="nav-logo">
+        <a href="${isContractor ? '/contractor-dashboard.html' : '/index.html'}" class="nav-logo">
           <img src="/img/otter-logo.svg" alt="OtterQuote" class="nav-logo-icon" style="width:32px;height:32px;">
           <span class="nav-logo-text">${CONFIG.SITE_NAME}</span>
         </a>
