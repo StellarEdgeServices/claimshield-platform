@@ -414,32 +414,316 @@
       margin-bottom: var(--sp-4);
     }
 
-    @media (max-width: 768px) {
-      main {
-        padding: var(--sp-6) var(--sp-4);
-      }
+    /* ── Value-add subsection box ── */
+    .va-box {
+      margin-bottom: var(--sp-6);
+      padding: var(--sp-4);
+      background: #F8FAFC;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--light);
+    }
 
-      .page-header h1 {
-        font-size: 1.75rem;
-      }
+    .va-box h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: var(--sp-3);
+      color: var(--navy);
+    }
 
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
+    .va-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
 
-      .fee-row {
-        flex-wrap: wrap;
-      }
+    .va-option-row {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-2);
+      font-size: 0.875rem;
+      cursor: pointer;
+      flex-wrap: wrap;
+    }
 
-      .fee-label {
-        width: 100%;
-        margin-bottom: var(--sp-2);
-      }
+    .va-option-row input[type="radio"],
+    .va-option-row input[type="checkbox"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
 
-      .fee-amount {
-        width: 100%;
-        text-align: right;
-      }
+    .va-inline-dollar {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 4px;
+    }
+
+    .va-inline-dollar input[type="number"] {
+      width: 90px;
+      padding: 2px 6px;
+      border: 1px solid var(--light);
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+
+    .va-notes {
+      margin-top: var(--sp-3);
+      width: 100%;
+      padding: var(--sp-3);
+      border: 1px solid var(--light);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    /* ── Total Bid Price — bid type selector ── */
+    .bid-type-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-4);
+    }
+
+    .bid-type-card {
+      border: 2px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      padding: var(--sp-4);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .bid-type-card.selected {
+      border-color: var(--amber);
+      background: #FFFBEB;
+    }
+
+    .bid-type-card label {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-3);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .bid-type-card label input[type="radio"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .bid-type-subtext {
+      font-size: 0.82rem;
+      color: var(--slate);
+      margin-top: var(--sp-2);
+      margin-left: 1.5rem;
+      font-weight: 400;
+    }
+
+    .bid-type-rcv-display {
+      margin-top: var(--sp-3);
+      margin-left: 1.5rem;
+      font-size: 0.875rem;
+      color: var(--navy-3);
+      padding: var(--sp-2) var(--sp-3);
+      background: #EFF6FF;
+      border-left: 2px solid var(--amber);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+
+    #bidTypeOtherDetails {
+      display: none;
+      margin-top: var(--sp-4);
+    }
+
+    /* ── Warranty builder ── */
+    .warranty-builder {
+      margin-top: var(--sp-4);
+    }
+
+    .warranty-template-bar {
+      display: flex;
+      gap: var(--sp-3);
+      align-items: center;
+      margin-bottom: var(--sp-4);
+      flex-wrap: wrap;
+    }
+
+    .warranty-template-bar select {
+      flex: 1;
+      min-width: 180px;
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+    }
+
+    .btn-sm {
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #CBD5E1;
+      background: var(--white);
+      color: var(--navy);
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-sm:hover {
+      background: #F1F5F9;
+    }
+
+    .btn-sm.primary {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--navy);
+    }
+
+    .btn-sm.primary:hover {
+      background: #DDA500;
+    }
+
+    .warranty-cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-6);
+    }
+
+    .warranty-card {
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .warranty-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--navy-3);
+      color: var(--white);
+    }
+
+    .warranty-card-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .warranty-card-body {
+      padding: var(--sp-4);
+      background: var(--white);
+    }
+
+    .warranty-name-price-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-4);
+      align-items: end;
+    }
+
+    .warranty-coverage-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-bottom: var(--sp-4);
+    }
+
+    .warranty-coverage-table thead th {
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: var(--sp-2) var(--sp-3);
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .warranty-coverage-table tbody td {
+      padding: var(--sp-2) var(--sp-3);
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+
+    .warranty-coverage-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .warranty-years-input {
+      width: 70px;
+      padding: 3px 6px;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: var(--font-body);
+    }
+
+    .warranty-notes-input {
+      width: 100%;
+      padding: 3px 8px;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: var(--font-body);
+    }
+
+    .warranty-save-bar {
+      display: flex;
+      gap: var(--sp-3);
+      align-items: center;
+      margin-top: var(--sp-4);
+      flex-wrap: wrap;
+    }
+
+    .warranty-save-bar input[type="text"] {
+      flex: 1;
+      min-width: 150px;
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+    }
+
+    /* ── Other Trades section ── */
+    .trade-covered-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+    }
+
+    .trade-covered-item {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: var(--sp-3);
+      align-items: center;
+      padding: var(--sp-3);
+      background: var(--white);
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+    }
+
+    .trade-covered-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .trade-covered-input {
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      width: 100%;
     }
 
     /* ── Insurance Line Items Panel ── */
@@ -579,8 +863,42 @@
     }
 
     @media (max-width: 768px) {
+      main {
+        padding: var(--sp-6) var(--sp-4);
+      }
+
+      .page-header h1 {
+        font-size: 1.75rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .fee-row {
+        flex-wrap: wrap;
+      }
+
+      .fee-label {
+        width: 100%;
+        margin-bottom: var(--sp-2);
+      }
+
+      .fee-amount {
+        width: 100%;
+        text-align: right;
+      }
+
       .line-items-table thead th, .line-items-table tbody td { padding: var(--sp-1) var(--sp-2); }
       .line-items-totals { grid-template-columns: 1fr 1fr; }
+
+      .trade-covered-item {
+        grid-template-columns: 1fr;
+      }
+
+      .warranty-name-price-row {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -589,7 +907,7 @@
 
   <main>
     <!-- Change Bid Banner (hidden until Change Bid mode activates) -->
-    <div id="changeBidBanner" style="display:none; background:#FFF3CD; border:2px solid #F59E0B; border-radius:0.75rem; padding:1rem 1.5rem; margin-bottom:1.5rem; display:none;">
+    <div id="changeBidBanner" style="display:none; background:#FFF3CD; border:2px solid #F59E0B; border-radius:0.75rem; padding:1rem 1.5rem; margin-bottom:1.5rem;">
       <div style="display:flex; align-items:flex-start; gap:0.75rem;">
         <span style="font-size:1.4rem; flex-shrink:0;">⚠️</span>
         <div>
@@ -607,27 +925,25 @@
     <!-- Project Summary -->
     <div class="project-summary">
       <div class="project-summary-title">Project Summary</div>
-      <div class="summary-grid">
+      <div class="summary-grid" id="projectSummaryGrid">
         <div class="summary-item">
           <div class="summary-label">Location</div>
-          <div class="summary-value">Indianapolis, IN 46208</div>
+          <div class="summary-value" id="summaryLocation">Loading…</div>
         </div>
         <div class="summary-item">
           <div class="summary-label">Damage Type</div>
-          <div class="summary-value">Roof — Hail & Wind</div>
+          <div class="summary-value" id="summaryDamage">Loading…</div>
         </div>
         <div class="summary-item">
           <div class="summary-label">Insurance Carrier</div>
-          <div class="summary-value">State Farm</div>
+          <div class="summary-value" id="summaryCarrier">Loading…</div>
         </div>
         <div class="summary-item">
-          <div class="summary-label">Material Selected</div>
-          <div class="summary-value">GAF Architectural</div>
+          <div class="summary-label">Shingle Selected</div>
+          <div class="summary-value" id="summaryShingle">Loading…</div>
         </div>
       </div>
-      <div class="summary-highlight">
-        ✓ This homeowner has selected <strong>GAF Architectural Shingles, Class 4 Impact Resistant</strong>
-      </div>
+      <div class="summary-highlight" id="summaryHighlight" style="display:none;"></div>
     </div>
 
     <!-- Insurance Line Items Panel (shown when parsed_line_items exists) -->
@@ -665,16 +981,51 @@
         <input type="hidden" id="isBundledBidHidden" name="isBundledBid" value="false">
         <input type="hidden" id="bundledTradesHidden" name="bundledTrades" value="[]">
         <input type="hidden" id="perTradeBreakdownHidden" name="perTradeBreakdown" value="{}">
+        <!-- Hidden total price (synced from bid type selector) -->
+        <input type="hidden" id="totalPrice" name="totalPrice" value="">
 
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label for="totalPrice">Total Bid Price *</label>
-          <input type="number" id="totalPrice" name="totalPrice" placeholder="Enter your total bid price" value="19850" required min="500" step="0.01">
-          <div class="form-help">Enter your complete bid for this roofing job including labor and materials</div>
+        <!-- ── Total Bid Price: Bid Type Selector ── -->
+        <div class="form-section" style="grid-column: 1 / -1;">
+          <label class="form-label required" style="margin-bottom:var(--sp-3);">Total Bid Price</label>
+          <div class="bid-type-options">
+
+            <!-- Option A: RCV plus supplements -->
+            <div class="bid-type-card" id="bidTypeCardA">
+              <label>
+                <input type="radio" name="bidTypeOption" id="bidTypeRCV" value="rcv_plus_supplements" checked>
+                <span>Replacement Cost Value (RCV) plus supplements</span>
+              </label>
+              <div class="bid-type-subtext">Additional out-of-pocket costs for homeowner options are shown separately below.</div>
+              <div class="bid-type-rcv-display" id="rcvDisplay">Insurance RCV: <strong id="rcvDisplayValue">—</strong></div>
+            </div>
+
+            <!-- Option B: Other -->
+            <div class="bid-type-card" id="bidTypeCardB">
+              <label>
+                <input type="radio" name="bidTypeOption" id="bidTypeOther" value="other">
+                <span>Other</span>
+              </label>
+              <div id="bidTypeOtherDetails">
+                <div class="form-group" style="margin-top:var(--sp-3);">
+                  <label for="otherBidPrice">Price (optional)</label>
+                  <div class="input-prefix">
+                    <span>$</span>
+                    <input type="number" id="otherBidPrice" name="otherBidPrice" min="0" step="0.01" placeholder="Enter amount if applicable">
+                  </div>
+                </div>
+                <div class="form-group" style="margin-top:var(--sp-3);">
+                  <label for="otherBidDescription">Describe your pricing approach *</label>
+                  <textarea id="otherBidDescription" name="otherBidDescription" placeholder="Describe how you have priced this job and what is included…" style="min-height:120px;"></textarea>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="brandProduct">Brand & Product Line *</label>
-          <input type="text" id="brandProduct" name="brandProduct" placeholder="e.g., GAF Timberline HDZ" value="GAF Timberline HDZ" required>
+          <label for="brandProduct">Brand &amp; Product Line *</label>
+          <input type="text" id="brandProduct" name="brandProduct" placeholder="e.g., GAF Timberline HDZ" required>
         </div>
 
         <div class="form-group">
@@ -691,22 +1042,6 @@
             <option value="1-2 weeks">1-2 weeks</option>
             <option value="2-4 weeks">2-4 weeks</option>
           </select>
-        </div>
-
-        <div class="form-group">
-          <label for="workmanshipWarranty">Workmanship Warranty (years) *</label>
-          <input type="number" id="workmanshipWarranty" name="workmanshipWarranty" placeholder="e.g., 10" value="10" required min="1" max="50">
-        </div>
-
-        <div class="form-group">
-          <label for="manufacturerWarranty">Manufacturer Warranty (years) *</label>
-          <input type="number" id="manufacturerWarranty" name="manufacturerWarranty" placeholder="e.g., 30" value="30" required min="1" max="50">
-        </div>
-
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label for="warrantySummary">Warranty Summary *</label>
-          <input type="text" id="warrantySummary" name="warrantySummary" placeholder="e.g., Lifetime architectural shingle warranty + 10-year workmanship" value="Lifetime architectural shingle warranty + 10-year workmanship" required>
-          <div class="form-help">Summarize the complete warranty coverage you're offering</div>
         </div>
 
         <!-- Decking Contingency (Required) -->
@@ -745,117 +1080,232 @@
           </div>
         </div>
 
-        <!-- Value Adds & Distinguishing Features (Insurance Jobs) -->
+        <!-- ══════════════════════════════════════════════════════
+             VALUE ADDS & DISTINGUISHING FEATURES (Insurance Jobs)
+             ══════════════════════════════════════════════════════ -->
         <div class="form-section" id="valueAddsSection" style="grid-column: 1 / -1; display: none;">
           <h3 style="font-size: 1.1rem; margin-bottom: var(--sp-2);">What's Included With Your Bid?</h3>
-          <p style="font-size: 0.85rem; color: #6B7280; margin-bottom: var(--sp-4);">
-            For insurance jobs, homeowners often have identical bids at the same RCV price. This is your chance to stand out. Tell homeowners exactly what's included in your proposal at no extra cost, and what's available as an add-on.
+          <p style="font-size: 0.85rem; color: #6B7280; margin-bottom: var(--sp-6);">
+            For insurance jobs, homeowners often receive identical bids at the same RCV price. This is your chance to stand out. Tell homeowners exactly what's included in your proposal at no extra cost, and what's available as an add-on.
           </p>
 
-          <!-- Gutters -->
-          <div style="margin-bottom: var(--sp-6); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--navy);">Gutters</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="none" checked> Not included / N/A
+          <!-- ── Gutters ── -->
+          <div class="va-box">
+            <h4>Gutters</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="gutterOption" value="none" checked> Not included / N/A</label>
+              <label class="va-option-row"><input type="radio" name="gutterOption" value="5inch_included"> 5&quot; gutters included (no out-of-pocket for homeowner)</label>
+              <label class="va-option-row"><input type="radio" name="gutterOption" value="6inch_included"> 6&quot; gutters included (no out-of-pocket for homeowner)</label>
+              <label class="va-option-row">
+                <input type="radio" name="gutterOption" value="5inch_additional"> 5&quot; gutters available for an additional
+                <span class="va-inline-dollar">$<input type="number" id="gutter5Cost" name="gutter5AdditionalCost" min="0" step="1" placeholder="0"></span>
               </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="5inch_included"> 5&quot; gutters included (no out-of-pocket for homeowner)
+              <label class="va-option-row">
+                <input type="radio" name="gutterOption" value="6inch_additional"> 6&quot; gutters available for an additional
+                <span class="va-inline-dollar">$<input type="number" id="gutter6Cost" name="gutter6AdditionalCost" min="0" step="1" placeholder="0"></span>
               </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="6inch_included"> 6&quot; gutters included (no out-of-pocket for homeowner)
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="5inch_additional" style="margin-top: 3px;"> 5&quot; gutters available for an additional
-                <span style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">$<input type="number" id="gutter5Cost" name="gutter5AdditionalCost" min="0" step="1" placeholder="0" style="width:80px; padding:2px 6px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem;"></span>
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="6inch_additional" style="margin-top: 3px;"> 6&quot; gutters available for an additional
-                <span style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">$<input type="number" id="gutter6Cost" name="gutter6AdditionalCost" min="0" step="1" placeholder="0" style="width:80px; padding:2px 6px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem;"></span>
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterOption" value="other" style="margin-top: 3px;"> Other:
-                <input type="text" id="gutterOtherText" name="gutterOtherText" placeholder="Describe your gutter offer..." style="margin-left: 4px; flex:1; padding:2px 8px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem;">
+              <label class="va-option-row">
+                <input type="radio" name="gutterOption" value="other"> Other:
+                <input type="text" id="gutterOtherText" name="gutterOtherText" placeholder="Describe your gutter offer…" style="margin-left:4px;flex:1;padding:2px 8px;border:1px solid var(--light);border-radius:4px;font-size:0.875rem;">
               </label>
             </div>
           </div>
 
-          <!-- Chimney Flashing -->
-          <div style="margin-bottom: var(--sp-6); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--navy);">Chimney Flashing</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyFlashing" value="na" checked> N/A — no chimney
+          <!-- ── Gutter Guards (moved under Gutters per spec) ── -->
+          <div class="va-box">
+            <h4>Gutter Guards</h4>
+            <div class="va-options">
+              <label class="va-option-row">
+                <input type="checkbox" name="gutterGuardPricingOnRequest" id="gutterGuardPricingOnRequest"> Pricing available upon request
               </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyFlashing" value="reuse"> Reuse existing flashing (if in good condition)
-              </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyFlashing" value="replace"> Replace with new flashing (included in bid)
+              <div style="margin-top:var(--sp-2);display:flex;flex-direction:column;gap:var(--sp-2);">
+                <label class="va-option-row">
+                  Type: Mesh — Out of Pocket:
+                  <span class="va-inline-dollar">$<input type="number" name="gutterGuardMeshOop" id="gutterGuardMeshOop" min="0" step="1" placeholder="0"></span>
+                </label>
+                <label class="va-option-row">
+                  Type: Screw-in — Out of Pocket:
+                  <span class="va-inline-dollar">$<input type="number" name="gutterGuardScrewInOop" id="gutterGuardScrewInOop" min="0" step="1" placeholder="0"></span>
+                </label>
+              </div>
+              <div style="margin-top:var(--sp-3);">
+                <label class="form-label" style="font-size:0.8rem;color:var(--slate);margin-bottom:var(--sp-1);">Notes</label>
+                <textarea class="va-notes" name="gutterGuardNotes" id="gutterGuardNotes" placeholder="Any additional notes about gutter guard options…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Chimney Flashing ── -->
+          <div class="va-box">
+            <h4>Chimney Flashing</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="chimneyFlashing" value="na" checked> N/A — no chimney</label>
+              <label class="va-option-row"><input type="radio" name="chimneyFlashing" value="reuse"> Reuse existing flashing (if in good condition)</label>
+              <label class="va-option-row"><input type="radio" name="chimneyFlashing" value="replace"> Replace with new flashing (included in bid)</label>
+              <label class="va-option-row">
+                <input type="radio" name="chimneyFlashing" value="replace_oop"> Replace for
+                <span class="va-inline-dollar">$<input type="number" name="chimneyFlashingOopPrice" id="chimneyFlashingOopPrice" min="0" step="1" placeholder="0"></span>
+                out of pocket
               </label>
             </div>
           </div>
 
-          <!-- Gutter Guards -->
-          <div style="margin-bottom: var(--sp-6); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--navy);">Gutter Guards</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="gutterGuards" value="none" checked> Not offered
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer; flex-wrap: wrap;">
-                <input type="radio" name="gutterGuards" value="available" style="margin-top: 3px;"> Available — Type:
-                <select name="gutterGuardType" style="margin-left: 4px; padding: 2px 8px; border: 1px solid var(--light); border-radius: 4px; font-size: 0.875rem;">
-                  <option value="mesh">Mesh</option>
-                  <option value="screw_in">Screw-In</option>
-                  <option value="other">Other</option>
-                </select>
-                <input type="text" name="gutterGuardTypeOther" placeholder="Describe type..." style="margin-left: 4px; width: 160px; padding:2px 8px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem; display:none;" id="gutterGuardTypeOtherInput">
-                &nbsp;&nbsp;OOP price: $<input type="number" name="gutterGuardOopPrice" min="0" step="1" placeholder="0" style="width:80px; padding:2px 6px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem;">
+          <!-- ── Skylights ── -->
+          <div class="va-box">
+            <h4>Skylights</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="skylights" value="na" checked> N/A — no skylights</label>
+              <label class="va-option-row"><input type="radio" name="skylights" value="reflash"> Reflash skylights (included)</label>
+              <label class="va-option-row"><input type="radio" name="skylights" value="replace"> Replace skylights</label>
+            </div>
+          </div>
+
+          <!-- ── Chimney Reflash ── -->
+          <div class="va-box">
+            <h4>Chimney Reflash</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="chimneyReflash" value="na" checked> N/A</label>
+              <label class="va-option-row"><input type="radio" name="chimneyReflash" value="included"> Included at no additional cost</label>
+              <label class="va-option-row">
+                <input type="radio" name="chimneyReflash" value="oop"> Available at homeowner's out-of-pocket cost of
+                <span class="va-inline-dollar">$<input type="number" name="chimneyReflashOopPrice" min="0" step="1" placeholder="0"></span>
               </label>
             </div>
           </div>
 
-          <!-- Skylights -->
-          <div style="margin-bottom: var(--sp-6); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--navy);">Skylights</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="skylights" value="na" checked> N/A — no skylights
+          <!-- ── Other Shingles Available ── -->
+          <div class="va-box">
+            <h4>Other Shingles Available</h4>
+            <p style="font-size:0.8rem;color:#6B7280;margin-bottom:var(--sp-3);">What other shingle options can you offer this homeowner?</p>
+            <div class="va-options">
+              <label class="va-option-row"><input type="checkbox" name="shingleOtherImpact"> Impact Resistant (Class 4)</label>
+              <label class="va-option-row"><input type="checkbox" name="shingleOtherDesigner"> Designer / Luxury</label>
+              <label class="va-option-row"><input type="checkbox" name="shingleOtherMetal"> Metal Roofing</label>
+              <label class="va-option-row"><input type="checkbox" name="shingleOtherPremiumArch"> Premium Architectural (upgrade)</label>
+              <label class="va-option-row">
+                <input type="checkbox" name="shingleOtherOtherCheck"> Other:
+                <input type="text" name="shingleOtherOtherText" placeholder="Describe…" style="margin-left:4px;flex:1;padding:2px 8px;border:1px solid var(--light);border-radius:4px;font-size:0.875rem;">
               </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="skylights" value="reflash"> Reflash skylights (included)
-              </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="skylights" value="replace"> Replace skylights
-              </label>
+            </div>
+            <div style="margin-top:var(--sp-3);">
+              <label class="form-label" style="font-size:0.8rem;color:var(--slate);margin-bottom:var(--sp-1);">Notes</label>
+              <textarea class="va-notes" name="shingleOtherNotes" id="shingleOtherNotes" placeholder="Additional details about available shingle upgrades, pricing guidance, etc."></textarea>
             </div>
           </div>
 
-          <!-- Chimney Reflash -->
-          <div style="margin-bottom: var(--sp-6); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--navy);">Chimney Reflash</h4>
-            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyReflash" value="na" checked> N/A
-              </label>
-              <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyReflash" value="included"> Included at no additional cost
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: var(--sp-2); font-size: 0.875rem; cursor: pointer;">
-                <input type="radio" name="chimneyReflash" value="oop" style="margin-top: 3px;"> Available at homeowner's out-of-pocket cost of
-                <span style="display: flex; align-items: center; gap: 4px; margin-left: 4px;">$<input type="number" name="chimneyReflashOopPrice" min="0" step="1" placeholder="0" style="width:90px; padding:2px 6px; border:1px solid var(--light); border-radius:4px; font-size:0.875rem;"></span>
-              </label>
+          <!-- ── Underlayment ── -->
+          <div class="va-box">
+            <h4>Underlayment</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="underlaymentType" value="synthetic"> Synthetic</label>
+              <label class="va-option-row"><input type="radio" name="underlaymentType" value="felt"> Felt</label>
+            </div>
+            <div style="margin-top:var(--sp-3);">
+              <label class="form-label" style="font-size:0.8rem;color:var(--slate);margin-bottom:var(--sp-1);">Notes</label>
+              <textarea class="va-notes" name="underlaymentNotes" id="underlaymentNotes" placeholder="Any notes about underlayment selection, brand, weight, etc."></textarea>
             </div>
           </div>
 
-          <!-- Other Special Offers -->
-          <div style="margin-bottom: var(--sp-2); padding: var(--sp-4); background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--light);">
-            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: var(--sp-2); color: var(--navy);">Other Special Offers</h4>
-            <p style="font-size: 0.8rem; color: #6B7280; margin-bottom: var(--sp-3);">Anything else that sets your company apart — financing options, extended warranties, free inspections, etc.</p>
-            <textarea name="valueAddsOtherOffers" id="valueAddsOtherOffers" placeholder="e.g., We offer 0% financing for 12 months, free annual roof inspection for 5 years, and a complimentary gutter cleaning with every full replacement..." style="width:100%; min-height:100px; padding: var(--sp-3); border: 1px solid var(--light); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.875rem; resize: vertical;" maxlength="2000"></textarea>
+          <!-- ── Ventilation ── -->
+          <div class="va-box">
+            <h4>Ventilation</h4>
+            <div class="va-options">
+              <label class="va-option-row"><input type="checkbox" name="ridgeVentIncluded" id="ridgeVentIncluded"> Ridge Vent Included</label>
+              <label class="va-option-row">
+                Ridge Vent for
+                <span class="va-inline-dollar">$<input type="number" name="ridgeVentOopPrice" id="ridgeVentOopPrice" min="0" step="1" placeholder="0"></span>
+                out of pocket
+              </label>
+            </div>
+            <div style="margin-top:var(--sp-3);">
+              <label class="form-label" style="font-size:0.8rem;color:var(--slate);margin-bottom:var(--sp-1);">Notes</label>
+              <textarea class="va-notes" name="ventilationNotes" id="ventilationNotes" placeholder="Any notes about ventilation, intake/exhaust balance, etc."></textarea>
+            </div>
           </div>
-        </div>
+
+          <!-- ── Starter Strip ── -->
+          <div class="va-box">
+            <h4>Starter Strip</h4>
+            <p style="font-size:0.8rem;color:#6B7280;margin-bottom:var(--sp-3);">Where is starter strip applied?</p>
+            <div class="va-options">
+              <label class="va-option-row"><input type="radio" name="starterStrip" value="rakes"> Rakes</label>
+              <label class="va-option-row"><input type="radio" name="starterStrip" value="eaves"> Eaves</label>
+              <label class="va-option-row"><input type="radio" name="starterStrip" value="rakes_and_eaves"> Rakes and Eaves</label>
+              <label class="va-option-row"><input type="radio" name="starterStrip" value="neither"> Neither</label>
+            </div>
+          </div>
+
+          <!-- ── Warranty Builder ── -->
+          <div class="va-box" id="warrantyBuilderBox">
+            <h4>Warranties</h4>
+            <p style="font-size:0.8rem;color:#6B7280;margin-bottom:var(--sp-3);">Add one or more warranties you are offering. You can load a saved template or build from scratch.</p>
+
+            <!-- Template loader bar -->
+            <div class="warranty-template-bar" id="warrantyTemplateBar" style="display:none;">
+              <select id="warrantyTemplateSelect">
+                <option value="">— Select saved template —</option>
+              </select>
+              <button type="button" class="btn-sm" onclick="loadWarrantyTemplate()">Load Template</button>
+            </div>
+
+            <div class="warranty-builder">
+              <div class="warranty-cards-container" id="warrantyCardsContainer"></div>
+              <button type="button" class="btn-sm primary" style="margin-top:var(--sp-4);" onclick="addWarrantyCard()">+ Add Warranty</button>
+            </div>
+          </div>
+
+          <!-- ── Other Trades Covered by Insurance ── -->
+          <div class="va-box">
+            <h4>Other Trades Covered by Insurance</h4>
+            <p style="font-size:0.8rem;color:#6B7280;margin-bottom:var(--sp-4);">For each trade covered by the insurance estimate, state whether you are willing to perform the work for the amount paid or whether you recommend other actions (rebate, other contractor, etc.).</p>
+            <div class="trade-covered-list" id="tradesCoveredList">
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Siding (full replacement)</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredSidingFull" placeholder="e.g., Will complete at insurance price / Recommend other contractor">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Siding (repair)</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredSidingRepair" placeholder="e.g., Can complete at insurance price">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Gutters (full replacement)</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredGuttersFull" placeholder="e.g., Included in this bid / Available for $X extra">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Gutters (repair)</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredGuttersRepair" placeholder="e.g., Will complete at insurance price">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Interior repairs</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredInterior" placeholder="e.g., Recommend a drywall sub / Can self-perform">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Paint</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredPaint" placeholder="e.g., Will rebate to homeowner / Can coordinate">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Windows</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredWindows" placeholder="e.g., Not our trade — recommend a window company">
+              </div>
+              <div class="trade-covered-item">
+                <span class="trade-covered-label">Other (specify in notes below)</span>
+                <input type="text" class="trade-covered-input" name="tradeCoveredOther" placeholder="Any other items in the estimate…">
+              </div>
+            </div>
+            <div style="margin-top:var(--sp-4);">
+              <label class="form-label" style="font-size:0.875rem;margin-bottom:var(--sp-2);">Additional Notes</label>
+              <textarea name="tradesCoveredAdditionalNotes" id="tradesCoveredAdditionalNotes" placeholder="Any additional context about trade coverage, supplements, or items not addressed above…" style="width:100%;min-height:120px;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;"></textarea>
+            </div>
+          </div>
+
+          <!-- ── Other Special Offers ── -->
+          <div class="va-box" style="margin-bottom:var(--sp-2);">
+            <h4>Other Special Offers</h4>
+            <p style="font-size:0.8rem;color:#6B7280;margin-bottom:var(--sp-3);">Anything else that sets your company apart — financing options, free inspections, cleanup guarantee, etc.</p>
+            <textarea name="valueAddsOtherOffers" id="valueAddsOtherOffers" placeholder="e.g., We offer 0% financing for 12 months, free annual roof inspection for 5 years, complimentary gutter cleaning with every full replacement…" style="width:100%;min-height:100px;padding:var(--sp-3);border:1px solid var(--light);border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;" maxlength="2000"></textarea>
+          </div>
+
+        </div><!-- /valueAddsSection -->
 
         <div class="form-group" style="grid-column: 1 / -1;">
           <label for="homeownerMessage">Message to Homeowner</label>
@@ -871,7 +1321,7 @@
 
       <div class="fee-row">
         <span>Your Bid:</span>
-        <span class="fee-amount" id="displayBid">$19,850.00</span>
+        <span class="fee-amount" id="displayBid">$0.00</span>
       </div>
 
       <div style="margin-top: var(--sp-6); margin-bottom: var(--sp-4);">
@@ -881,7 +1331,7 @@
             <span>Contract Signing (base)</span>
             <span class="fee-percentage">5.0%</span>
           </span>
-          <span class="fee-amount" id="feeContractSigning">$992.50</span>
+          <span class="fee-amount" id="feeContractSigning">$0.00</span>
         </div>
 
         <div class="fee-row">
@@ -890,7 +1340,7 @@
             <span>Color Selection</span>
             <span class="fee-percentage">3.0%</span>
           </span>
-          <span class="fee-amount" id="feeColorSelection">$595.50</span>
+          <span class="fee-amount" id="feeColorSelection">$0.00</span>
         </div>
 
         <div class="fee-row">
@@ -899,7 +1349,7 @@
             <span>Deductible Collection</span>
             <span class="fee-percentage">5.0%</span>
           </span>
-          <span class="fee-amount" id="feeDeductibleCollection">$992.50</span>
+          <span class="fee-amount" id="feeDeductibleCollection">$0.00</span>
         </div>
       </div>
 
@@ -907,13 +1357,13 @@
         <span>Total Platform Fee</span>
         <div>
           <span class="fee-amount" id="totalFeePercent">13.0%</span>
-          <span style="margin-left: var(--sp-2); font-weight: 400;">= <span class="fee-amount" id="totalFeeAmount">$2,580.50</span></span>
+          <span style="margin-left: var(--sp-2); font-weight: 400;">= <span class="fee-amount" id="totalFeeAmount">$0.00</span></span>
         </div>
       </div>
 
       <div class="fee-row net">
         <span>Your Net:</span>
-        <span class="fee-amount" id="yourNet">$17,269.50</span>
+        <span class="fee-amount" id="yourNet">$0.00</span>
       </div>
 
       <div class="fee-info">
@@ -966,13 +1416,53 @@
     let currentContractor = null;
     let changeBidMode = false;
     let existingQuote = null;
+    let claimRcv = null; // RCV from parsed line items or rcv_amount column
 
-    const priceInput = document.getElementById('totalPrice');
     const charCountEl = document.getElementById('charCount');
     const messageInput = document.getElementById('homeownerMessage');
     const bidForm = document.getElementById('bidForm');
     const submitBtn = document.getElementById('submitBtn');
     const successState = document.getElementById('successState');
+
+    // ── Bid Type UI Logic ──
+    function initBidTypeUI() {
+      const radioRCV   = document.getElementById('bidTypeRCV');
+      const radioOther = document.getElementById('bidTypeOther');
+      const cardA      = document.getElementById('bidTypeCardA');
+      const cardB      = document.getElementById('bidTypeCardB');
+      const otherDetails = document.getElementById('bidTypeOtherDetails');
+      const rcvDisplay = document.getElementById('rcvDisplay');
+      const totalPriceHidden = document.getElementById('totalPrice');
+      const otherPriceInput  = document.getElementById('otherBidPrice');
+
+      function applyBidTypeState() {
+        const isRCV = radioRCV.checked;
+        cardA.classList.toggle('selected', isRCV);
+        cardB.classList.toggle('selected', !isRCV);
+        otherDetails.style.display = isRCV ? 'none' : 'block';
+        rcvDisplay.style.display   = isRCV ? 'block' : 'none';
+
+        if (isRCV) {
+          if (claimRcv != null) {
+            totalPriceHidden.value = claimRcv;
+          }
+        } else {
+          totalPriceHidden.value = otherPriceInput.value || '';
+        }
+        updateFeeCalculator();
+      }
+
+      radioRCV.addEventListener('change', applyBidTypeState);
+      radioOther.addEventListener('change', applyBidTypeState);
+      otherPriceInput.addEventListener('input', () => {
+        if (radioOther.checked) {
+          totalPriceHidden.value = otherPriceInput.value || '';
+          updateFeeCalculator();
+        }
+      });
+
+      applyBidTypeState();
+    }
 
     // Init function
     async function init() {
@@ -980,7 +1470,6 @@
       currentUser = await Auth.requireAuth('contractor');
 
       if (!currentUser && !CONFIG.DEMO_MODE) {
-        // Not authenticated and not demo mode
         return;
       }
 
@@ -990,19 +1479,37 @@
 
       if (claimId && !CONFIG.DEMO_MODE && sb) {
         try {
+          // ── Bug Fix #2: Join carrier_profiles to get carrier name ──
           const { data, error } = await sb
             .from('claims')
-            .select('*')
+            .select('*, carrier_profiles(carrier_name)')
             .eq('id', claimId)
             .single();
 
           if (!error && data) {
             currentClaim = data;
-            // Populate claim summary from real data
+
+            // Determine RCV for bid type selector
+            const parsedSummary = data.parsed_line_items?.summary;
+            if (parsedSummary?.rcv != null) {
+              claimRcv = parsedSummary.rcv;
+            } else if (data.rcv_amount != null) {
+              claimRcv = data.rcv_amount;
+            }
+
+            // Update project summary and RCV display
             updateClaimSummary();
+            if (claimRcv != null) {
+              document.getElementById('rcvDisplayValue').textContent = formatCurrency(claimRcv);
+              document.getElementById('rcvDisplay').style.display = 'block';
+              document.getElementById('totalPrice').value = claimRcv;
+              updateFeeCalculator();
+            }
+
             // Render insurance line items if parsed data exists
             renderInsuranceLineItems();
-            // Show value adds section for insurance RCV jobs
+
+            // Show value adds section for insurance jobs
             if (data.job_type === 'insurance_rcv' || data.job_type === 'insurance_acv' || data.funding_type === 'insurance') {
               const vas = document.getElementById('valueAddsSection');
               if (vas) vas.style.display = 'block';
@@ -1025,19 +1532,24 @@
           if (!error && data) {
             currentContractor = data;
 
-            // Profile completeness gate — must complete profile before bidding
+            // Profile completeness gate
             const hasCompanyName     = !!(data.company_name && data.company_name.trim());
             const hasPhone           = !!(data.phone && data.phone.trim());
             const hasTrades          = Array.isArray(data.trades) && data.trades.length > 0;
             const hasServiceCounties = Array.isArray(data.service_counties) && data.service_counties.length > 0;
 
             if (!hasCompanyName || !hasPhone || !hasTrades || !hasServiceCounties) {
-              // Redirect to profile page with a banner explaining the requirement
               window.location.href = 'contractor-profile.html?incomplete=bid';
               return;
             }
 
-            // Re-render line items now that we know the contractor's trades
+            // Load warranty templates if any
+            const warrantyTemplates = data.auto_bid_value_adds?.warranty_templates;
+            if (warrantyTemplates && warrantyTemplates.length > 0) {
+              populateWarrantyTemplateDropdown(warrantyTemplates);
+            }
+
+            // Re-render line items with contractor trades
             renderInsuranceLineItems();
 
             // Check for existing quote — activate Change Bid mode if found
@@ -1068,31 +1580,29 @@
 
     // ── Change Bid Mode ──
     function activateChangeBidMode(quote) {
-      // Update heading and button
       const heading = document.getElementById('pageHeading');
       if (heading) heading.textContent = 'Change Your Bid';
       document.title = 'Change Your Bid | OtterQuote Contractor Portal';
       const submitBtnEl = document.getElementById('submitBtn');
       if (submitBtnEl) submitBtnEl.textContent = 'Update Bid';
 
-      // Show change bid banner
       const banner = document.getElementById('changeBidBanner');
       if (banner) banner.style.display = 'block';
 
-      // Pre-populate form fields from existing quote
       const scope = (() => {
         try { return JSON.parse(quote.scope_summary || '{}'); } catch(e) { return {}; }
       })();
       const va = quote.value_adds || {};
 
       // Core bid fields
-      setVal('totalPrice', quote.total_price || '');
+      if (quote.total_price) {
+        document.getElementById('totalPrice').value = quote.total_price;
+        document.getElementById('otherBidPrice').value = quote.total_price;
+        updateFeeCalculator();
+      }
       setVal('brandProduct', scope.brand || '');
       setVal('startDate', scope.estimated_start_date || '');
       setVal('completionTime', scope.estimated_completion_time || '');
-      setVal('workmanshipWarranty', scope.workmanship_warranty_years || '');
-      setVal('manufacturerWarranty', scope.manufacturer_warranty_years || '');
-      setVal('warrantySummary', scope.warranty_summary || '');
       setVal('deckingPricePerSheet', quote.decking_price_per_sheet || '');
       setVal('fullRedeckPrice', quote.full_redeck_price || '');
       setVal('homeownerMessage', quote.notes || '');
@@ -1101,35 +1611,100 @@
       const suppCheck = document.getElementById('supplementAcknowledged');
       if (suppCheck) suppCheck.checked = !!quote.supplement_acknowledged;
 
-      // Character counter for message
-      const charCountEl = document.getElementById('charCount');
+      // Character counter
       if (charCountEl) charCountEl.textContent = (quote.notes || '').length;
 
-      // Value adds — radio buttons
+      // Bid type
+      if (va.bid_type_option === 'other') {
+        setRadio('bidTypeOption', 'other');
+        setVal('otherBidDescription', va.other_bid_description || '');
+      } else {
+        setRadio('bidTypeOption', 'rcv_plus_supplements');
+      }
+
+      // Gutters
       setRadio('gutterOption', va.gutters?.option || 'none');
-      setRadio('chimneyFlashing', va.chimney_flashing || 'na');
-      setRadio('gutterGuards', va.gutter_guards?.option || 'none');
+      if (va.gutters?.additional_cost_5inch) setVal('gutter5Cost', va.gutters.additional_cost_5inch);
+      if (va.gutters?.additional_cost_6inch) setVal('gutter6Cost', va.gutters.additional_cost_6inch);
+      if (va.gutters?.other_text) setVal('gutterOtherText', va.gutters.other_text);
+
+      // Gutter guards (new structure)
+      if (va.gutter_guards?.pricing_on_request) setCheck('gutterGuardPricingOnRequest', true);
+      if (va.gutter_guards?.mesh_oop != null) setVal('gutterGuardMeshOop', va.gutter_guards.mesh_oop);
+      if (va.gutter_guards?.screw_in_oop != null) setVal('gutterGuardScrewInOop', va.gutter_guards.screw_in_oop);
+      if (va.gutter_guards?.notes) setVal('gutterGuardNotes', va.gutter_guards.notes);
+
+      // Chimney flashing
+      setRadio('chimneyFlashing', va.chimney_flashing?.option || 'na');
+      if (va.chimney_flashing?.oop_price != null) setVal('chimneyFlashingOopPrice', va.chimney_flashing.oop_price);
+
+      // Skylights / chimney reflash
       setRadio('skylights', va.skylights || 'na');
       setRadio('chimneyReflash', va.chimney_reflash?.option || 'na');
-
-      // Value adds — cost inputs
-      if (va.gutters?.additional_cost_5inch) setVal('gutter5AdditionalCost', va.gutters.additional_cost_5inch);
-      if (va.gutters?.additional_cost_6inch) setVal('gutter6AdditionalCost', va.gutters.additional_cost_6inch);
-      if (va.gutters?.other_text) setVal('gutterOtherText', va.gutters.other_text);
-      if (va.gutter_guards?.type) {
-        const ggSel = document.querySelector('select[name="gutterGuardType"]');
-        if (ggSel) ggSel.value = va.gutter_guards.type;
+      if (va.chimney_reflash?.oop_price) {
+        const inp = document.querySelector('input[name="chimneyReflashOopPrice"]');
+        if (inp) inp.value = va.chimney_reflash.oop_price;
       }
-      if (va.gutter_guards?.oop_price) document.querySelector('input[name="gutterGuardOopPrice"]') && (document.querySelector('input[name="gutterGuardOopPrice"]').value = va.gutter_guards.oop_price);
-      if (va.chimney_reflash?.oop_price) document.querySelector('input[name="chimneyReflashOopPrice"]') && (document.querySelector('input[name="chimneyReflashOopPrice"]').value = va.chimney_reflash.oop_price);
+
+      // Other shingles
+      if (va.other_shingles) {
+        if (va.other_shingles.impact) setCheck('shingleOtherImpact', true, '[name="shingleOtherImpact"]');
+        if (va.other_shingles.designer) setCheck('shingleOtherDesigner', true, '[name="shingleOtherDesigner"]');
+        if (va.other_shingles.metal) setCheck('shingleOtherMetal', true, '[name="shingleOtherMetal"]');
+        if (va.other_shingles.premium_arch) setCheck('shingleOtherPremiumArch', true, '[name="shingleOtherPremiumArch"]');
+        if (va.other_shingles.other_text) {
+          setCheck('shingleOtherOtherCheck', true, '[name="shingleOtherOtherCheck"]');
+          const inp = document.querySelector('[name="shingleOtherOtherText"]');
+          if (inp) inp.value = va.other_shingles.other_text;
+        }
+        if (va.other_shingles.notes) setVal('shingleOtherNotes', va.other_shingles.notes);
+      }
+
+      // Underlayment
+      if (va.underlayment?.type) setRadio('underlaymentType', va.underlayment.type);
+      if (va.underlayment?.notes) setVal('underlaymentNotes', va.underlayment.notes);
+
+      // Ventilation
+      if (va.ventilation?.ridge_vent_included) setCheck('ridgeVentIncluded', true);
+      if (va.ventilation?.ridge_vent_oop != null) setVal('ridgeVentOopPrice', va.ventilation.ridge_vent_oop);
+      if (va.ventilation?.notes) setVal('ventilationNotes', va.ventilation.notes);
+
+      // Starter strip
+      if (va.starter_strip) setRadio('starterStrip', va.starter_strip);
+
+      // Warranties — re-build cards
+      if (va.warranties && va.warranties.length > 0) {
+        va.warranties.forEach(w => addWarrantyCard(w));
+      }
+
+      // Other trades covered
+      if (va.other_trades_covered) {
+        const otc = va.other_trades_covered;
+        setFieldByName('tradeCoveredSidingFull', otc.siding_full || '');
+        setFieldByName('tradeCoveredSidingRepair', otc.siding_repair || '');
+        setFieldByName('tradeCoveredGuttersFull', otc.gutters_full || '');
+        setFieldByName('tradeCoveredGuttersRepair', otc.gutters_repair || '');
+        setFieldByName('tradeCoveredInterior', otc.interior || '');
+        setFieldByName('tradeCoveredPaint', otc.paint || '');
+        setFieldByName('tradeCoveredWindows', otc.windows || '');
+        setFieldByName('tradeCoveredOther', otc.other || '');
+        if (otc.additional_notes) setVal('tradesCoveredAdditionalNotes', otc.additional_notes);
+      }
+
+      // Other offers
       if (va.other_offers) setVal('valueAddsOtherOffers', va.other_offers);
 
-      // Trigger fee calculator update
-      updateFeeCalculator();
+      // Trigger bid type UI sync
+      document.querySelectorAll('input[name="bidTypeOption"]').forEach(r => r.dispatchEvent(new Event('change')));
     }
 
     function setVal(id, value) {
       const el = document.getElementById(id);
+      if (el && value !== null && value !== undefined) el.value = value;
+    }
+
+    function setFieldByName(name, value) {
+      const el = document.querySelector(`[name="${name}"]`);
       if (el && value !== null && value !== undefined) el.value = value;
     }
 
@@ -1138,10 +1713,16 @@
       if (radio) radio.checked = true;
     }
 
+    function setCheck(id, value, selector) {
+      const el = selector ? document.querySelector(selector) : document.getElementById(id);
+      if (el) el.checked = value;
+    }
+
+    // ── Update Project Summary (Bug Fix #1 + #2) ──
     function updateClaimSummary() {
       if (!currentClaim) return;
 
-      // D-074: Display only city + zip — never the full street address to contractors before bid submission
+      // Location: D-074 — city + zip only (never full street address to contractors before bid)
       const addressParts = (currentClaim.property_address || '').split(',');
       let city = 'Unknown';
       if (addressParts.length >= 2) {
@@ -1152,32 +1733,82 @@
       const zip = (currentClaim.property_address || '').match(/\d{5}/)?.[0] || '';
       const locationDisplay = zip ? `${city}, IN ${zip}` : city;
 
-      // Update the project summary section with real claim data
-      const summaryGrid = document.querySelector('.summary-grid');
-      if (summaryGrid) {
-        summaryGrid.innerHTML = `
-          <div class="summary-item">
-            <div class="summary-label">Location</div>
-            <div class="summary-value">${locationDisplay}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Damage Type</div>
-            <div class="summary-value">${currentClaim.damage_type || 'Not specified'}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Insurance Carrier</div>
-            <div class="summary-value">${currentClaim.insurance_carrier_id || 'Not specified'}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Material Selected</div>
-            <div class="summary-value">${currentClaim.material_product || 'Not selected'}</div>
-          </div>
-        `;
+      // ── Bug Fix #2: Carrier name ──
+      // Priority: carrier_profiles join → parsed_line_items.carrier_name → 'Not specified'
+      let carrierName = 'Not specified';
+      if (currentClaim.carrier_profiles?.carrier_name) {
+        carrierName = currentClaim.carrier_profiles.carrier_name;
+      } else if (currentClaim.parsed_line_items?.carrier_name) {
+        // Shorten "USAA Casualty Insurance Company" → "USAA" etc. for display brevity
+        const raw = currentClaim.parsed_line_items.carrier_name;
+        carrierName = simplifyCarrierName(raw);
+      }
+
+      // ── Bug Fix #1: Shingle display ──
+      // Use the actual material selection fields from the claims table
+      let shingleDisplay = 'Not yet selected';
+      let shingleHighlight = null;
+
+      if (currentClaim.shingle_type) {
+        shingleDisplay = currentClaim.shingle_type;
+        if (currentClaim.impact_class) {
+          shingleDisplay += ` — Class ${currentClaim.impact_class} Impact`;
+          shingleHighlight = `✓ This homeowner has selected <strong>${currentClaim.shingle_type}, Class ${currentClaim.impact_class} Impact Resistant</strong>`;
+        } else {
+          shingleHighlight = `✓ This homeowner has selected <strong>${currentClaim.shingle_type}</strong>`;
+        }
+      } else if (currentClaim.designer_product) {
+        shingleDisplay = currentClaim.designer_product;
+        if (currentClaim.designer_manufacturer) shingleDisplay += ` (${currentClaim.designer_manufacturer})`;
+        shingleHighlight = `✓ This homeowner has selected <strong>${shingleDisplay}</strong>`;
+      } else if (currentClaim.material_category) {
+        shingleDisplay = currentClaim.material_category;
+      }
+
+      // Update DOM
+      const locEl = document.getElementById('summaryLocation');
+      const dmgEl = document.getElementById('summaryDamage');
+      const carEl = document.getElementById('summaryCarrier');
+      const shEl  = document.getElementById('summaryShingle');
+      if (locEl) locEl.textContent = locationDisplay;
+      if (dmgEl) dmgEl.textContent = currentClaim.damage_type || 'Not specified';
+      if (carEl) carEl.textContent = carrierName;
+      if (shEl)  shEl.textContent  = shingleDisplay;
+
+      const highlightDiv = document.getElementById('summaryHighlight');
+      if (highlightDiv) {
+        if (shingleHighlight) {
+          highlightDiv.innerHTML = shingleHighlight;
+          highlightDiv.style.display = 'block';
+        } else {
+          highlightDiv.style.display = 'none';
+        }
       }
     }
 
+    // Simplify long carrier name strings for compact display
+    function simplifyCarrierName(raw) {
+      if (!raw) return 'Not specified';
+      const lower = raw.toLowerCase();
+      if (lower.includes('usaa')) return 'USAA';
+      if (lower.includes('state farm')) return 'State Farm';
+      if (lower.includes('allstate')) return 'Allstate';
+      if (lower.includes('farmers')) return 'Farmers';
+      if (lower.includes('geico')) return 'GEICO';
+      if (lower.includes('progressive')) return 'Progressive';
+      if (lower.includes('nationwide')) return 'Nationwide';
+      if (lower.includes('liberty mutual')) return 'Liberty Mutual';
+      if (lower.includes('american family')) return 'American Family';
+      if (lower.includes('travelers')) return 'Travelers';
+      if (lower.includes('cincinnati')) return 'Cincinnati Financial';
+      if (lower.includes('erie')) return 'Erie';
+      if (lower.includes('auto-owners') || lower.includes('auto owners')) return 'Auto-Owners';
+      if (lower.includes('tower hill')) return 'Tower Hill';
+      // Fallback: trim common legal suffixes
+      return raw.replace(/\s+(insurance\s+company|insurance|casualty|property|fire|mutual|group|co\.?)$/i, '').trim() || raw;
+    }
+
     // ── Insurance Line Items Panel ──
-    // Trade-to-keyword mapping for filtering parsed line items
     const TRADE_SECTION_KEYWORDS = {
       roofing:  ['roof', 'roofplan', 'shingle', 'underlayment', 'decking', 'exterior plan', 'vents', 'flashings', 'debris'],
       gutters:  ['gutter', 'downspout', 'fascia'],
@@ -1216,7 +1847,6 @@
       const panel = document.getElementById('insuranceLineItemsPanel');
       if (!panel) return;
 
-      // Need parsed line items on the claim
       if (!currentClaim || !currentClaim.parsed_line_items) {
         panel.style.display = 'none';
         return;
@@ -1231,16 +1861,14 @@
         return;
       }
 
-      // Determine contractor trades — fall back to all sections if no contractor loaded yet
       const contractorTrades = (currentContractor && currentContractor.trades && currentContractor.trades.length > 0)
         ? currentContractor.trades.map(t => t.toLowerCase())
-        : null; // null means show everything (no trade filter yet)
+        : null;
 
-      // Filter sections and line items
       const filteredSections = [];
       (parsed.sections || []).forEach(section => {
         const items = (section.line_items || []).filter(item => {
-          if (!contractorTrades) return true; // show all until trades known
+          if (!contractorTrades) return true;
           return matchesTrade(section.section_name, item.description, contractorTrades);
         });
         if (items.length > 0) {
@@ -1253,7 +1881,6 @@
         return;
       }
 
-      // Build info bar
       const carrierDisplay = parsed.carrier_name || 'Unknown Carrier';
       const dolDisplay = parsed.date_of_loss ? 'Date of Loss: ' + parsed.date_of_loss : '';
       const dbDisplay = parsed.pricing_database ? 'Pricing DB: ' + parsed.pricing_database : '';
@@ -1268,7 +1895,6 @@
         + '<span style="color:var(--slate);font-style:italic;">' + escHtmlBid(tradeNote) + '</span>'
         + '</div>';
 
-      // Build section tables
       let sectionsHtml = '';
       filteredSections.forEach(section => {
         const sectionLabel = [section.section_name, section.area_name].filter(Boolean).join(' — ');
@@ -1308,7 +1934,6 @@
           + '</div>';
       });
 
-      // Build totals bar from summary
       let totalsHtml = '';
       const s = parsed.summary;
       if (s) {
@@ -1343,11 +1968,10 @@
         .replace(/"/g, '&quot;');
     }
 
-    // Update fee calculator
+    // ── Fee Calculator ──
     function updateFeeCalculator() {
-      const bidAmount = parseFloat(priceInput.value) || 0;
+      const bidAmount = parseFloat(document.getElementById('totalPrice').value) || 0;
 
-      // Calculate fees
       const contractSigningFee = bidAmount * PLATFORM_FEES.contractSigning;
       const colorSelectionFee = contractorTiers.colorSelection ? bidAmount * PLATFORM_FEES.colorSelection : 0;
       const deductibleCollectionFee = contractorTiers.deductibleCollection ? bidAmount * PLATFORM_FEES.deductibleCollection : 0;
@@ -1356,7 +1980,6 @@
       const totalFeePercent = bidAmount > 0 ? (totalFee / bidAmount * 100).toFixed(1) : 0;
       const netAmount = bidAmount - totalFee;
 
-      // Update display
       document.getElementById('displayBid').textContent = formatCurrency(bidAmount);
       document.getElementById('feeContractSigning').textContent = formatCurrency(contractSigningFee);
       document.getElementById('feeColorSelection').textContent = formatCurrency(colorSelectionFee);
@@ -1375,84 +1998,313 @@
       }).format(value);
     }
 
-    // Character counter
+    // ── Warranty Builder ──
+    let warrantyCardCount = 0;
+
+    const WARRANTY_COVERAGE_LINES = [
+      { key: 'material_defects', label: 'Material Defects Warranty' },
+      { key: 'labor', label: 'Labor Warranty' },
+      { key: 'algae_resistance', label: 'Algae Resistance Warranty' },
+      { key: 'hail_damage', label: 'Hail Damage Warranty' },
+      { key: 'wind_damage', label: 'Wind Damage Warranty' },
+    ];
+
+    function addWarrantyCard(prefillData) {
+      warrantyCardCount++;
+      const idx = warrantyCardCount;
+      const container = document.getElementById('warrantyCardsContainer');
+
+      const card = document.createElement('div');
+      card.className = 'warranty-card';
+      card.id = `warrantyCard_${idx}`;
+
+      const coverageRowsHtml = WARRANTY_COVERAGE_LINES.map(line => `
+        <tr>
+          <td style="font-weight:500;">${escHtmlBid(line.label)}</td>
+          <td><input type="number" class="warranty-years-input" name="wc_${idx}_${line.key}_years" min="0" max="100" placeholder="—" value="${prefillData?.[line.key]?.years ?? ''}"></td>
+          <td><input type="text" class="warranty-notes-input" name="wc_${idx}_${line.key}_notes" placeholder="Notes…" value="${escHtmlBid(prefillData?.[line.key]?.notes ?? '')}"></td>
+        </tr>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="warranty-card-header">
+          <span class="warranty-card-title">Warranty #${idx}</span>
+          <button type="button" class="btn-sm" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.3);color:#fff;" onclick="removeWarrantyCard(${idx})">Remove</button>
+        </div>
+        <div class="warranty-card-body">
+          <div class="warranty-name-price-row">
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.8rem;">Warranty Name</label>
+              <input type="text" name="wc_${idx}_name" placeholder="e.g., CertainTeed Integrity Roof System Warranty" value="${escHtmlBid(prefillData?.name ?? '')}">
+            </div>
+            <div class="form-group" style="min-width:140px;">
+              <label class="form-label" style="font-size:0.8rem;">Warranty Price</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" name="wc_${idx}_price" min="0" step="0.01" placeholder="0" value="${prefillData?.price ?? ''}">
+              </div>
+            </div>
+          </div>
+          <table class="warranty-coverage-table">
+            <thead>
+              <tr>
+                <th style="width:40%;">Coverage Type</th>
+                <th style="width:15%;">Years</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coverageRowsHtml}
+            </tbody>
+          </table>
+          <div class="form-group">
+            <label class="form-label" style="font-size:0.8rem;color:var(--slate);">Additional Warranty Notes</label>
+            <textarea name="wc_${idx}_additional_notes" style="min-height:70px;width:100%;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;" placeholder="Any additional details about this warranty…">${escHtmlBid(prefillData?.additional_notes ?? '')}</textarea>
+          </div>
+          <div class="warranty-save-bar">
+            <input type="text" name="wc_${idx}_template_name" placeholder="Save as template: enter name…" value="${escHtmlBid(prefillData?.name ?? '')}">
+            <button type="button" class="btn-sm" onclick="saveWarrantyAsTemplate(${idx})">Save as Template</button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    }
+
+    function removeWarrantyCard(idx) {
+      const card = document.getElementById(`warrantyCard_${idx}`);
+      if (card) card.remove();
+    }
+
+    function getWarrantyCardData(idx) {
+      const card = document.getElementById(`warrantyCard_${idx}`);
+      if (!card) return null;
+
+      const get = name => {
+        const el = card.querySelector(`[name="wc_${idx}_${name}"]`);
+        return el ? el.value : '';
+      };
+
+      const coverage = {};
+      WARRANTY_COVERAGE_LINES.forEach(line => {
+        coverage[line.key] = {
+          years: parseInt(get(`${line.key}_years`)) || null,
+          notes: get(`${line.key}_notes`) || null,
+        };
+      });
+
+      return {
+        name: get('name') || null,
+        price: parseFloat(get('price')) || 0,
+        ...coverage,
+        additional_notes: get('additional_notes') || null,
+      };
+    }
+
+    function collectAllWarrantyData() {
+      const warranties = [];
+      const cards = document.querySelectorAll('.warranty-card');
+      cards.forEach(card => {
+        const idMatch = card.id.match(/warrantyCard_(\d+)/);
+        if (idMatch) {
+          const data = getWarrantyCardData(parseInt(idMatch[1]));
+          if (data) warranties.push(data);
+        }
+      });
+      return warranties;
+    }
+
+    // Template management
+    function populateWarrantyTemplateDropdown(templates) {
+      const bar = document.getElementById('warrantyTemplateBar');
+      const sel = document.getElementById('warrantyTemplateSelect');
+      if (!bar || !sel || !templates?.length) return;
+
+      sel.innerHTML = '<option value="">— Select saved template —</option>'
+        + templates.map((t, i) => `<option value="${i}">${escHtmlBid(t.name || `Template ${i+1}`)}</option>`).join('');
+
+      bar.style.display = 'flex';
+      bar._templates = templates;
+    }
+
+    function loadWarrantyTemplate() {
+      const sel = document.getElementById('warrantyTemplateSelect');
+      const bar = document.getElementById('warrantyTemplateBar');
+      if (!sel || !bar?._templates) return;
+
+      const idx = parseInt(sel.value);
+      if (isNaN(idx) || idx < 0) return;
+
+      const template = bar._templates[idx];
+      if (!template) return;
+
+      addWarrantyCard(template);
+    }
+
+    async function saveWarrantyAsTemplate(cardIdx) {
+      if (!currentContractor || !sb) {
+        alert('Cannot save template — contractor profile not loaded.');
+        return;
+      }
+
+      const data = getWarrantyCardData(cardIdx);
+      if (!data) return;
+
+      const nameInput = document.querySelector(`[name="wc_${cardIdx}_template_name"]`);
+      const templateName = nameInput?.value?.trim() || data.name || `Warranty Template ${cardIdx}`;
+      data.name = templateName;
+
+      // Merge into existing templates
+      const existing = currentContractor.auto_bid_value_adds || {};
+      const templates = Array.isArray(existing.warranty_templates) ? [...existing.warranty_templates] : [];
+
+      // Replace existing template with same name, otherwise append
+      const existingIdx = templates.findIndex(t => t.name === templateName);
+      if (existingIdx >= 0) {
+        templates[existingIdx] = data;
+      } else {
+        templates.push(data);
+      }
+
+      const updatedVA = { ...existing, warranty_templates: templates };
+
+      const { error } = await sb
+        .from('contractors')
+        .update({ auto_bid_value_adds: updatedVA })
+        .eq('id', currentContractor.id);
+
+      if (error) {
+        alert('Failed to save template: ' + error.message);
+      } else {
+        currentContractor.auto_bid_value_adds = updatedVA;
+        populateWarrantyTemplateDropdown(templates);
+        alert(`Template "${templateName}" saved!`);
+      }
+    }
+
+    // ── Character counter ──
     messageInput.addEventListener('input', (e) => {
       charCountEl.textContent = e.target.value.length;
     });
 
-    // Gutter guard type "other" show/hide
-    const ggTypeSelect = document.querySelector('select[name="gutterGuardType"]');
-    const ggTypeOtherInput = document.getElementById('gutterGuardTypeOtherInput');
-    if (ggTypeSelect && ggTypeOtherInput) {
-      ggTypeSelect.addEventListener('change', () => {
-        ggTypeOtherInput.style.display = ggTypeSelect.value === 'other' ? 'inline-block' : 'none';
-      });
-    }
-
-    // Price input listener
-    priceInput.addEventListener('input', updateFeeCalculator);
-
-    // Form submission
+    // ── Form Submission ──
     bidForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Validate form
+      // Validate: bid type must have a price if RCV selected
+      const bidTypeOption = document.querySelector('input[name="bidTypeOption"]:checked')?.value || 'rcv_plus_supplements';
+      const totalPriceVal = parseFloat(document.getElementById('totalPrice').value) || 0;
+
+      if (bidTypeOption === 'rcv_plus_supplements' && totalPriceVal <= 0) {
+        alert('Unable to determine RCV for this claim. Please select "Other" and enter your bid price manually.');
+        return;
+      }
+
+      if (bidTypeOption === 'other') {
+        const otherDesc = document.getElementById('otherBidDescription')?.value?.trim();
+        if (!otherDesc) {
+          alert('Please describe your pricing approach in the "Other" description field.');
+          return;
+        }
+      }
+
       if (!bidForm.checkValidity()) {
         alert('Please fill in all required fields');
         return;
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
+      submitBtn.textContent = 'Submitting…';
 
       try {
         const formData = new FormData(bidForm);
 
         if (CONFIG.DEMO_MODE) {
-          // Demo mode: just show success
           await new Promise(resolve => setTimeout(resolve, 800));
         } else if (sb && currentUser && currentClaim) {
-          // Real mode: insert quote to database
-          const totalPrice = parseFloat(formData.get('totalPrice'));
-          const feePercentage = 13.0; // Base 5% + Color 3% + Deductible 5%
+          const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
+          const feePercentage = 13.0;
 
-          // Build scope summary with all bid details for display later
           const scopeSummary = JSON.stringify({
-            brand: formData.get('brandProductLine') || null,
-            workmanship_warranty_years: parseInt(formData.get('workmanshipWarranty')) || null,
-            manufacturer_warranty_years: parseInt(formData.get('manufacturerWarranty')) || null,
-            warranty_summary: formData.get('warrantySummary') || null,
+            brand: formData.get('brandProduct') || null,
             estimated_start_date: formData.get('startDate') || null,
             estimated_completion_time: formData.get('completionTime') || null,
           });
 
-          // Guard: contractor profile must be loaded before INSERT (RLS requires contractor_id = contractors.id)
           if (!currentContractor) {
-            throw new Error('Your contractor profile could not be loaded. Please refresh the page and try again.');
+            throw new Error('Your contractor profile could not be loaded. Please refresh and try again.');
           }
 
-          // Build value_adds JSON for distinguishing features
+          // ── Build value_adds JSON ──
           const gutterOption = formData.get('gutterOption') || 'none';
-          const gutterGuardsOption = formData.get('gutterGuards') || 'none';
+          const chimneyFlashingOption = formData.get('chimneyFlashing') || 'na';
+
           const valueAdds = {
+            bid_type_option: bidTypeOption,
+            other_bid_description: bidTypeOption === 'other' ? (formData.get('otherBidDescription') || null) : null,
+
             gutters: {
               option: gutterOption,
               additional_cost_5inch: gutterOption === '5inch_additional' ? (parseFloat(formData.get('gutter5AdditionalCost')) || null) : null,
               additional_cost_6inch: gutterOption === '6inch_additional' ? (parseFloat(formData.get('gutter6AdditionalCost')) || null) : null,
               other_text: gutterOption === 'other' ? (formData.get('gutterOtherText') || null) : null,
             },
-            chimney_flashing: formData.get('chimneyFlashing') || 'na',
+
             gutter_guards: {
-              option: gutterGuardsOption,
-              type: gutterGuardsOption === 'available' ? (formData.get('gutterGuardType') || 'mesh') : null,
-              type_other: gutterGuardsOption === 'available' && formData.get('gutterGuardType') === 'other' ? (formData.get('gutterGuardTypeOther') || null) : null,
-              oop_price: gutterGuardsOption === 'available' ? (parseFloat(formData.get('gutterGuardOopPrice')) || null) : null,
+              pricing_on_request: formData.get('gutterGuardPricingOnRequest') === 'on',
+              mesh_oop: parseFloat(formData.get('gutterGuardMeshOop')) || null,
+              screw_in_oop: parseFloat(formData.get('gutterGuardScrewInOop')) || null,
+              notes: formData.get('gutterGuardNotes') || null,
             },
+
+            chimney_flashing: {
+              option: chimneyFlashingOption,
+              oop_price: chimneyFlashingOption === 'replace_oop' ? (parseFloat(formData.get('chimneyFlashingOopPrice')) || null) : null,
+            },
+
             skylights: formData.get('skylights') || 'na',
+
             chimney_reflash: {
               option: formData.get('chimneyReflash') || 'na',
               oop_price: formData.get('chimneyReflash') === 'oop' ? (parseFloat(formData.get('chimneyReflashOopPrice')) || null) : null,
             },
+
+            other_shingles: {
+              impact:       formData.get('shingleOtherImpact') === 'on',
+              designer:     formData.get('shingleOtherDesigner') === 'on',
+              metal:        formData.get('shingleOtherMetal') === 'on',
+              premium_arch: formData.get('shingleOtherPremiumArch') === 'on',
+              other_text:   formData.get('shingleOtherOtherCheck') === 'on' ? (formData.get('shingleOtherOtherText') || null) : null,
+              notes:        formData.get('shingleOtherNotes') || null,
+            },
+
+            underlayment: {
+              type:  formData.get('underlaymentType') || null,
+              notes: formData.get('underlaymentNotes') || null,
+            },
+
+            ventilation: {
+              ridge_vent_included: formData.get('ridgeVentIncluded') === 'on',
+              ridge_vent_oop:      parseFloat(formData.get('ridgeVentOopPrice')) || null,
+              notes:               formData.get('ventilationNotes') || null,
+            },
+
+            starter_strip: formData.get('starterStrip') || null,
+
+            warranties: collectAllWarrantyData(),
+
+            other_trades_covered: {
+              siding_full:     formData.get('tradeCoveredSidingFull') || null,
+              siding_repair:   formData.get('tradeCoveredSidingRepair') || null,
+              gutters_full:    formData.get('tradeCoveredGuttersFull') || null,
+              gutters_repair:  formData.get('tradeCoveredGuttersRepair') || null,
+              interior:        formData.get('tradeCoveredInterior') || null,
+              paint:           formData.get('tradeCoveredPaint') || null,
+              windows:         formData.get('tradeCoveredWindows') || null,
+              other:           formData.get('tradeCoveredOther') || null,
+              additional_notes: formData.get('tradesCoveredAdditionalNotes') || null,
+            },
+
             other_offers: formData.get('valueAddsOtherOffers') || null,
           };
 
@@ -1472,7 +2324,6 @@
           };
 
           if (changeBidMode && existingQuote) {
-            // UPDATE existing quote record
             const { error: updateError } = await sb
               .from('quotes')
               .update({
@@ -1492,7 +2343,6 @@
 
             if (updateError) throw updateError;
 
-            // Notify homeowner — insert dashboard notification
             try {
               await sb.from('notifications').insert({
                 user_id: currentClaim.user_id || null,
@@ -1507,12 +2357,11 @@
               console.warn('Notification insert failed (non-fatal):', notifErr);
             }
 
-            // Log to activity feed
             try {
               await sb.from('activity_log').insert({
                 user_id: currentUser.id,
                 event_type: 'bid_updated',
-                title: `Bid updated for project ${currentClaim.id?.slice(0, 8) || '...'}`,
+                title: `Bid updated for project ${currentClaim.id?.slice(0, 8) || '…'}`,
                 created_at: new Date().toISOString(),
               });
             } catch (logErr) {
@@ -1525,7 +2374,6 @@
             });
 
           } else {
-            // INSERT new quote record
             const { error } = await sb
               .from('quotes')
               .insert(quoteData);
@@ -1539,7 +2387,7 @@
           }
         }
 
-        // Show success state (customized for change bid mode)
+        // Show success
         bidForm.style.display = 'none';
         const changeBidBanner = document.getElementById('changeBidBanner');
         if (changeBidBanner) changeBidBanner.style.display = 'none';
@@ -1556,7 +2404,7 @@
         console.error('Error submitting bid:', err);
         alert('Error submitting bid: ' + (err.message || 'Unknown error'));
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Bid';
+        submitBtn.textContent = changeBidMode ? 'Update Bid' : 'Submit Bid';
       }
     });
 
@@ -1589,7 +2437,6 @@
         document.getElementById('selectedTradeType').value = selected[0] || 'roofing';
         document.getElementById('bundledTradesHidden').value = JSON.stringify(selected);
 
-        // Show bundled option when 2+ trades selected
         bundledOption.style.display = selected.length >= 2 ? 'block' : 'none';
         if (selected.length < 2) {
           bundledCheck.checked = false;
@@ -1614,7 +2461,6 @@
             + '</div></div>'
           ).join('');
 
-          // Update hidden field when prices change
           breakdownFields.querySelectorAll('.trade-price').forEach(inp => {
             inp.addEventListener('input', () => {
               const breakdown = {};
@@ -1634,15 +2480,14 @@
       updateTradeState();
     }
 
-    // Initialize page — wait for INITIAL_SESSION so the Supabase client
-    // has the JWT attached before any RLS-protected queries fire.
-    // Without this wait the contractor profile query can silently return
-    // nothing, leaving currentContractor null and causing an RLS violation
-    // on INSERT.  (Same fix applied to contractor-dashboard.html in Session 59.)
+    // ── Initialize ──
     document.addEventListener('DOMContentLoaded', () => {
       if (!sb && typeof supabase !== 'undefined') {
         sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
       }
+
+      // Wire up bid type UI
+      initBidTypeUI();
 
       async function startUp() {
         await init();
@@ -1650,9 +2495,10 @@
 
         // Set default start date to today
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('startDate').value = today;
+        const startDateEl = document.getElementById('startDate');
+        if (startDateEl && !startDateEl.value) startDateEl.value = today;
 
-        // Check if this is a multi-trade project (from URL or claim data)
+        // Multi-trade project check
         const urlParams = new URLSearchParams(window.location.search);
         const tradesParam = urlParams.get('trades');
         if (tradesParam) {
