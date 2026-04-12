@@ -1,7 +1,10 @@
 /**
  * OtterQuote — Navigation Component
  * Renders consistent header/footer across all pages.
- * Detects contractor pages and shows contractor-specific nav links.
+ * Primary detection: URL-based (contractor in pathname).
+ * Secondary correction: role-based (Auth.getRole) for pages where URL and role
+ * may disagree — most notably contractor-about.html, which is a homeowner page
+ * whose URL contains "contractor".
  */
 
 const Nav = {
@@ -66,6 +69,46 @@ const Nav = {
     }
   },
 
+  /**
+   * Patch nav links and logo href when the authenticated role does not match
+   * the URL-based contractor detection. This handles pages like
+   * contractor-about.html (homeowner page whose URL contains "contractor").
+   * Only fires when showAuth=true (i.e., pages that render the auth slot).
+   */
+  _updateNavLinksForRole(role) {
+    if (!role) return;
+    const isContractorByUrl  = this._isContractorPage();
+    const isContractorByRole = (role === 'contractor');
+    if (isContractorByUrl === isContractorByRole) return; // nothing to fix
+
+    const links = isContractorByRole ? [
+      { href: '/contractor-dashboard.html',    label: 'Home' },
+      { href: '/contractor-how-it-works.html', label: 'How It Works' },
+      { href: '/contractor-faq.html',          label: 'FAQ' },
+    ] : [
+      { href: '/index.html',       label: 'Home' },
+      { href: '/how-it-works.html', label: 'How It Works' },
+      { href: '/faq.html',          label: 'FAQ' },
+    ];
+
+    // Update the three main nav-link anchors (exclude mobile-auth injected links)
+    const container = document.getElementById('nav-links');
+    if (container) {
+      const anchors = container.querySelectorAll(
+        'a.nav-link:not(.nav-mobile-cta):not(.nav-mobile-cta-secondary)'
+      );
+      anchors.forEach((a, i) => {
+        if (links[i]) { a.href = links[i].href; a.textContent = links[i].label; }
+      });
+    }
+
+    // Update logo href
+    const logo = document.querySelector('.nav-logo');
+    if (logo) {
+      logo.href = isContractorByRole ? '/contractor-dashboard.html' : '/index.html';
+    }
+  },
+
   async _renderAuthSlot() {
     const slot = document.getElementById('nav-auth-slot');
     const mobileSlot = document.getElementById('nav-mobile-auth-slot');
@@ -77,6 +120,11 @@ const Nav = {
     if (user) {
       // Determine which dashboard to link to based on role
       const role = await Auth.getRole();
+
+      // Correct nav links if URL detection disagrees with actual role
+      // (e.g. homeowner on contractor-about.html, or contractor on a homeowner page)
+      this._updateNavLinksForRole(role);
+
       const dashboardUrl = role === 'contractor'
         ? '/contractor-dashboard.html'
         : '/dashboard.html';
