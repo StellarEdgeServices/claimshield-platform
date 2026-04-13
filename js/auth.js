@@ -115,10 +115,35 @@ window.Auth = {
   },
 
   /**
-   * Get the user's role from their profile.
-   * Returns 'homeowner', 'contractor', or null if no profile.
+   * Get the user's role — database-driven to prevent email confusion.
+   * Returns 'contractor' if a contractor record exists for this user,
+   * otherwise checks the profile role. Returns null if no profile.
+   *
+   * SECURITY: If a contractor record exists, that's the source of truth.
+   * This prevents homeowners from being misrouted as contractors and vice versa.
    */
   async getRole() {
+    const user = await this.getUser();
+    if (!user) return null;
+
+    // Check if this user has a contractor record — that's the source of truth
+    if (sb) {
+      try {
+        const { data: contractor, error } = await sb
+          .from('contractors')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (contractor && !error) {
+          return 'contractor';
+        }
+      } catch (e) {
+        // No contractor record found — fall through to profile check
+      }
+    }
+
+    // Fall back to profile role if no contractor record exists
     const profile = await this.getProfile();
     return profile?.role || null;
   },
@@ -191,7 +216,29 @@ window.Auth = {
     const user = await this.getUser();
     if (!user) return;
 
-    const role = localStorage.getItem('cs_auth_role') || sessionStorage.getItem('cs_auth_role') || 'homeowner';
+    // Determine role: stored value > contractor record check > default homeowner
+    let role = localStorage.getItem('cs_auth_role') || sessionStorage.getItem('cs_auth_role');
+
+    // If no stored role, check if a contractor record exists for this user
+    if (!role && sb) {
+      try {
+        const { data: contractor } = await sb
+          .from('contractors')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        if (contractor) {
+          role = 'contractor';
+        }
+      } catch (e) {
+        // No contractor record — will default to homeowner below
+      }
+    }
+
+    // Final fallback to homeowner
+    if (!role) {
+      role = 'homeowner';
+    }
 
     // Handle partner (referral agent) signup data
     // After clicking magic link, link the referral_agents record to this auth user.
