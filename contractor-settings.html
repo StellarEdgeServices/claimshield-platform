@@ -1344,22 +1344,19 @@
     let contractorRecord = null;
 
     // ════════════════════════════════════════
-    // Stripe Payment Method Setup
+    // Stripe Payment Method Setup (SetupIntent flow)
     // ════════════════════════════════════════
     let stripe = null;
     let elements = null;
     let cardElement = null;
+    let currentClientSecret = null; // SetupIntent client_secret
 
-    // Initialize Stripe after config is loaded
     function initializeStripe() {
-      if (stripe) return; // Already initialized
-
-      // Get Stripe publishable key from config
+      if (stripe) return;
       if (typeof CONFIG === 'undefined' || !CONFIG.STRIPE_PK) {
         console.error('Stripe publishable key not configured in CONFIG');
         return;
       }
-
       stripe = Stripe(CONFIG.STRIPE_PK);
       elements = stripe.elements();
       cardElement = elements.create('card', {
@@ -1375,12 +1372,14 @@
       });
     }
 
-    // Show the payment setup form
-    window.initializeStripeSetup = function() {
+    // Show the payment setup form — calls create-setup-intent Edge Function
+    window.initializeStripeSetup = async function() {
       initializeStripe();
+
+      // Show form, hide status displays
       document.getElementById('pmSetupForm').style.display = 'block';
-      document.getElementById('pmAddPaymentBtn').style.display = 'none';
-      document.getElementById('pmUpdateBtn').style.display = 'none';
+      document.getElementById('pmStatusNoPayment').style.display = 'none';
+      document.getElementById('pmStatusSaved').style.display = 'none';
 
       // Mount card element if not already mounted
       if (cardElement && !cardElement._parent) {
@@ -1398,6 +1397,37 @@
           errorDiv.style.display = 'none';
         }
       });
+
+      // Create SetupIntent via Edge Function
+      const confirmBtn = document.getElementById('pmConfirmBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Preparing...';
+
+      try {
+        const { data, error } = await sb.functions.invoke('create-setup-intent', {
+          body: { contractor_id: contractorRecord.id }
+        });
+
+        if (error) throw new Error(error.message || 'Failed to create setup intent');
+        if (!data || !data.client_secret) throw new Error('No client secret returned');
+
+        currentClientSecret = data.client_secret;
+
+        // Store the customer_id locally if it was just created
+        if (data.customer_id && !contractorRecord.stripe_customer_id) {
+          contractorRecord.stripe_customer_id = data.customer_id;
+        }
+
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Save Card';
+      } catch (err) {
+        console.error('SetupIntent creation error:', err);
+        const errorDiv = document.getElementById('card-errors');
+        errorDiv.textContent = 'Setup error: ' + err.message;
+        errorDiv.style.display = 'block';
+        confirmBtn.textContent = 'Error — Try Again';
+        confirmBtn.disabled = false;
+      }
     };
 
     // Cancel payment setup
@@ -1405,8 +1435,8 @@
       document.getElementById('pmSetupForm').style.display = 'none';
       document.getElementById('card-errors').textContent = '';
       document.getElementById('card-errors').style.display = 'none';
+      currentClientSecret = null;
 
-      // Re-show the appropriate button based on saved status
       if (contractorRecord && contractorRecord.stripe_payment_method_id) {
         document.getElementById('pmStatusSaved').style.display = 'block';
         document.getElementById('pmStatusNoPayment').style.display = 'none';
@@ -1416,10 +1446,15 @@
       }
     };
 
-    // Confirm and save payment method
+    // Confirm SetupIntent and save payment method
     window.confirmPaymentMethod = async function() {
       if (!contractorRecord || !sb) {
         alert('Error: Not connected to database. Please refresh the page.');
+        return;
+      }
+
+      if (!currentClientSecret) {
+        alert('Error: Payment setup not initialized. Please try again.');
         return;
       }
 
@@ -1429,13 +1464,9 @@
       button.textContent = 'Processing...';
 
       try {
-        // Step 1: Create SetupIntent (for now, we'll create it inline)
-        // In production, this should be a backend endpoint
-        // For this task, we'll use a simple approach: save payment method info and have backend create customer
-
-        // Step 2: Confirm SetupIntent with card details from CardElement
+        // Confirm the SetupIntent with card details from CardElement
         const { setupIntent, error: confirmError } = await stripe.confirmCardSetup(
-          '', // Empty client secret for now - we'll handle this server-side
+          currentClientSecret,
           {
             payment_method: {
               card: cardElement,
@@ -1446,34 +1477,35 @@
           }
         );
 
-        // For now, create payment method directly without SetupIntent
-        const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
-          type: 'card',
-          card: cardElement,
-          billing_details: {
-            name: contractorRecord.company_name || contractorRecord.contact_name || 'Contractor',
+        if (confirmError) {
+          throw new Error(confirmError.message);
+        }
+
+        if (!setupIntent || setupIntent.status !== 'succeeded') {
+          throw new Error('Setup failed with status: ' + (setupIntent?.status || 'unknown'));
+        }
+
+        // Extract payment method ID from the confirmed SetupIntent
+        const paymentMethodId = setupIntent.payment_method;
+        let last4 = '••••';
+        let brand = 'CARD';
+
+        // Retrieve card details from the payment method
+        try {
+          const { paymentMethod } = await stripe.retrievePaymentMethod(paymentMethodId);
+          if (paymentMethod && paymentMethod.card) {
+            last4 = paymentMethod.card.last4;
+            brand = paymentMethod.card.brand.toUpperCase();
           }
-        });
-
-        if (pmError) {
-          throw new Error(pmError.message);
+        } catch (pmErr) {
+          console.warn('Could not retrieve payment method details:', pmErr);
         }
 
-        if (!paymentMethod) {
-          throw new Error('Failed to create payment method');
-        }
-
-        // Step 3: Save payment method ID to contractor record in Supabase
-        const paymentMethodId = paymentMethod.id;
-        const last4 = paymentMethod.card.last4;
-        const brand = paymentMethod.card.brand.toUpperCase();
-
-        // Update contractor record
+        // Save to contractor record in Supabase
         const { error: updateError } = await sb
           .from('contractors')
           .update({
             stripe_payment_method_id: paymentMethodId,
-            stripe_customer_id: paymentMethod.customer || null, // May be null until charged
             stripe_payment_method_last4: last4,
             stripe_payment_method_brand: brand,
             updated_at: new Date().toISOString(),
@@ -1482,19 +1514,19 @@
 
         if (updateError) throw updateError;
 
-        // Step 4: Update local record
+        // Update local record
         contractorRecord.stripe_payment_method_id = paymentMethodId;
-        contractorRecord.stripe_customer_id = paymentMethod.customer || null;
         contractorRecord.stripe_payment_method_last4 = last4;
         contractorRecord.stripe_payment_method_brand = brand;
 
-        // Step 5: Update UI
+        // Update UI
         updatePaymentMethodUI();
         document.getElementById('pmSetupForm').style.display = 'none';
         document.getElementById('pmStatusSaved').style.display = 'block';
         document.getElementById('pmStatusNoPayment').style.display = 'none';
+        currentClientSecret = null;
 
-        button.textContent = 'Saved!';
+        button.textContent = 'Card Saved!';
         button.style.backgroundColor = '#10B981';
         setTimeout(() => {
           button.textContent = originalText;
@@ -1502,15 +1534,16 @@
           button.disabled = false;
         }, 2000);
 
-        gtag('event', 'payment_method_added', {
+        gtag('event', 'payment_method_saved', {
           contractor_id: contractorRecord.id,
           card_brand: brand,
+          method: 'setup_intent',
         });
 
       } catch (err) {
         console.error('Payment method setup error:', err);
         const errorDiv = document.getElementById('card-errors');
-        errorDiv.textContent = `Error: ${err.message}`;
+        errorDiv.textContent = 'Error: ' + err.message;
         errorDiv.style.display = 'block';
 
         button.textContent = 'Error — Try Again';
