@@ -829,9 +829,18 @@
               ${(function() {
                 const cs = currentClaim ? currentClaim.status : null;
                 if (cs === 'contract_signed') return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-ghost" style="border:1px solid var(--green);color:var(--green);">✓ Contract Signed</a>`;
-                if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">Sign Contract →</a>`;
+                if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) {
+                  if (bid.is_auto_bid && !bid.contractor_signed_at) {
+                    return `<span class="btn btn-sm btn-ghost" style="border:1px solid #F59E0B;color:#F59E0B;cursor:default;">⏳ Contractor Preparing Agreement</span>`;
+                  }
+                  return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">Sign Contract →</a>`;
+                }
                 if (cs === 'awarded') return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
-                return `<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
+                // Show signing status badge on each bid card
+                const signingBadge = bid.contractor_signed_at
+                  ? '<span style="color:#16A34A;font-size:0.8rem;font-weight:600;margin-right:8px;">✓ Contract-Ready</span>'
+                  : (bid.is_auto_bid ? '<span style="color:#6B7280;font-size:0.8rem;margin-right:8px;">Auto-Bid</span>' : '');
+                return `${signingBadge}<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
               })()}
             </div>
           </div>
@@ -1072,13 +1081,58 @@
       document.getElementById('modalActions').style.display = 'none';
       document.getElementById('modalSpinner').style.display = 'block';
       document.getElementById('modalTitle').textContent = 'Processing...';
-      document.getElementById('modalBody').textContent = 'Awarding the project and notifying the contractor...';
+      document.getElementById('modalBody').textContent = 'Awarding the project...';
 
       try {
-        // 0. Charge contractor's payment method for 5% platform fee
+        // ── Step 0: Check if contractor has a saved payment method ──
+        document.getElementById('modalBody').textContent = 'Verifying contractor payment method...';
+
+        const { data: contractorPM, error: pmCheckErr } = await sb
+          .from('contractors')
+          .select('stripe_payment_method_id, stripe_customer_id, company_name, user_id')
+          .eq('id', bid.contractor_id)
+          .single();
+
+        if (pmCheckErr) {
+          console.error('Could not check contractor payment method:', pmCheckErr);
+        }
+
+        if (!contractorPM || !contractorPM.stripe_payment_method_id) {
+          // No payment method on file — notify contractor and tell homeowner to wait
+          document.getElementById('modalTitle').textContent = 'Almost There';
+          document.getElementById('modalBody').innerHTML =
+            'This contractor hasn\'t set up their payment method yet. We\'re notifying them now. Please check back soon — most contractors resolve this within a few hours.';
+          document.getElementById('modalSpinner').style.display = 'none';
+          document.getElementById('modalActions').innerHTML =
+            '<button class="btn btn-secondary" onclick="closeModal()">OK, I\'ll Check Back</button>';
+          document.getElementById('modalActions').style.display = 'flex';
+
+          // Create in-app notification for the contractor
+          try {
+            if (contractorPM && contractorPM.user_id) {
+              await sb.from('notifications').insert({
+                user_id: contractorPM.user_id,
+                notification_type: 'payment_method_needed',
+                channel: 'dashboard',
+                title: 'Payment Method Required',
+                message: 'A homeowner wants to select you, but you don\'t have a payment method on file. Please add one in Settings.',
+                metadata: { claim_id: currentClaim.id, quote_id: bidId },
+              });
+            }
+          } catch (notifErr) {
+            console.warn('Could not send notification to contractor:', notifErr);
+          }
+
+          gtag('event', 'contractor_no_payment_method', {
+            bid_id: bidId,
+            contractor_id: bid.contractor_id,
+          });
+          return;
+        }
+
+        // ── Step 1: Charge contractor's payment method for 5% platform fee ──
         document.getElementById('modalBody').textContent = 'Processing payment...';
 
-        // Get platform fee percentage from platform_settings table
         const { data: platformSettings, error: psError } = await sb
           .from('platform_settings')
           .select('platform_fee_percent')
@@ -1088,11 +1142,8 @@
           console.warn('Could not fetch platform fee percentage, using default 5%:', psError);
         }
         const platformFeePercent = platformSettings?.platform_fee_percent || 5;
-
-        // Calculate 5% fee in cents
         const feeAmount = Math.round(bid.total_price * (platformFeePercent / 100) * 100);
 
-        // Call create-payment-intent Edge Function for off-session charging
         const { data: paymentResult, error: paymentErr } = await sb.functions.invoke(
           'create-payment-intent',
           {
@@ -1105,25 +1156,66 @@
                 contractor_id: bid.contractor_id,
                 type: 'platform_fee',
               },
-              // Off-session charge parameters
               contractor_id: bid.contractor_id,
               off_session: true,
             }
           }
         );
 
-        if (paymentErr) {
-          throw new Error(`Payment processing failed: ${paymentErr.message}`);
+        // ── Payment FAILED — trigger dunning sequence ──
+        if (paymentErr || !paymentResult || !paymentResult.succeeded) {
+          console.error('Payment failed:', paymentErr || paymentResult?.error || paymentResult?.status);
+
+          // Store payment_intent_id on quote even if failed
+          if (paymentResult && paymentResult.payment_intent_id) {
+            await sb.from('quotes').update({
+              payment_intent_id: paymentResult.payment_intent_id,
+              payment_status: 'failed',
+            }).eq('id', bidId);
+          }
+
+          // Trigger the dunning sequence via process-dunning Edge Function
+          try {
+            await sb.functions.invoke('process-dunning', {
+              body: {
+                quote_id: bidId,
+                contractor_id: bid.contractor_id,
+                claim_id: currentClaim.id,
+                homeowner_id: currentUser?.id || null,
+                amount_cents: feeAmount,
+                stripe_error: paymentResult?.error || paymentErr?.message || 'Payment declined',
+              }
+            });
+          } catch (dunningErr) {
+            console.error('Failed to trigger dunning sequence:', dunningErr);
+          }
+
+          // Show homeowner a reassuring message (do NOT reveal payment failure)
+          document.getElementById('modalTitle').textContent = 'Processing Your Selection';
+          document.getElementById('modalBody').innerHTML =
+            'We\'re processing this selection. You\'ll receive a confirmation email shortly. This may take a few minutes.';
+          document.getElementById('modalSpinner').style.display = 'none';
+          document.getElementById('modalActions').innerHTML =
+            '<button class="btn btn-secondary" onclick="closeModal()">OK</button>';
+          document.getElementById('modalActions').style.display = 'flex';
+
+          gtag('event', 'contractor_payment_failed', {
+            bid_id: bidId,
+            contractor_id: bid.contractor_id,
+            amount: feeAmount,
+          });
+          return;
         }
 
-        if (!paymentResult || !paymentResult.succeeded) {
-          throw new Error(
-            paymentResult?.error ||
-            `Payment failed with status: ${paymentResult?.status || 'unknown'}`
-          );
-        }
+        // ── Payment SUCCEEDED — proceed with normal award flow ──
 
-        // 1. Update claim status to 'awarded' and store winning contractor
+        // Store payment info on quote
+        await sb.from('quotes').update({
+          payment_intent_id: paymentResult.payment_intent_id,
+          payment_status: 'succeeded',
+        }).eq('id', bidId);
+
+        // 2. Update claim status to 'awarded' and store winning contractor
         const { error: claimErr } = await sb
           .from('claims')
           .update({
@@ -1134,14 +1226,14 @@
           .eq('id', currentClaim.id);
         if (claimErr) throw claimErr;
 
-        // 2. Update winning quote status to 'awarded' (matches log_bid_accepted trigger)
+        // 3. Update winning quote status to 'awarded'
         const { error: winErr } = await sb
           .from('quotes')
           .update({ status: 'awarded' })
           .eq('id', bidId);
         if (winErr) throw winErr;
 
-        // 3. Decline all other quotes for this claim
+        // 4. Decline all other quotes for this claim
         const { error: rejectErr } = await sb
           .from('quotes')
           .update({ status: 'declined' })
@@ -1153,14 +1245,46 @@
           bid_id: bidId,
           contractor_id: bid.contractor_id,
           price: bid.total_price,
+          platform_fee: feeAmount,
         });
 
-        // 4. Redirect to contract signing with claim_id and contractor_id
-        window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}`;
+        // 5. Determine signing flow based on contractor_signed_at and is_auto_bid
+        const contractorSigned = bid.contractor_signed_at;
+        const isAutoBid = bid.is_auto_bid;
+
+        if (contractorSigned) {
+          window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bidId)}`;
+
+        } else if (isAutoBid) {
+          document.getElementById('modalTitle').textContent = 'Your Contractor Is Preparing Your Agreement';
+          document.getElementById('modalBody').innerHTML =
+            '<p style="margin-bottom: 1rem;">This contractor submitted an auto-bid and needs to review and sign the contract before you can sign.</p>' +
+            '<p style="margin-bottom: 1rem;">They\'ve been notified and will typically respond within a few hours.</p>' +
+            '<p style="color: #6B7280; font-size: 0.9rem;">We\'ll send you an email when the agreement is ready for your signature.</p>';
+          document.getElementById('modalSpinner').style.display = 'none';
+          document.getElementById('modalActions').innerHTML =
+            '<a href="/dashboard.html" class="btn btn-primary" style="text-decoration:none;">Go to Dashboard</a>';
+          document.getElementById('modalActions').style.display = 'flex';
+
+          try {
+            await sb.functions.invoke('notify-contractors', {
+              body: {
+                event_type: 'auto_bid_selected',
+                claim_id: currentClaim.id,
+                contractor_id: bid.contractor_id,
+              },
+            });
+          } catch (notifErr) {
+            console.warn('Auto-bid selection notification failed (non-fatal):', notifErr);
+          }
+
+        } else {
+          window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bidId)}`;
+        }
+
       } catch (err) {
         console.error('Selection error:', err);
 
-        // Provide specific error messages based on the error type
         let errorTitle = 'Something Went Wrong';
         let errorMessage = 'There was a problem awarding this project. Please try again.';
 

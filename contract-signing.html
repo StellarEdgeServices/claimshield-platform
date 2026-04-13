@@ -900,13 +900,22 @@
               </div>
             </div>
 
-            <!-- Cancellation Guarantee -->
-            <div class="callout">
-              <div class="callout-icon">&#x2713;</div>
+            <!-- IC 24-5-11 Right to Cancel Notice -->
+            <div class="callout callout-info">
+              <div class="callout-icon">&#x2696;&#xFE0F;</div>
               <div class="callout-text">
-                <div class="callout-title">Cancellation Guarantee</div>
-                <div class="callout-description">Not sure? You can switch to another OtterQuote contractor at no cost up to 3 days before installation.</div>
+                <div class="callout-title">Your Right to Cancel (Indiana Law IC 24-5-11)</div>
+                <div class="callout-description">You may cancel this contract at any time before midnight on the third business day after signing. A Notice of Cancellation form is included in the contract documents. Your contractor has already signed this agreement.</div>
               </div>
+            </div>
+
+            <!-- D-123: OtterQuote is not a party acknowledgment -->
+            <div class="checkbox-container" id="acknowledgmentCheckbox">
+              <input type="checkbox" class="checkbox-input" id="otterquoteAcknowledgment">
+              <label class="checkbox-label" for="otterquoteAcknowledgment">
+                <span class="checkbox-label-text">I understand I am signing a contract directly with <span id="ackContractorName">the contractor</span>. OtterQuote is not a party to this agreement.</span>
+                <span class="checkbox-label-hint">Required before signing.</span>
+              </label>
             </div>
 
             <!-- Step 1 Actions -->
@@ -1062,10 +1071,14 @@
       contractorId: null,
       contractor: null,
       bid: null,
+      quoteId: null,
       currentUser: null,
       envelopeId: null,
       contractSigned: false,
       templateUrl: null,
+      // IC 24-5-11 flow: contractor signs first, homeowner signs second
+      contractorAlreadySigned: false,
+      existingEnvelopeId: null,
     };
 
     // ── Initialization ──
@@ -1086,6 +1099,7 @@
       const bidParam = params.get('bid');
       const claimIdParam = params.get('claim_id');
       const contractorIdParam = params.get('contractor_id');
+      const quoteIdParam = params.get('quote_id');
 
       // Check if returning from DocuSign signing (redirect-based completion)
       const signed = params.get('signed');
@@ -1155,16 +1169,29 @@
 
         // ── Load bid data (if not already loaded from ?bid= param) ──
         if (!state.bid) {
-          const { data: bidData } = await sb
-            .from('quotes')
-            .select('*')
-            .eq('claim_id', state.claimId)
-            .eq('contractor_id', state.contractorId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
+          let bidQuery;
+          if (quoteIdParam) {
+            // Use specific quote_id if provided
+            bidQuery = sb.from('quotes').select('*').eq('id', quoteIdParam).single();
+          } else {
+            bidQuery = sb.from('quotes').select('*')
+              .eq('claim_id', state.claimId)
+              .eq('contractor_id', state.contractorId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+          }
+          const { data: bidData } = await bidQuery;
           if (bidData) state.bid = bidData;
+        }
+
+        // Store quote_id for use in signing flow
+        state.quoteId = quoteIdParam || state.bid?.id || null;
+
+        // Check if contractor has already signed (IC 24-5-11 flow)
+        if (state.bid?.contractor_signed_at) {
+          state.contractorAlreadySigned = true;
+          state.existingEnvelopeId = state.bid.docusign_envelope_id || null;
         }
 
         // ── Render the page ──
@@ -1266,6 +1293,10 @@
       document.getElementById('confirmContractorName').textContent = c.company_name || c.name || 'your contractor';
       document.getElementById('confirmContractorName2').textContent = c.company_name || c.name || 'Your contractor';
       document.getElementById('colorSelectionLink').href = `/color-selection.html?claim_id=${state.claimId}`;
+
+      // D-123: Set contractor name in acknowledgment checkbox
+      const ackNameEl = document.getElementById('ackContractorName');
+      if (ackNameEl) ackNameEl.textContent = c.company_name || c.name || 'the contractor';
     }
 
     // ── Load Contract Template Preview ──
@@ -1365,8 +1396,22 @@
 
     // ── Setup Event Listeners ──
     function setupEventListeners() {
+      // D-123: Acknowledgment checkbox controls Proceed button
+      const ackCheckbox = document.getElementById('otterquoteAcknowledgment');
+      const proceedBtn = document.getElementById('proceedToSignBtn');
+      if (ackCheckbox && proceedBtn) {
+        proceedBtn.disabled = true;
+        ackCheckbox.addEventListener('change', () => {
+          proceedBtn.disabled = !ackCheckbox.checked;
+        });
+      }
+
       // Step 1 → 2 (triggers DocuSign envelope creation)
-      document.getElementById('proceedToSignBtn').addEventListener('click', () => {
+      proceedBtn.addEventListener('click', () => {
+        if (!ackCheckbox.checked) {
+          alert('Please check the acknowledgment box before proceeding.');
+          return;
+        }
         goToStep(2);
         initDocuSign();
       });
@@ -1416,14 +1461,22 @@
           || state.currentUser.user_metadata?.full_name
           || state.currentUser.email;
 
+        // IC 24-5-11 Flow: Use 'homeowner_sign' if contractor already signed
+        // (retrieves existing envelope instead of creating a new one).
+        // Falls back to 'contract' (legacy) if no existing envelope.
+        const docType = state.contractorAlreadySigned && state.existingEnvelopeId
+          ? 'homeowner_sign'
+          : 'contract';
+
+        console.log(`DocuSign flow: ${docType}, contractor_signed: ${state.contractorAlreadySigned}, envelope: ${state.existingEnvelopeId}`);
+
         // Call create-docusign-envelope Edge Function
-        // Using sb.functions.invoke() instead of raw fetch() so the Supabase client
-        // handles auth headers correctly for both legacy HS256 and new ES256 JWTs.
         const { data: result, error: invokeError } = await sb.functions.invoke('create-docusign-envelope', {
           body: {
             claim_id: state.claimId,
-            document_type: 'contract',
+            document_type: docType,
             contractor_id: state.contractorId,
+            quote_id: state.quoteId,
             signer: {
               email: state.currentUser.email,
               name: signerName,
@@ -1484,9 +1537,10 @@
       document.getElementById('docusignSigned').style.display = 'block';
       document.getElementById('signContractBtn').disabled = false;
 
-      // Update claim status in Supabase
+      // Update claim status and quote homeowner_signed_at in Supabase
       if (sb && state.claimId) {
         try {
+          // Update claim status
           const { error } = await sb
             .from('claims')
             .update({
@@ -1496,6 +1550,23 @@
             .eq('id', state.claimId);
 
           if (error) console.error('Error updating claim status:', error);
+
+          // Update quote with homeowner_signed_at (IC 24-5-11 tracking)
+          if (state.quoteId) {
+            const { error: quoteErr } = await sb
+              .from('quotes')
+              .update({ homeowner_signed_at: new Date().toISOString() })
+              .eq('id', state.quoteId);
+            if (quoteErr) console.error('Error updating homeowner_signed_at:', quoteErr);
+          } else if (state.contractorId) {
+            // Fallback: update by claim_id + contractor_id
+            const { error: quoteErr } = await sb
+              .from('quotes')
+              .update({ homeowner_signed_at: new Date().toISOString() })
+              .eq('claim_id', state.claimId)
+              .eq('contractor_id', state.contractorId);
+            if (quoteErr) console.error('Error updating homeowner_signed_at:', quoteErr);
+          }
         } catch (err) {
           console.error('Error updating claim:', err);
         }

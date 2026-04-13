@@ -1387,6 +1387,55 @@
         <div>The homeowner will be notified and can review your bid details.</div>
       </div>
     </div>
+
+    <!-- CONTRACT SIGNING STEP (IC 24-5-11: Contractor signs first) -->
+    <div id="contractSigningStep" style="display: none; margin-top: var(--sp-8);">
+      <div style="background: #FFFBEB; border: 2px solid #F59E0B; border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6);">
+        <h3 style="color: var(--navy); margin-bottom: var(--sp-3); font-size: 1.15rem;">⚖️ Sign Your Contract — Required by Indiana Law</h3>
+        <p style="color: #374151; font-size: 0.95rem; line-height: 1.6; margin-bottom: var(--sp-3);">
+          Indiana law (IC 24-5-11) requires that you, as the contractor, sign the contract <strong>before</strong> the homeowner.
+          Your contract template has been pre-filled with the project details. Please review and sign below.
+        </p>
+        <p style="color: #6B7280; font-size: 0.85rem;">
+          An IC 24-5-11 compliance addendum (Statement of Right to Cancel + Notice of Cancellation) has been automatically attached.
+        </p>
+      </div>
+
+      <!-- DocuSign Loading -->
+      <div id="contractorDocusignLoading" style="text-align: center; padding: var(--sp-8);">
+        <div style="width: 40px; height: 40px; border: 3px solid #E5E7EB; border-top-color: #F59E0B; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto var(--sp-4);"></div>
+        <p style="color: var(--navy); font-weight: 600;">Preparing your contract for signing...</p>
+        <p style="color: #6B7280; font-size: 0.9rem;">This may take a few seconds.</p>
+      </div>
+
+      <!-- DocuSign Error -->
+      <div id="contractorDocusignError" style="display: none; text-align: center; padding: var(--sp-6); background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-md);">
+        <div style="font-size: 2rem; margin-bottom: var(--sp-3);">⚠️</div>
+        <p style="color: #DC2626; font-weight: 600; margin-bottom: var(--sp-2);" id="contractorDocusignErrorTitle">Unable to prepare contract</p>
+        <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: var(--sp-4);" id="contractorDocusignErrorDetail">Please try again or contact support.</p>
+        <button class="submit-button" onclick="initContractorSigning()" style="max-width: 200px; margin: 0 auto;">Retry</button>
+      </div>
+
+      <!-- DocuSign Iframe -->
+      <div id="contractorDocusignContainer" style="display: none;">
+        <iframe id="contractorDocusignFrame" style="width: 100%; min-height: 600px; border: 1px solid #E5E7EB; border-radius: var(--radius-md); background: #fff;" allow="geolocation"></iframe>
+      </div>
+
+      <!-- Signed Confirmation -->
+      <div id="contractorDocusignSigned" style="display: none; text-align: center; padding: var(--sp-6); background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-md);">
+        <div style="font-size: 2rem; margin-bottom: var(--sp-3);">✅</div>
+        <p style="color: #16A34A; font-weight: 600; margin-bottom: var(--sp-2);">Contract Signed Successfully</p>
+        <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: var(--sp-4);">Your bid is now live and contract-ready. When the homeowner selects you, they'll sign next.</p>
+        <a href="contractor-dashboard.html" style="color: var(--amber); font-weight: 600; text-decoration: none;">← Back to Dashboard</a>
+      </div>
+
+      <!-- Skip option (for auto-bids or if DocuSign has issues) -->
+      <div id="contractorSignSkip" style="display: none; text-align: center; margin-top: var(--sp-4);">
+        <p style="color: #6B7280; font-size: 0.85rem; margin-bottom: var(--sp-2);">Having trouble signing? You can complete this step later.</p>
+        <a href="contractor-dashboard.html" style="color: #6B7280; font-size: 0.85rem; text-decoration: underline;">Skip for now → Dashboard</a>
+      </div>
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   </main>
 
   <footer id="site-footer"></footer>
@@ -2333,6 +2382,7 @@
             supplement_acknowledged: formData.get('supplementAcknowledged') === 'on',
             trade_type: formData.get('tradeType') || 'roofing',
             value_adds: valueAdds,
+            is_auto_bid: false,
           };
 
           if (changeBidMode && existingQuote) {
@@ -2399,11 +2449,16 @@
             }
 
           } else {
-            const { error } = await sb
+            const { data: insertedQuote, error } = await sb
               .from('quotes')
-              .insert(quoteData);
+              .insert(quoteData)
+              .select('id')
+              .single();
 
             if (error) throw error;
+
+            // Store the new quote ID for contract signing
+            window._newQuoteId = insertedQuote?.id || null;
 
             gtag('event', 'bid_submitted', {
               claim_id: currentClaim.id,
@@ -2423,6 +2478,19 @@
             <div>Your updated bid has been saved. The homeowner has been notified and will see your revised figures.</div>
             <div style="margin-top: 1rem;"><a href="contractor-dashboard.html" style="color: var(--amber); font-weight: 600; text-decoration: none;">← Back to Dashboard</a></div>
           `;
+        } else {
+          // NEW BID: Show contract signing step (IC 24-5-11 — contractor signs first)
+          successState.innerHTML = `
+            <div class="success-icon">✓</div>
+            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--sp-3);">Bid submitted!</div>
+            <div>Now sign the contract below to make your bid contract-ready.</div>
+          `;
+          // Trigger contractor signing step
+          setTimeout(() => {
+            document.getElementById('contractSigningStep').style.display = 'block';
+            document.getElementById('contractSigningStep').scrollIntoView({ behavior: 'smooth' });
+            initContractorSigning();
+          }, 800);
         }
         successState.classList.add('show');
       } catch (err) {
@@ -2544,6 +2612,136 @@
         startUp();
       }
     });
+    // ═══════════════════════════════════════════════════════════════
+    // CONTRACT SIGNING — IC 24-5-11 Contractor-Signs-First Flow
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * After a new bid is submitted, this function creates a DocuSign envelope
+     * with document_type='contractor_sign' and presents the signing iframe.
+     * The contractor signs first; the homeowner signs later when they select this bid.
+     */
+    async function initContractorSigning() {
+      const loadingEl = document.getElementById('contractorDocusignLoading');
+      const errorEl = document.getElementById('contractorDocusignError');
+      const containerEl = document.getElementById('contractorDocusignContainer');
+      const signedEl = document.getElementById('contractorDocusignSigned');
+      const skipEl = document.getElementById('contractorSignSkip');
+
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      containerEl.style.display = 'none';
+      signedEl.style.display = 'none';
+      skipEl.style.display = 'none';
+
+      try {
+        // Build signer info from the contractor's profile
+        const signerName = currentContractor.company_name || currentContractor.owner_name || 'Contractor';
+        const signerEmail = currentContractor.email || currentUser.email;
+
+        const { data: result, error: invokeError } = await sb.functions.invoke('create-docusign-envelope', {
+          body: {
+            claim_id: currentClaim.id,
+            document_type: 'contractor_sign',
+            contractor_id: currentContractor.id,
+            quote_id: window._newQuoteId || null,
+            signer: {
+              email: signerEmail,
+              name: signerName,
+            },
+          },
+        });
+
+        if (invokeError) {
+          throw new Error(invokeError.message || 'Failed to create DocuSign envelope');
+        }
+
+        // Store envelope ID
+        window._contractorEnvelopeId = result.envelope_id;
+
+        // Load signing URL in iframe
+        loadingEl.style.display = 'none';
+        containerEl.style.display = 'block';
+        skipEl.style.display = 'block';
+        document.getElementById('contractorDocusignFrame').src = result.signing_url;
+
+        gtag('event', 'contractor_docusign_envelope_created', {
+          claim_id: currentClaim.id,
+          contractor_id: currentContractor.id,
+          envelope_id: result.envelope_id,
+        });
+
+      } catch (err) {
+        console.error('Contractor signing initialization error:', err);
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        skipEl.style.display = 'block';
+        document.getElementById('contractorDocusignErrorDetail').textContent = err.message;
+      }
+    }
+
+    // Listen for DocuSign iframe postMessage (signing complete)
+    window.addEventListener('message', function(event) {
+      if (event.data && typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'session_end' || data.event === 'signing_complete') {
+            onContractorSigningComplete();
+          }
+        } catch (e) {
+          if (event.data.includes('signed=contractor') || event.data.includes('signing_complete')) {
+            onContractorSigningComplete();
+          }
+        }
+      }
+    });
+
+    // Check if returning from DocuSign redirect (iframe return URL)
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('signed') === 'contractor') {
+        // We're inside the DocuSign iframe — notify parent
+        if (window.self !== window.top) {
+          window.parent.postMessage(JSON.stringify({ type: 'session_end', event: 'signing_complete' }), '*');
+          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#16a34a;font-size:1.2rem;">Contract signed! Returning...</div>';
+        }
+      }
+    })();
+
+    async function onContractorSigningComplete() {
+      const loadingEl = document.getElementById('contractorDocusignLoading');
+      const containerEl = document.getElementById('contractorDocusignContainer');
+      const errorEl = document.getElementById('contractorDocusignError');
+      const signedEl = document.getElementById('contractorDocusignSigned');
+      const skipEl = document.getElementById('contractorSignSkip');
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (containerEl) containerEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
+      if (signedEl) signedEl.style.display = 'block';
+      if (skipEl) skipEl.style.display = 'none';
+
+      // Update the quote with contractor_signed_at
+      if (window._newQuoteId || (currentClaim && currentContractor)) {
+        try {
+          const updateFilter = window._newQuoteId
+            ? sb.from('quotes').update({ contractor_signed_at: new Date().toISOString() }).eq('id', window._newQuoteId)
+            : sb.from('quotes').update({ contractor_signed_at: new Date().toISOString() })
+                .eq('claim_id', currentClaim.id)
+                .eq('contractor_id', currentContractor.id);
+          const { error } = await updateFilter;
+          if (error) console.error('Error updating contractor_signed_at:', error);
+        } catch (err) {
+          console.error('Error updating quote:', err);
+        }
+      }
+
+      gtag('event', 'contractor_contract_signed', {
+        claim_id: currentClaim?.id,
+        contractor_id: currentContractor?.id,
+        envelope_id: window._contractorEnvelopeId,
+      });
+    }
   </script>
 </body>
 </html>

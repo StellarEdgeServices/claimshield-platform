@@ -1,9 +1,24 @@
 /**
  * OtterQuote Edge Function: create-docusign-envelope
- * Creates a DocuSign envelope for contract signing with JWT Grant auth flow.
- * Auto-populates contractor templates with claim data using anchor-based tabs.
- * Rate-limited via Supabase check_rate_limit() RPC.
- * Supports document types: "contract", "color_confirmation", "project_confirmation"
+ * Creates DocuSign envelopes for the contract signing flow.
+ *
+ * SIGNING ORDER (IC 24-5-11-11 compliance):
+ *   1. Contractor signs FIRST (at bid submission or upon auto-bid selection)
+ *   2. Homeowner signs SECOND (after selecting contractor)
+ *
+ * Supported document_type values:
+ *   - "contractor_sign"          — Creates envelope with contractor as sole signer (Step A)
+ *   - "homeowner_sign"           — Adds homeowner to existing envelope as next signer (Step C)
+ *   - "contract" (DEPRECATED)    — Legacy flow, kept for backward compatibility
+ *   - "color_confirmation"       — Color confirmation signing
+ *   - "project_confirmation"     — Project confirmation signing
+ *
+ * IC 24-5-11 Compliance Addendum:
+ *   Every contract envelope includes a programmatically generated addendum PDF as the
+ *   LAST document. This addendum contains:
+ *   - Verbatim Statement of Right to Cancel (IC 24-5-11-10.6)
+ *   - Notice of Cancellation form (10-point boldface equivalent)
+ *   - Homeowner acknowledgment that OtterQuote is not a party
  *
  * Environment variables:
  *   DOCUSIGN_INTEGRATION_KEY
@@ -154,7 +169,6 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
   }
 
   // Fetch account info from /oauth/userinfo to get the correct account ID and base URI.
-  // This avoids relying on a hardcoded DOCUSIGN_API_ACCOUNT_ID secret which may be wrong.
   console.log("Fetching DocuSign account info via /oauth/userinfo");
   const userInfoResponse = await fetch(`${oauthHost}/oauth/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -243,6 +257,244 @@ function base64EncodeBinary(bytes: Uint8Array): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+// ========== IC 24-5-11 COMPLIANCE ADDENDUM PDF ==========
+/**
+ * Generates a PDF addendum containing Indiana Home Improvement Contract Act
+ * compliance language. This addendum is attached as the LAST document in every
+ * contract envelope.
+ *
+ * Contents:
+ * 1. Statement of Right to Cancel (IC 24-5-11-10.6 — verbatim)
+ * 2. Notice of Cancellation form (IC 24-5-11-10.6(b) — 10pt boldface)
+ * 3. Homeowner acknowledgment that OtterQuote is not a party (D-123)
+ *
+ * Uses a minimal PDF generator (no external libraries) to produce a valid PDF
+ * with the required legal text.
+ */
+function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string): string {
+  // Minimal PDF generator — builds a valid PDF 1.4 document with text content
+  const lines: string[] = [];
+  const objects: { offset: number }[] = [];
+  let currentOffset = 0;
+
+  function write(s: string) {
+    lines.push(s);
+    currentOffset += s.length + 1; // +1 for newline
+  }
+
+  function startObject(num: number) {
+    objects[num] = { offset: currentOffset };
+    write(`${num} 0 obj`);
+  }
+
+  // Calculate cancellation deadline (3rd business day after signing)
+  const signDate = new Date(contractDate || new Date().toISOString());
+  let businessDays = 0;
+  const cancelDate = new Date(signDate);
+  while (businessDays < 3) {
+    cancelDate.setDate(cancelDate.getDate() + 1);
+    const dow = cancelDate.getDay();
+    if (dow !== 0 && dow !== 6) businessDays++;
+  }
+  const cancelDateStr = cancelDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  // Build PDF content stream with compliance text
+  // Using standard PDF text operators: BT (begin text), ET (end text), Tf (font), Td (move), Tj (show text)
+  const contentLines: string[] = [];
+
+  function addText(x: number, y: number, fontSize: number, font: string, text: string) {
+    // Escape special PDF characters
+    const escaped = text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${escaped}) Tj ET`);
+  }
+
+  function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
+    // Approximate character width: fontSize * 0.5 for Helvetica
+    const charWidth = fontSize * 0.5;
+    const maxChars = Math.floor(maxWidth / charWidth);
+    const words = text.split(" ");
+    let currentLine = "";
+    let y = startY;
+    const lineSpacing = fontSize * 1.4;
+
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 > maxChars) {
+        addText(x, y, fontSize, font, currentLine.trim());
+        y -= lineSpacing;
+        currentLine = word + " ";
+      } else {
+        currentLine += word + " ";
+      }
+    }
+    if (currentLine.trim()) {
+      addText(x, y, fontSize, font, currentLine.trim());
+      y -= lineSpacing;
+    }
+    return y;
+  }
+
+  // Page 1: Statement of Right to Cancel + Notice of Cancellation
+  let y = 750;
+
+  // Title
+  addText(50, y, 14, "F2", "INDIANA HOME IMPROVEMENT CONTRACT ACT ADDENDUM");
+  y -= 20;
+  addText(50, y, 10, "F1", `IC 24-5-11 Compliance Addendum — Contract Date: ${contractDate || new Date().toLocaleDateString("en-US")}`);
+  y -= 10;
+
+  // Horizontal rule
+  contentLines.push(`50 ${y} m 562 ${y} l S`);
+  y -= 20;
+
+  // Section 1: Statement of Right to Cancel
+  addText(50, y, 12, "F2", "STATEMENT OF RIGHT TO CANCEL");
+  y -= 20;
+
+  const statementText = `You may cancel this contract at any time before midnight on the third business day after the later of the following: (A) The date this contract is signed by you and ${contractorName}. (B) If applicable, the date you receive written notification from your insurance company of a final determination as to whether all or any part of your claim or this contract is a covered loss under your insurance policy. See attached notice of cancellation form for an explanation of this right.`;
+
+  y = addWrappedText(50, y, 10, "F2", statementText, 512);
+  y -= 15;
+
+  // Horizontal rule
+  contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
+  y -= 15;
+
+  // Section 2: Notice of Cancellation
+  addText(50, y, 12, "F2", "NOTICE OF CANCELLATION");
+  y -= 20;
+
+  addText(50, y, 10, "F2", `Contract Date: ${contractDate || "_______________"}`);
+  y -= 16;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `You may CANCEL this transaction, without any penalty or obligation, within THREE (3) BUSINESS DAYS from the above date, or if applicable, within three (3) business days from the date you receive written notification from your insurance company of a final determination as to whether all or any part of your claim or this contract is a covered loss under your insurance policy.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `If you cancel, any property traded in, any payments made by you under the contract, and any negotiable instrument executed by you will be returned within TEN (10) BUSINESS DAYS following receipt by the contractor of your cancellation notice, and any security interest arising out of the transaction will be cancelled.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `If you cancel, you must make available to the contractor at your residence, in substantially as good condition as when received, any goods delivered to you under this contract. Or you may, if you wish, comply with the instructions of the contractor regarding the return shipment of the goods at the contractor's expense and risk.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F1",
+    `To cancel this transaction, mail, deliver, or email a signed and dated copy of this cancellation notice, or any other written notice to:`,
+    512);
+  y -= 5;
+
+  addText(70, y, 10, "F2", contractorName);
+  y -= 14;
+  addText(70, y, 10, "F1", "(Contractor name and contact information as provided in this contract)");
+  y -= 20;
+
+  addText(50, y, 10, "F2", "I HEREBY CANCEL THIS TRANSACTION.");
+  y -= 25;
+
+  addText(50, y, 10, "F1", "Homeowner Signature: ___________________________________    Date: ________________");
+  y -= 20;
+  addText(50, y, 10, "F1", `Homeowner Name (printed): ${homeownerName}`);
+  y -= 30;
+
+  // Horizontal rule
+  contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
+  y -= 15;
+
+  // Section 3: OtterQuote Disclaimer (D-123)
+  addText(50, y, 12, "F2", "PLATFORM DISCLOSURE");
+  y -= 20;
+
+  y = addWrappedText(50, y, 10, "F1",
+    `OtterQuote is a technology platform that facilitates connections between homeowners and contractors. OtterQuote is NOT a party to this contract and assumes no liability for work performed under this agreement. This contract is between the homeowner and the contractor named above.`,
+    512);
+  y -= 10;
+
+  addText(50, y, 10, "F1", `Down payment may not exceed $1,000 or 10% of contract price, whichever is less (IC 24-5-11-12).`);
+  y -= 30;
+
+  addText(50, y, 8, "F1", "This addendum is generated by OtterQuote to comply with Indiana Code IC 24-5-11 (Home Improvement Contract Act).");
+  y -= 12;
+  addText(50, y, 8, "F1", `Generated: ${new Date().toISOString()}`);
+
+  // Assemble PDF content stream
+  const contentStream = contentLines.join("\n");
+  const contentBytes = new TextEncoder().encode(contentStream);
+
+  // Build the PDF structure
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) {
+    pdfLines.push(s);
+    byteOffset += s.length + 1;
+  }
+
+  function pdfStartObj(n: number) {
+    pdfObjects[n] = byteOffset;
+    pdfWrite(`${n} 0 obj`);
+  }
+
+  pdfWrite("%PDF-1.4");
+
+  // Object 1: Catalog
+  pdfStartObj(1);
+  pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
+  pdfWrite("endobj");
+
+  // Object 2: Pages
+  pdfStartObj(2);
+  pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  pdfWrite("endobj");
+
+  // Object 3: Page
+  pdfStartObj(3);
+  pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
+  pdfWrite("endobj");
+
+  // Object 4: Content stream
+  pdfStartObj(4);
+  pdfWrite(`<< /Length ${contentStream.length} >>`);
+  pdfWrite("stream");
+  pdfWrite(contentStream);
+  pdfWrite("endstream");
+  pdfWrite("endobj");
+
+  // Object 5: Font (Helvetica — regular)
+  pdfStartObj(5);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  pdfWrite("endobj");
+
+  // Object 6: Font (Helvetica-Bold — for required boldface sections)
+  pdfStartObj(6);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  pdfWrite("endobj");
+
+  // Cross-reference table
+  const xrefOffset = byteOffset;
+  pdfWrite("xref");
+  pdfWrite(`0 7`);
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) {
+    pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  }
+
+  // Trailer
+  pdfWrite("trailer");
+  pdfWrite(`<< /Size 7 /Root 1 0 R >>`);
+  pdfWrite("startxref");
+  pdfWrite(String(xrefOffset));
+  pdfWrite("%%EOF");
+
+  // Encode to base64
+  const pdfContent = pdfLines.join("\n");
+  const pdfBytes = new TextEncoder().encode(pdfContent);
+  return base64EncodeBinary(pdfBytes);
 }
 
 // ========== TAB BUILDERS ==========
@@ -380,14 +632,703 @@ function buildSignerTabs(documentId: string, signerType: "homeowner" | "contract
   };
 }
 
+// ========== ADDENDUM SIGNER TABS ==========
+// These are positioned on the compliance addendum (document 2) for the homeowner's
+// acknowledgment checkbox and signature on the cancellation notice
+function buildAddendumTabs(documentId: string) {
+  return {
+    // Checkbox for D-123 acknowledgment
+    checkboxTabs: [
+      {
+        anchorString: "PLATFORM DISCLOSURE",
+        anchorUnits: "pixels",
+        anchorXOffset: "0",
+        anchorYOffset: "180",
+        tabLabel: "otterquote_acknowledgment",
+        name: "I understand I am signing a contract directly with the contractor named above. OtterQuote is not a party to this agreement.",
+        required: "true",
+        documentId,
+      },
+    ],
+    // Sign on the Notice of Cancellation (homeowner only — this signature is on the addendum)
+    signHereTabs: [
+      {
+        anchorString: "I HEREBY CANCEL THIS TRANSACTION",
+        anchorUnits: "pixels",
+        anchorXOffset: "0",
+        anchorYOffset: "20",
+        tabLabel: "cancellation_acknowledgment_signature",
+        optional: "true",
+        documentId,
+      },
+    ],
+  };
+}
+
 // ========== DOCUMENT LABEL HELPERS ==========
 function getDocumentLabel(documentType: string): string {
   switch (documentType) {
-    case "contract": return "Repair Contract";
+    case "contract":
+    case "contractor_sign":
+    case "homeowner_sign":
+      return "Repair Contract";
     case "color_confirmation": return "Color Confirmation";
     case "project_confirmation": return "Project Confirmation";
     default: return "Document";
   }
+}
+
+// ========== AUTO-POPULATE FIELDS FROM DB ==========
+async function autoPopulateFields(
+  supabase: any,
+  claimId: string,
+  contractorId: string,
+  signerName: string,
+  signerEmail: string,
+  documentType: string
+): Promise<{ fields: TextTabFields; claimData: any; contractorData: any; bidData: any }> {
+  const { data: claimData } = await supabase
+    .from("claims")
+    .select("*")
+    .eq("id", claimId)
+    .single();
+
+  const { data: contractorData } = await supabase
+    .from("contractors")
+    .select("*")
+    .eq("id", contractorId)
+    .single();
+
+  const { data: bidData } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("claim_id", claimId)
+    .eq("contractor_id", contractorId)
+    .single();
+
+  const fields: TextTabFields = {};
+
+  if (claimData) {
+    // Homeowner info
+    fields.customer_name = signerName || "";
+    fields.customer_address = claimData.property_address || claimData.address_line1 || "";
+    fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
+    fields.customer_phone = claimData.phone || "";
+    fields.customer_email = signerEmail || "";
+    // Insurance info
+    fields.insurance_company = claimData.insurance_carrier || "";
+    fields.claim_number = claimData.claim_number || "";
+    fields.deductible = claimData.deductible_amount ? `$${Number(claimData.deductible_amount).toLocaleString()}` : "";
+    // Job info
+    fields.contract_date = new Date().toLocaleDateString("en-US");
+    fields.job_description = claimData.damage_type ? `Roof ${claimData.damage_type}` : "Roof Replacement";
+    fields.material_type = claimData.material_product || bidData?.brand || "";
+  }
+
+  if (bidData) {
+    fields.contract_price = bidData.amount ? `$${Number(bidData.amount).toLocaleString()}` : "";
+    fields.warranty_years = bidData.warranty_years ? `${bidData.warranty_years} years` : "";
+    fields.estimated_start = bidData.estimated_start_date || "";
+    fields.decking_per_sheet = bidData.decking_price_per_sheet ? `$${bidData.decking_price_per_sheet}` : "";
+    fields.full_redeck_price = bidData.full_redeck_price ? `$${Number(bidData.full_redeck_price).toLocaleString()}` : "";
+  }
+
+  if (contractorData) {
+    fields.contractor_name = contractorData.company_name || "";
+    fields.contractor_phone = contractorData.phone || "";
+    fields.contractor_email = contractorData.email || "";
+    fields.contractor_address = contractorData.address_line1
+      ? `${contractorData.address_line1}, ${contractorData.address_city || ""}, ${contractorData.address_state || ""} ${contractorData.address_zip || ""}`
+      : "";
+    fields.contractor_license = "";
+
+    // Get contractor license info
+    const { data: licenseData } = await supabase
+      .from("contractor_licenses")
+      .select("license_number, municipality")
+      .eq("contractor_id", contractorData.id)
+      .limit(1);
+    if (licenseData && licenseData.length > 0) {
+      fields.contractor_license = `${licenseData[0].license_number} (${licenseData[0].municipality})`;
+    }
+  }
+
+  // Project Confirmation: merge scope/material fields from project_confirmation JSONB
+  if (documentType === "project_confirmation" && claimData?.project_confirmation) {
+    const pc = claimData.project_confirmation;
+    Object.assign(fields, {
+      shingle_manufacturer: pc.shingleManufacturer || "",
+      shingle_type: pc.shingleType || "",
+      shingle_color: pc.shingleColor || "",
+      drip_edge_color: pc.dripEdgeColor || "",
+      skylights: pc.skylightsAction ? `${pc.skylightsAction} (${pc.skylightCount || 0})` : "",
+      satellite: pc.satelliteDish || "",
+      valley_type: pc.valleyType || "",
+      gutter_guards: pc.gutterGuards || "",
+      num_structures: pc.numStructures || "",
+      structure_names: pc.structureNames || "",
+      bad_decking: pc.badDeckingExpected || "",
+      work_not_done: pc.workNotBeingDone || "",
+      non_recoverable: pc.nonRecoverableDepreciation != null ? `$${Number(pc.nonRecoverableDepreciation).toLocaleString()}` : "",
+      project_notes: pc.homeownerNotes || "",
+    });
+  }
+
+  return { fields, claimData, contractorData, bidData };
+}
+
+// ========== HANDLER: CONTRACTOR SIGN (new — Step A) ==========
+async function handleContractorSign(
+  supabase: any,
+  requestBody: any,
+  tokenInfo: CachedToken
+): Promise<Response> {
+  const { claim_id, contractor_id, signer, fields: providedFields, return_url, quote_id } = requestBody;
+
+  // Auto-populate fields if not provided
+  let autoFields = providedFields || {};
+  let claimData: any = null;
+  let contractorData: any = null;
+  let bidData: any = null;
+
+  if (!providedFields || Object.keys(providedFields).length === 0) {
+    const result = await autoPopulateFields(supabase, claim_id, contractor_id, signer.name, signer.email, "contractor_sign");
+    autoFields = result.fields;
+    claimData = result.claimData;
+    contractorData = result.contractorData;
+    bidData = result.bidData;
+  } else {
+    const { data: c } = await supabase.from("contractors").select("*").eq("id", contractor_id).single();
+    contractorData = c;
+    const { data: cl } = await supabase.from("claims").select("*").eq("id", claim_id).single();
+    claimData = cl;
+  }
+
+  // Fetch contractor's contract template from storage
+  // Determine trade + funding type to select the right template
+  const trades = claimData?.selected_trades || [];
+  const trade = trades.length ? trades[0].toLowerCase() : "roofing";
+  let fundingType = "insurance";
+  if (claimData?.funding_type) {
+    fundingType = claimData.funding_type.toLowerCase();
+  } else if (claimData?.job_type === "retail" || claimData?.job_type === "cash") {
+    fundingType = "retail";
+  }
+
+  // Look up template from contractor's contract_templates JSONB
+  const templates = contractorData?.contract_templates || [];
+  let matchingTemplate = templates.find((t: any) =>
+    t.trade && t.trade.toLowerCase() === trade &&
+    t.funding_type && t.funding_type.toLowerCase() === fundingType
+  );
+  if (!matchingTemplate) {
+    matchingTemplate = templates.find((t: any) => t.trade && t.trade.toLowerCase() === trade);
+  }
+  if (!matchingTemplate && contractorData?.contract_pdf_url) {
+    matchingTemplate = { file_url: contractorData.contract_pdf_url };
+  }
+
+  let templateBase64: string;
+  if (matchingTemplate?.file_url && matchingTemplate.file_url.includes("contractor-templates")) {
+    // Extract storage path from URL and download
+    const pathMatch = matchingTemplate.file_url.match(/contractor-templates\/(.+)$/);
+    if (pathMatch) {
+      const storagePath = decodeURIComponent(pathMatch[1]);
+      const { data: blob, error } = await supabase.storage.from("contractor-templates").download(storagePath);
+      if (error) throw new Error(`Template download error: ${error.message}`);
+      const ab = await blob.arrayBuffer();
+      templateBase64 = base64EncodeBinary(new Uint8Array(ab));
+    } else {
+      templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
+    }
+  } else if (matchingTemplate?.file_url) {
+    templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
+  } else {
+    // Fallback: try standard path convention
+    templateBase64 = await getTemplateFromStorage(supabase, contractor_id, "contract");
+  }
+
+  // Generate IC 24-5-11 compliance addendum
+  const contractDate = new Date().toLocaleDateString("en-US");
+  const contractorName = contractorData?.company_name || signer.name || "Contractor";
+  const homeownerName = autoFields.customer_name || "Homeowner";
+  const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
+
+  const { accessToken, accountId, baseUri } = tokenInfo;
+
+  // Build envelope with contractor as FIRST signer (routingOrder 1)
+  // Homeowner placeholder as SECOND signer (routingOrder 2) — will be activated later
+  const documentId = "1";
+  const addendumDocId = "2";
+  const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
+  const contractorTabs = buildSignerTabs(documentId, "contractor");
+
+  // Resolve homeowner email for placeholder recipient (from profiles table)
+  let homeownerEmail = "homeowner@placeholder.otterquote.com";
+  let homeownerFullName = homeownerName;
+  if (claimData?.user_id) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", claimData.user_id)
+      .single();
+    if (profileData) {
+      homeownerEmail = profileData.email || homeownerEmail;
+      homeownerFullName = profileData.full_name || homeownerFullName;
+    }
+  }
+
+  const docLabel = getDocumentLabel("contractor_sign");
+
+  const envelopeDefinition: any = {
+    emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
+    documents: [
+      {
+        documentBase64: templateBase64,
+        name: docLabel,
+        fileExtension: "pdf",
+        documentId,
+      },
+      {
+        documentBase64: addendumBase64,
+        name: "IC 24-5-11 Compliance Addendum",
+        fileExtension: "pdf",
+        documentId: addendumDocId,
+      },
+    ],
+    recipients: {
+      signers: [
+        {
+          email: signer.email,
+          name: signer.name,
+          recipientId: "1",
+          routingOrder: "1",
+          clientUserId: "contractor_1",
+          tabs: {
+            textTabs,
+            ...contractorTabs,
+          },
+        },
+        // Homeowner is signer 2 — not yet active (will use createRecipient later)
+        // Placeholder with routingOrder 2 so DocuSign knows the signing order
+        {
+          email: homeownerEmail,
+          name: homeownerFullName,
+          recipientId: "2",
+          routingOrder: "2",
+          clientUserId: "homeowner_1",
+          tabs: {
+            ...buildSignerTabs(documentId, "homeowner"),
+            ...buildAddendumTabs(addendumDocId),
+          },
+        },
+      ],
+    },
+    status: "sent", // "sent" starts the signing workflow
+  };
+
+  console.log("Creating DocuSign envelope (contractor_sign)");
+  const envelopeResponse = await fetch(
+    `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(envelopeDefinition),
+    }
+  );
+
+  if (!envelopeResponse.ok) {
+    const errorData = await envelopeResponse.text();
+    console.error("DocuSign envelope creation failed:", errorData);
+    throw new Error(`Failed to create envelope: ${envelopeResponse.status} ${errorData}`);
+  }
+
+  const envelopeData = await envelopeResponse.json();
+  const envelopeId = envelopeData.envelopeId;
+  if (!envelopeId) throw new Error("No envelopeId returned from DocuSign");
+
+  console.log(`Envelope created (contractor_sign): ${envelopeId}`);
+
+  // Generate embedded signing URL for contractor
+  const defaultReturnUrl = return_url || `https://otterquote.com/contractor-bid-form.html?claim_id=${claim_id}&signed=contractor`;
+  const recipientViewResponse = await fetch(
+    `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        returnUrl: defaultReturnUrl,
+        authenticationMethod: "none",
+        email: signer.email,
+        userName: signer.name,
+        clientUserId: "contractor_1",
+      }),
+    }
+  );
+
+  if (!recipientViewResponse.ok) {
+    const errorData = await recipientViewResponse.text();
+    throw new Error(`Failed to generate contractor signing URL: ${recipientViewResponse.status} ${errorData}`);
+  }
+
+  const recipientViewData = await recipientViewResponse.json();
+  const signingUrl = recipientViewData.url;
+  if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
+
+  // Store envelope ID on the quote record
+  const quoteUpdateFilter = quote_id
+    ? supabase.from("quotes").update({ docusign_envelope_id: envelopeId }).eq("id", quote_id)
+    : supabase.from("quotes").update({ docusign_envelope_id: envelopeId })
+        .eq("claim_id", claim_id)
+        .eq("contractor_id", contractor_id);
+
+  const { error: quoteUpdateError } = await quoteUpdateFilter;
+  if (quoteUpdateError) {
+    console.error("Failed to update quote with envelope ID:", quoteUpdateError);
+  }
+
+  // Also update claim with the latest envelope
+  await supabase.from("claims").update({
+    contract_sent_at: new Date().toISOString(),
+    docusign_envelope_id: envelopeId,
+  }).eq("id", claim_id);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      envelope_id: envelopeId,
+      signing_url: signingUrl,
+      status: "sent",
+      document_type: "contractor_sign",
+      signer_email: signer.email,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ========== HANDLER: HOMEOWNER SIGN (new — Step C) ==========
+async function handleHomeownerSign(
+  supabase: any,
+  requestBody: any,
+  tokenInfo: CachedToken
+): Promise<Response> {
+  const { claim_id, contractor_id, signer, return_url, quote_id } = requestBody;
+
+  // Look up existing envelope from the quote
+  let envelopeId: string | null = null;
+
+  if (quote_id) {
+    const { data: quoteData } = await supabase
+      .from("quotes")
+      .select("docusign_envelope_id, contractor_signed_at")
+      .eq("id", quote_id)
+      .single();
+    envelopeId = quoteData?.docusign_envelope_id;
+  }
+
+  if (!envelopeId) {
+    // Fallback: look up by claim_id + contractor_id
+    const { data: quoteData } = await supabase
+      .from("quotes")
+      .select("docusign_envelope_id, contractor_signed_at")
+      .eq("claim_id", claim_id)
+      .eq("contractor_id", contractor_id)
+      .not("docusign_envelope_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    envelopeId = quoteData?.docusign_envelope_id;
+  }
+
+  if (!envelopeId) {
+    throw new Error("No existing DocuSign envelope found for this quote. The contractor must sign first.");
+  }
+
+  const { accessToken, accountId, baseUri } = tokenInfo;
+
+  // Generate embedded signing URL for the homeowner (recipient 2, already in the envelope)
+  const defaultReturnUrl = return_url || `https://otterquote.com/contract-signing.html?claim_id=${claim_id}&signed=true`;
+
+  console.log(`Generating homeowner signing URL for envelope ${envelopeId}`);
+
+  const recipientViewResponse = await fetch(
+    `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        returnUrl: defaultReturnUrl,
+        authenticationMethod: "none",
+        email: signer.email,
+        userName: signer.name,
+        clientUserId: "homeowner_1",
+      }),
+    }
+  );
+
+  if (!recipientViewResponse.ok) {
+    const errorData = await recipientViewResponse.text();
+    console.error("Homeowner signing URL generation failed:", errorData);
+    throw new Error(`Failed to generate homeowner signing URL: ${recipientViewResponse.status} ${errorData}`);
+  }
+
+  const recipientViewData = await recipientViewResponse.json();
+  const signingUrl = recipientViewData.url;
+  if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
+
+  console.log("Homeowner signing URL generated successfully");
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      envelope_id: envelopeId,
+      signing_url: signingUrl,
+      status: "sent",
+      document_type: "homeowner_sign",
+      signer_email: signer.email,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ========== HANDLER: LEGACY CONTRACT / COLOR / PROJECT CONFIRMATION ==========
+async function handleLegacyFlow(
+  supabase: any,
+  requestBody: any,
+  tokenInfo: CachedToken
+): Promise<Response> {
+  const {
+    claim_id,
+    document_type,
+    contractor_id,
+    signer,
+    fields: providedFields,
+    return_url,
+  } = requestBody;
+
+  // Auto-populate fields if not provided
+  let autoFields = providedFields || {};
+  let claimData: any = null;
+  let contractorData: any = null;
+
+  if (!providedFields || Object.keys(providedFields).length === 0) {
+    const result = await autoPopulateFields(supabase, claim_id, contractor_id, signer.name, signer.email, document_type);
+    autoFields = result.fields;
+    claimData = result.claimData;
+    contractorData = result.contractorData;
+  } else {
+    if (document_type === "project_confirmation") {
+      const { data: fetchedClaim } = await supabase
+        .from("claims")
+        .select("project_confirmation, property_address")
+        .eq("id", claim_id)
+        .single();
+      claimData = fetchedClaim;
+
+      const { data: fetchedContractor } = await supabase
+        .from("contractors")
+        .select("color_confirmation_template, company_name, email")
+        .eq("id", contractor_id)
+        .single();
+      contractorData = fetchedContractor;
+    }
+  }
+
+  // Fetch template PDF
+  let templateBase64: string;
+
+  if (document_type === "project_confirmation") {
+    const templateContractor = contractorData || await (async () => {
+      const { data } = await supabase
+        .from("contractors")
+        .select("color_confirmation_template, company_name")
+        .eq("id", contractor_id)
+        .single();
+      return data;
+    })();
+
+    const templateUrl = templateContractor?.color_confirmation_template;
+    if (!templateUrl) {
+      throw new Error(
+        "No project confirmation template on file. The contractor must upload a Project Confirmation Template in their profile before this document can be created."
+      );
+    }
+    templateBase64 = await fetchTemplateFromUrl(templateUrl);
+  } else {
+    templateBase64 = await getTemplateFromStorage(supabase, contractor_id, document_type);
+  }
+
+  const { accessToken, accountId, baseUri } = tokenInfo;
+
+  // Build envelope definition
+  const documentId = "1";
+  const textTabs = buildTextTabs(autoFields, documentId, document_type);
+  const homeownerTabs = buildSignerTabs(documentId, "homeowner");
+  const contractorTabs = buildSignerTabs(documentId, "contractor");
+
+  let contractorEmail = autoFields.contractor_email || "contractor@example.com";
+  let contractorName = autoFields.contractor_name || "Contractor";
+
+  const docLabel = getDocumentLabel(document_type);
+
+  // For contract type, also generate the compliance addendum
+  const documents: any[] = [
+    {
+      documentBase64: templateBase64,
+      name: docLabel,
+      fileExtension: "pdf",
+      documentId,
+    },
+  ];
+
+  if (document_type === "contract") {
+    const contractDate = new Date().toLocaleDateString("en-US");
+    const addendumBase64 = generateComplianceAddendumPdf(
+      contractorName,
+      autoFields.customer_name || signer.name || "Homeowner",
+      contractDate
+    );
+    documents.push({
+      documentBase64: addendumBase64,
+      name: "IC 24-5-11 Compliance Addendum",
+      fileExtension: "pdf",
+      documentId: "2",
+    });
+  }
+
+  const envelopeDefinition = {
+    emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
+    documents,
+    recipients: {
+      signers: [
+        {
+          email: signer.email,
+          name: signer.name,
+          recipientId: "1",
+          routingOrder: "1",
+          clientUserId: "homeowner_1",
+          tabs: {
+            textTabs,
+            ...homeownerTabs,
+            ...(document_type === "contract" ? buildAddendumTabs("2") : {}),
+          },
+        },
+        {
+          email: contractorEmail,
+          name: contractorName,
+          recipientId: "2",
+          routingOrder: "2",
+          clientUserId: "contractor_1",
+          tabs: {
+            ...contractorTabs,
+          },
+        },
+      ],
+    },
+    status: "sent",
+  };
+
+  console.log(`Creating DocuSign envelope (legacy: ${document_type})`);
+  const envelopeResponse = await fetch(
+    `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(envelopeDefinition),
+    }
+  );
+
+  if (!envelopeResponse.ok) {
+    const errorData = await envelopeResponse.text();
+    console.error("DocuSign envelope creation failed:", errorData);
+    throw new Error(`Failed to create envelope: ${envelopeResponse.status} ${errorData}`);
+  }
+
+  const envelopeData = await envelopeResponse.json();
+  const envelopeId = envelopeData.envelopeId;
+  if (!envelopeId) throw new Error("No envelopeId returned from DocuSign");
+
+  console.log(`Envelope created (${document_type}): ${envelopeId}`);
+
+  // Generate embedded signing URL
+  const defaultReturnUrl = document_type === "project_confirmation"
+    ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
+    : "https://otterquote.com/contract-signing.html?signed=true";
+  const signingReturnUrl = return_url || defaultReturnUrl;
+
+  const recipientViewResponse = await fetch(
+    `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        returnUrl: signingReturnUrl,
+        authenticationMethod: "none",
+        email: signer.email,
+        userName: signer.name,
+        clientUserId: "homeowner_1",
+      }),
+    }
+  );
+
+  if (!recipientViewResponse.ok) {
+    const errorData = await recipientViewResponse.text();
+    throw new Error(`Failed to generate signing URL: ${recipientViewResponse.status} ${errorData}`);
+  }
+
+  const recipientViewData = await recipientViewResponse.json();
+  const signingUrl = recipientViewData.url;
+  if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
+
+  // Update claim in Supabase
+  const updateData: any = {
+    contract_sent_at: new Date().toISOString(),
+  };
+
+  if (document_type === "contract") {
+    updateData.docusign_envelope_id = envelopeId;
+  } else if (document_type === "color_confirmation") {
+    updateData.color_confirmation_envelope_id = envelopeId;
+  } else if (document_type === "project_confirmation") {
+    updateData.project_confirmation_envelope_id = envelopeId;
+  }
+
+  const { error: updateError } = await supabase
+    .from("claims")
+    .update(updateData)
+    .eq("id", claim_id);
+
+  if (updateError) {
+    console.error("Failed to update claim:", updateError);
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      envelope_id: envelopeId,
+      signing_url: signingUrl,
+      status: "sent",
+      document_type,
+      signer_email: signer.email,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
 
 // ========== MAIN HANDLER ==========
@@ -407,8 +1348,6 @@ serve(async (req) => {
       document_type,
       contractor_id,
       signer,
-      fields,
-      return_url,  // Optional: override the returnUrl after signing
     } = requestBody;
 
     // ========== INPUT VALIDATION ==========
@@ -422,375 +1361,77 @@ serve(async (req) => {
       );
     }
 
-    if (!["contract", "color_confirmation", "project_confirmation"].includes(document_type)) {
+    const validDocTypes = ["contract", "contractor_sign", "homeowner_sign", "color_confirmation", "project_confirmation"];
+    if (!validDocTypes.includes(document_type)) {
       return new Response(
         JSON.stringify({
-          error: 'document_type must be "contract", "color_confirmation", or "project_confirmation"',
+          error: `document_type must be one of: ${validDocTypes.join(", ")}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // ========== RATE LIMIT CHECK ==========
-    const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
-      p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id || null,
-    });
+    // Skip rate limit for homeowner_sign (no new envelope created)
+    if (document_type !== "homeowner_sign") {
+      const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
+        p_function_name: FUNCTION_NAME,
+        p_caller_id: claim_id || null,
+      });
 
-    if (rlError) {
-      console.error("Rate limit check failed:", rlError);
-      return new Response(
-        JSON.stringify({
-          error: "Rate limit check failed. Refusing to create envelope for safety.",
-          detail: rlError.message,
-        }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!rateLimitResult?.allowed) {
-      console.warn(`RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`);
-      return new Response(
-        JSON.stringify({
-          error: "Rate limit exceeded",
-          reason: rateLimitResult?.reason,
-          counts: rateLimitResult?.counts,
-        }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    // ========== END RATE LIMIT CHECK ==========
-
-    // ========== DOCUSIGN CONFIG ==========
-    const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
-    // BASE_URI from Supabase secret determines sandbox vs production OAuth routing.
-    // Account ID is resolved dynamically via /oauth/userinfo — do not rely on DOCUSIGN_API_ACCOUNT_ID.
-    const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
-
-    if (!INTEGRATION_KEY) {
-      throw new Error(
-        "DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY."
-      );
-    }
-
-    // ========== LOAD CLAIM + CONTRACTOR DATA ==========
-    // If fields not provided, auto-populate from claim and contractor records
-    let autoFields = fields || {};
-    let claimData: any = null;
-    let contractorData: any = null;
-
-    if (!fields || Object.keys(fields).length === 0) {
-      const { data: fetchedClaim } = await supabase
-        .from("claims")
-        .select("*")
-        .eq("id", claim_id)
-        .single();
-
-      const { data: fetchedContractor } = await supabase
-        .from("contractors")
-        .select("*")
-        .eq("id", contractor_id)
-        .single();
-
-      const { data: bidData } = await supabase
-        .from("quotes")
-        .select("*")
-        .eq("claim_id", claim_id)
-        .eq("contractor_id", contractor_id)
-        .single();
-
-      claimData = fetchedClaim;
-      contractorData = fetchedContractor;
-
-      if (claimData && signer) {
-        autoFields = {
-          // Homeowner info
-          customer_name: signer.name,
-          customer_address: claimData.property_address || claimData.address_line1 || "",
-          customer_city_zip: `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim(),
-          customer_phone: claimData.phone || "",
-          customer_email: signer.email,
-          // Insurance info
-          insurance_company: claimData.insurance_carrier || "",
-          claim_number: claimData.claim_number || "",
-          deductible: claimData.deductible_amount ? `$${Number(claimData.deductible_amount).toLocaleString()}` : "",
-          // Job info
-          contract_date: new Date().toLocaleDateString("en-US"),
-          job_description: claimData.damage_type ? `Roof ${claimData.damage_type}` : "Roof Replacement",
-          material_type: claimData.material_product || bidData?.brand || "",
-          // Bid info
-          contract_price: bidData?.amount ? `$${Number(bidData.amount).toLocaleString()}` : "",
-          warranty_years: bidData?.warranty_years ? `${bidData.warranty_years} years` : "",
-          estimated_start: bidData?.estimated_start_date || "",
-          decking_per_sheet: bidData?.decking_price_per_sheet ? `$${bidData.decking_price_per_sheet}` : "",
-          full_redeck_price: bidData?.full_redeck_price ? `$${Number(bidData.full_redeck_price).toLocaleString()}` : "",
-          // Contractor info
-          contractor_name: contractorData?.company_name || "",
-          contractor_phone: contractorData?.phone || "",
-          contractor_email: contractorData?.email || "",
-          contractor_address: contractorData?.address_line1 ? `${contractorData.address_line1}, ${contractorData.address_city || ""}, ${contractorData.address_state || ""} ${contractorData.address_zip || ""}` : "",
-          contractor_license: "",
-        };
-
-        // Get contractor license info
-        if (contractorData) {
-          const { data: licenseData } = await supabase
-            .from("contractor_licenses")
-            .select("license_number, municipality")
-            .eq("contractor_id", contractorData.id)
-            .limit(1);
-          if (licenseData && licenseData.length > 0) {
-            autoFields.contractor_license = `${licenseData[0].license_number} (${licenseData[0].municipality})`;
-          }
-        }
-      }
-
-      // ── Project Confirmation: merge scope/material fields from project_confirmation JSONB ──
-      if (document_type === "project_confirmation" && claimData?.project_confirmation) {
-        const pc = claimData.project_confirmation;
-        Object.assign(autoFields, {
-          shingle_manufacturer: pc.shingleManufacturer || "",
-          shingle_type: pc.shingleType || "",
-          shingle_color: pc.shingleColor || "",
-          drip_edge_color: pc.dripEdgeColor || "",
-          skylights: pc.skylightsAction ? `${pc.skylightsAction} (${pc.skylightCount || 0})` : "",
-          satellite: pc.satelliteDish || "",
-          valley_type: pc.valleyType || "",
-          gutter_guards: pc.gutterGuards || "",
-          num_structures: pc.numStructures || "",
-          structure_names: pc.structureNames || "",
-          bad_decking: pc.badDeckingExpected || "",
-          work_not_done: pc.workNotBeingDone || "",
-          non_recoverable: pc.nonRecoverableDepreciation != null ? `$${Number(pc.nonRecoverableDepreciation).toLocaleString()}` : "",
-          project_notes: pc.homeownerNotes || "",
-        });
-      }
-    } else {
-      // fields were provided by caller — we still may need claim/contractor data
-      // for project_confirmation template retrieval (handled below)
-      if (document_type === "project_confirmation") {
-        const { data: fetchedClaim } = await supabase
-          .from("claims")
-          .select("project_confirmation, property_address")
-          .eq("id", claim_id)
-          .single();
-        claimData = fetchedClaim;
-
-        const { data: fetchedContractor } = await supabase
-          .from("contractors")
-          .select("color_confirmation_template, company_name, email")
-          .eq("id", contractor_id)
-          .single();
-        contractorData = fetchedContractor;
-      }
-    }
-
-    // ========== FETCH TEMPLATE PDF ==========
-    let templateBase64: string;
-
-    if (document_type === "project_confirmation") {
-      // project_confirmation uses the contractor's color_confirmation_template URL
-      // (uploaded via contractor-profile.html, stored in contractors.color_confirmation_template)
-      const templateContractor = contractorData || await (async () => {
-        const { data } = await supabase
-          .from("contractors")
-          .select("color_confirmation_template, company_name")
-          .eq("id", contractor_id)
-          .single();
-        return data;
-      })();
-
-      const templateUrl = templateContractor?.color_confirmation_template;
-      if (!templateUrl) {
-        throw new Error(
-          "No project confirmation template on file. The contractor must upload a Project Confirmation Template in their profile before this document can be created."
+      if (rlError) {
+        console.error("Rate limit check failed:", rlError);
+        return new Response(
+          JSON.stringify({
+            error: "Rate limit check failed. Refusing to create envelope for safety.",
+            detail: rlError.message,
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      console.log(`Fetching project confirmation template for contractor ${contractor_id}`);
-      templateBase64 = await fetchTemplateFromUrl(templateUrl);
-    } else {
-      console.log(`Fetching template: ${contractor_id}/${document_type}.pdf`);
-      templateBase64 = await getTemplateFromStorage(supabase, contractor_id, document_type);
+
+      if (!rateLimitResult?.allowed) {
+        console.warn(`RATE LIMITED [${FUNCTION_NAME}]: ${rateLimitResult?.reason}`);
+        return new Response(
+          JSON.stringify({
+            error: "Rate limit exceeded",
+            reason: rateLimitResult?.reason,
+            counts: rateLimitResult?.counts,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // ========== DOCUSIGN CONFIG ==========
+    const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
+
+    const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
+    if (!INTEGRATION_KEY) {
+      throw new Error("DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY.");
     }
 
     // ========== GET ACCESS TOKEN + ACCOUNT INFO ==========
     console.log("Acquiring DocuSign access token");
     const tokenInfo = await getAccessToken(REST_API_BASE);
-    const accessToken = tokenInfo.accessToken;
-    const ACCOUNT_ID = tokenInfo.accountId;
-    const RESOLVED_BASE_URI = tokenInfo.baseUri;
 
-    // ========== BUILD ENVELOPE DEFINITION ==========
-    const documentId = "1";
-    const textTabs = buildTextTabs(autoFields, documentId, document_type);
+    // ========== ROUTE BY DOCUMENT TYPE ==========
+    switch (document_type) {
+      case "contractor_sign":
+        return await handleContractorSign(supabase, requestBody, tokenInfo);
 
-    // Homeowner (recipient 1)
-    const homeownerTabs = buildSignerTabs(documentId, "homeowner");
+      case "homeowner_sign":
+        return await handleHomeownerSign(supabase, requestBody, tokenInfo);
 
-    // Contractor (recipient 2)
-    const contractorTabs = buildSignerTabs(documentId, "contractor");
+      case "contract":
+      case "color_confirmation":
+      case "project_confirmation":
+        return await handleLegacyFlow(supabase, requestBody, tokenInfo);
 
-    // Look up contractor info for recipient 2
-    let contractorEmail = "contractor@example.com";
-    let contractorName = "Contractor";
-    if (autoFields.contractor_email) {
-      contractorEmail = autoFields.contractor_email;
-    }
-    if (autoFields.contractor_name) {
-      contractorName = autoFields.contractor_name;
+      default:
+        throw new Error(`Unhandled document type: ${document_type}`);
     }
 
-    const docLabel = getDocumentLabel(document_type);
-
-    const envelopeDefinition = {
-      emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
-      documents: [
-        {
-          documentBase64: templateBase64,
-          name: docLabel,
-          fileExtension: "pdf",
-          documentId,
-        },
-      ],
-      recipients: {
-        signers: [
-          {
-            email: signer.email,
-            name: signer.name,
-            recipientId: "1",
-            routingOrder: "1",
-            clientUserId: "homeowner_1",
-            tabs: {
-              textTabs,
-              ...homeownerTabs,
-            },
-          },
-          {
-            email: contractorEmail,
-            name: contractorName,
-            recipientId: "2",
-            routingOrder: "2",
-            clientUserId: "contractor_1",
-            tabs: {
-              ...contractorTabs,
-            },
-          },
-        ],
-      },
-      status: "sent",
-    };
-
-    // ========== CREATE ENVELOPE ==========
-    console.log("Creating DocuSign envelope");
-    const envelopeResponse = await fetch(
-      `${RESOLVED_BASE_URI}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(envelopeDefinition),
-      }
-    );
-
-    if (!envelopeResponse.ok) {
-      const errorData = await envelopeResponse.text();
-      console.error("DocuSign envelope creation failed:", errorData);
-      throw new Error(
-        `Failed to create envelope: ${envelopeResponse.status} ${errorData}`
-      );
-    }
-
-    const envelopeData = await envelopeResponse.json();
-    const envelopeId = envelopeData.envelopeId;
-
-    if (!envelopeId) {
-      throw new Error("No envelopeId returned from DocuSign");
-    }
-
-    console.log(`Envelope created: ${envelopeId}`);
-
-    // ========== GENERATE EMBEDDED SIGNING URL ==========
-    console.log("Generating embedded signing URL for homeowner");
-
-    // Default returnUrl by document type; caller can override with return_url param
-    const defaultReturnUrl = document_type === "project_confirmation"
-      ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
-      : "https://otterquote.com/contract-signing.html?signed=true";
-    const signingReturnUrl = return_url || defaultReturnUrl;
-
-    const recipientViewResponse = await fetch(
-      `${RESOLVED_BASE_URI}/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeId}/views/recipient`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          returnUrl: signingReturnUrl,
-          authenticationMethod: "none",
-          email: signer.email,
-          userName: signer.name,
-          clientUserId: "homeowner_1",
-        }),
-      }
-    );
-
-    if (!recipientViewResponse.ok) {
-      const errorData = await recipientViewResponse.text();
-      console.error("Embedded signing URL generation failed:", errorData);
-      throw new Error(
-        `Failed to generate signing URL: ${recipientViewResponse.status} ${errorData}`
-      );
-    }
-
-    const recipientViewData = await recipientViewResponse.json();
-    const signingUrl = recipientViewData.url;
-
-    if (!signingUrl) {
-      throw new Error("No URL returned from DocuSign recipient view endpoint");
-    }
-
-    console.log("Signing URL generated successfully");
-
-    // ========== UPDATE CLAIM IN SUPABASE ==========
-    const updateData: any = {
-      contract_sent_at: new Date().toISOString(),
-    };
-
-    if (document_type === "contract") {
-      updateData.docusign_envelope_id = envelopeId;
-    } else if (document_type === "color_confirmation") {
-      updateData.color_confirmation_envelope_id = envelopeId;
-    } else if (document_type === "project_confirmation") {
-      updateData.project_confirmation_envelope_id = envelopeId;
-    }
-
-    const { error: updateError } = await supabase
-      .from("claims")
-      .update(updateData)
-      .eq("id", claim_id);
-
-    if (updateError) {
-      // Non-fatal: log but don't fail the request — envelope was created successfully
-      console.error("Failed to update claim:", updateError);
-    }
-
-    // ========== SUCCESS RESPONSE ==========
-    return new Response(
-      JSON.stringify({
-        success: true,
-        envelope_id: envelopeId,
-        signing_url: signingUrl,
-        status: "sent",
-        document_type,
-        signer_email: signer.email,
-        rate_limit_counts: rateLimitResult?.counts,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error) {
     console.error("create-docusign-envelope error:", error);
 
