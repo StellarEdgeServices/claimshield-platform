@@ -1132,51 +1132,67 @@
     </div>
 
     <!-- ═══════════════════════════════════════ -->
-    <!-- Payment Method (Stripe Setup)          -->
+    <!-- Payment Methods (Multi-Method)         -->
     <!-- ═══════════════════════════════════════ -->
     <div class="settings-card">
-      <div class="settings-card-title">Payment Method</div>
+      <div class="settings-card-title">Payment Methods</div>
       <div class="settings-card-subtitle">
-        Add a payment method on file so we can charge the 5% platform fee when you win a project. Your payment method is secure and stored with Stripe.
+        Add one or more payment methods so we can charge the platform fee when you win a project. Bank accounts (ACH) have no processing fee. Card payments include a small processing fee.
       </div>
 
-      <!-- Status display: No payment method on file -->
+      <!-- Status display: No payment methods on file -->
       <div id="pmStatusNoPayment" style="padding: var(--sp-6); background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-md); margin-bottom: var(--sp-6); display: none;">
         <div style="font-size: 0.9rem; color: #991B1B; font-weight: 600; margin-bottom: var(--sp-2);">⚠️ No Payment Method on File</div>
         <p style="font-size: 0.875rem; color: #7F1D1D; margin-bottom: var(--sp-4); line-height: 1.5;">
-          A payment method is required before your bids can be accepted. Once a homeowner selects your bid, OtterQuote will charge the 5% platform fee to this card.
+          A payment method is required before your bids can be accepted. Add a bank account (free) or credit/debit card below.
         </p>
-        <button class="btn btn-primary" id="pmAddPaymentBtn" style="width: 100%;" onclick="initializeStripeSetup()">Add Payment Method</button>
       </div>
 
-      <!-- Status display: Payment method saved -->
-      <div id="pmStatusSaved" style="padding: var(--sp-6); background: #F0FDF4; border: 1px solid #BBEF63; border-radius: var(--radius-md); margin-bottom: var(--sp-6); display: none;">
-        <div style="font-size: 0.9rem; color: #166534; font-weight: 600; margin-bottom: var(--sp-2);">✓ Payment Method on File</div>
-        <div style="font-size: 0.875rem; color: #4B5563; margin-bottom: var(--sp-4);">
-          <div style="margin-bottom: var(--sp-3);">
-            <span id="pmCardDisplay" style="font-weight: 600; font-family: var(--font-mono);">•••• •••• •••• •••• </span>
-            <span id="pmCardBrand" style="color: var(--slate);">(•••• brand)</span>
-          </div>
-          <div style="font-size: 0.8rem; color: var(--slate);">
-            Your bids can be accepted. You'll be charged this card when you win a project.
-          </div>
+      <!-- Saved payment methods list -->
+      <div id="pmMethodsList" style="margin-bottom: var(--sp-6); display: none;"></div>
+
+      <!-- Encouragement banner: shown when only 1 method on file -->
+      <div id="pmEncourageBanner" style="padding: var(--sp-4) var(--sp-6); background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: var(--radius-md); margin-bottom: var(--sp-6); display: none;">
+        <div style="font-size: 0.85rem; color: #1E40AF; line-height: 1.5;">
+          💡 <strong>Tip:</strong> Adding a backup payment method ensures your bids are never held up by a single declined card. Bank accounts (ACH) are free — no processing fee.
         </div>
-        <button class="btn btn-secondary" id="pmUpdateBtn" style="width: 100%;" onclick="initializeStripeSetup()">Update Payment Method</button>
       </div>
 
-      <!-- Stripe Elements form (hidden by default, shown when adding/updating) -->
-      <div id="pmSetupForm" style="display: none;">
+      <!-- Add method buttons -->
+      <div id="pmAddButtons" style="display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-6);">
+        <button class="btn btn-primary" style="flex: 1; min-width: 200px;" onclick="initializeStripeSetup('us_bank_account')">
+          🏦 Add Bank Account
+          <span style="display: block; font-size: 0.75rem; font-weight: 400; opacity: 0.85; margin-top: 2px;">Free — No Processing Fee</span>
+        </button>
+        <button class="btn btn-secondary" style="flex: 1; min-width: 200px;" onclick="initializeStripeSetup('card')">
+          💳 Add Credit/Debit Card
+          <span style="display: block; font-size: 0.75rem; font-weight: 400; opacity: 0.85; margin-top: 2px;">Processing fee applies</span>
+        </button>
+      </div>
+
+      <!-- Stripe Card Element form (hidden by default) -->
+      <div id="pmCardForm" style="display: none;">
         <div style="margin-bottom: var(--sp-6); padding: var(--sp-6); background: #F8FAFC; border: 1px solid var(--light); border-radius: var(--radius-md);">
           <div style="font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: var(--sp-4);">Enter Your Card Details</div>
-
-          <!-- Stripe Card Element -->
           <div id="card-element" style="border: 1px solid #CBD5E1; border-radius: var(--radius-md); padding: var(--sp-4); background: white; min-height: 40px; margin-bottom: var(--sp-6);"></div>
-
-          <!-- Error message -->
           <div id="card-errors" style="color: #EF4444; font-size: 0.875rem; margin-bottom: var(--sp-4); display: none;"></div>
-
           <div style="display: flex; gap: var(--sp-4);">
-            <button class="btn btn-primary" id="pmConfirmBtn" style="flex: 1;" onclick="confirmPaymentMethod()">Save Card</button>
+            <button class="btn btn-primary" id="pmConfirmCardBtn" style="flex: 1;" onclick="confirmCardSetup()">Save Card</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="cancelPaymentSetup()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACH bank account setup status (hidden by default) -->
+      <div id="pmACHForm" style="display: none;">
+        <div style="margin-bottom: var(--sp-6); padding: var(--sp-6); background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-md);">
+          <div style="font-size: 0.9rem; font-weight: 600; color: #166534; margin-bottom: var(--sp-4);">🏦 Connect Your Bank Account</div>
+          <p style="font-size: 0.85rem; color: #4B5563; margin-bottom: var(--sp-4); line-height: 1.5;">
+            You'll be guided through Stripe's secure bank verification process. ACH payments have <strong>no processing fee</strong> — you only pay the exact platform fee.
+          </p>
+          <div id="ach-errors" style="color: #EF4444; font-size: 0.875rem; margin-bottom: var(--sp-4); display: none;"></div>
+          <div style="display: flex; gap: var(--sp-4);">
+            <button class="btn btn-primary" id="pmConfirmACHBtn" style="flex: 1; background: #166534;" onclick="confirmACHSetup()">Connect Bank Account</button>
             <button class="btn btn-secondary" style="flex: 1;" onclick="cancelPaymentSetup()">Cancel</button>
           </div>
         </div>
@@ -1344,12 +1360,14 @@
     let contractorRecord = null;
 
     // ════════════════════════════════════════
-    // Stripe Payment Method Setup (SetupIntent flow)
+    // Multi-Payment Method Management (Card + ACH)
     // ════════════════════════════════════════
     let stripe = null;
     let elements = null;
     let cardElement = null;
-    let currentClientSecret = null; // SetupIntent client_secret
+    let currentClientSecret = null;
+    let currentSetupType = null; // 'card' or 'us_bank_account'
+    let savedPaymentMethods = []; // loaded from contractor_payment_methods table
 
     function initializeStripe() {
       if (stripe) return;
@@ -1372,40 +1390,222 @@
       });
     }
 
-    // Show the payment setup form — calls create-setup-intent Edge Function
-    window.initializeStripeSetup = async function() {
-      initializeStripe();
+    // Load saved payment methods from contractor_payment_methods table
+    async function loadPaymentMethods() {
+      if (!contractorRecord || !sb) return;
+      try {
+        const { data, error } = await sb
+          .from('contractor_payment_methods')
+          .select('*')
+          .eq('contractor_id', contractorRecord.id)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        savedPaymentMethods = data || [];
+      } catch (err) {
+        console.error('Failed to load payment methods:', err);
+        savedPaymentMethods = [];
+      }
+      renderPaymentMethodsList();
+    }
 
-      // Show form, hide status displays
-      document.getElementById('pmSetupForm').style.display = 'block';
-      document.getElementById('pmStatusNoPayment').style.display = 'none';
-      document.getElementById('pmStatusSaved').style.display = 'none';
+    // Render the list of saved payment methods
+    function renderPaymentMethodsList() {
+      const listEl = document.getElementById('pmMethodsList');
+      const noPayEl = document.getElementById('pmStatusNoPayment');
+      const encourageEl = document.getElementById('pmEncourageBanner');
 
-      // Mount card element if not already mounted
-      if (cardElement && !cardElement._parent) {
-        cardElement.mount('#card-element');
+      if (savedPaymentMethods.length === 0) {
+        listEl.style.display = 'none';
+        noPayEl.style.display = 'block';
+        encourageEl.style.display = 'none';
+        return;
       }
 
-      // Listen for real-time validation errors
-      cardElement.addEventListener('change', (event) => {
-        const errorDiv = document.getElementById('card-errors');
-        if (event.error) {
-          errorDiv.textContent = event.error.message;
-          errorDiv.style.display = 'block';
-        } else {
-          errorDiv.textContent = '';
-          errorDiv.style.display = 'none';
+      noPayEl.style.display = 'none';
+      listEl.style.display = 'block';
+      encourageEl.style.display = savedPaymentMethods.length === 1 ? 'block' : 'none';
+
+      listEl.innerHTML = savedPaymentMethods.map(m => {
+        const isCard = m.payment_type === 'card';
+        const icon = isCard ? '💳' : '🏦';
+        const typeLabel = isCard
+          ? (m.brand ? m.brand.toUpperCase() : 'CARD')
+          : (m.bank_name || 'Bank Account');
+        const last4Display = m.last_four ? `•••• ${m.last_four}` : '••••';
+        const feeBadge = isCard
+          ? '<span style="font-size:0.7rem;background:#FEF3C7;color:#92400E;padding:2px 6px;border-radius:4px;margin-left:8px;">Processing fee</span>'
+          : '<span style="font-size:0.7rem;background:#D1FAE5;color:#065F46;padding:2px 6px;border-radius:4px;margin-left:8px;">Free</span>';
+        const defaultBadge = m.is_default
+          ? '<span style="font-size:0.7rem;background:#0B1929;color:#F59E0B;padding:2px 8px;border-radius:4px;margin-left:8px;font-weight:600;">DEFAULT</span>'
+          : '';
+        const setDefaultBtn = !m.is_default
+          ? `<button onclick="setDefaultMethod('${m.id}')" style="font-size:0.78rem;color:#0369A1;background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline;">Set as Default</button>`
+          : '';
+        const removeBtn = `<button onclick="removePaymentMethod('${m.id}')" style="font-size:0.78rem;color:#DC2626;background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline;">Remove</button>`;
+
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);background:${m.is_default ? '#F0FDF4' : '#F8FAFC'};border:1px solid ${m.is_default ? '#BBF7D0' : '#E2E8F0'};border-radius:var(--radius-md);margin-bottom:var(--sp-3);">
+            <div style="display:flex;align-items:center;gap:var(--sp-4);">
+              <span style="font-size:1.5rem;">${icon}</span>
+              <div>
+                <div style="font-weight:600;color:var(--navy);font-size:0.9rem;">
+                  ${typeLabel} ${last4Display}${defaultBadge}${feeBadge}
+                </div>
+                <div style="font-size:0.8rem;color:var(--slate);margin-top:2px;">
+                  Added ${new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:var(--sp-4);align-items:center;">
+              ${setDefaultBtn}
+              ${removeBtn}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // Set a payment method as default
+    window.setDefaultMethod = async function(methodId) {
+      if (!contractorRecord || !sb) return;
+      try {
+        // Clear all defaults for this contractor
+        await sb
+          .from('contractor_payment_methods')
+          .update({ is_default: false })
+          .eq('contractor_id', contractorRecord.id);
+        // Set the selected one as default
+        await sb
+          .from('contractor_payment_methods')
+          .update({ is_default: true })
+          .eq('id', methodId);
+        // Also update legacy field on contractors table for backward compat
+        const method = savedPaymentMethods.find(m => m.id === methodId);
+        if (method) {
+          await sb
+            .from('contractors')
+            .update({
+              stripe_payment_method_id: method.stripe_payment_method_id,
+              stripe_payment_method_last4: method.last_four,
+              stripe_payment_method_brand: method.payment_type === 'card' ? method.brand : method.bank_name,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', contractorRecord.id);
         }
-      });
+        await loadPaymentMethods();
+      } catch (err) {
+        console.error('Failed to set default:', err);
+        alert('Error setting default payment method. Please try again.');
+      }
+    };
+
+    // Remove a payment method
+    window.removePaymentMethod = async function(methodId) {
+      if (!contractorRecord || !sb) return;
+      const method = savedPaymentMethods.find(m => m.id === methodId);
+      if (!method) return;
+
+      if (savedPaymentMethods.length === 1) {
+        if (!confirm('This is your only payment method. Removing it means your bids cannot be accepted until you add a new one. Continue?')) return;
+      } else if (method.is_default) {
+        if (!confirm('This is your default payment method. Removing it will make another method the default. Continue?')) return;
+      }
+
+      try {
+        // Delete from our table
+        await sb
+          .from('contractor_payment_methods')
+          .delete()
+          .eq('id', methodId);
+
+        // Detach from Stripe customer
+        if (stripe && method.stripe_payment_method_id) {
+          try {
+            // Detaching happens server-side — for now, just remove from our DB
+            // Stripe will handle the detach when we stop using the method
+          } catch (e) { console.warn('Stripe detach note:', e); }
+        }
+
+        // If we removed the default, promote the next one
+        const remaining = savedPaymentMethods.filter(m => m.id !== methodId);
+        if (method.is_default && remaining.length > 0) {
+          await sb
+            .from('contractor_payment_methods')
+            .update({ is_default: true })
+            .eq('id', remaining[0].id);
+          // Update legacy fields
+          await sb
+            .from('contractors')
+            .update({
+              stripe_payment_method_id: remaining[0].stripe_payment_method_id,
+              stripe_payment_method_last4: remaining[0].last_four,
+              stripe_payment_method_brand: remaining[0].payment_type === 'card' ? remaining[0].brand : remaining[0].bank_name,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', contractorRecord.id);
+        } else if (remaining.length === 0) {
+          // No methods left — clear legacy fields
+          await sb
+            .from('contractors')
+            .update({
+              stripe_payment_method_id: null,
+              stripe_payment_method_last4: null,
+              stripe_payment_method_brand: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', contractorRecord.id);
+        }
+
+        await loadPaymentMethods();
+        gtag('event', 'payment_method_removed', { contractor_id: contractorRecord.id, payment_type: method.payment_type });
+      } catch (err) {
+        console.error('Failed to remove payment method:', err);
+        alert('Error removing payment method. Please try again.');
+      }
+    };
+
+    // Initialize Stripe setup for a specific payment type
+    window.initializeStripeSetup = async function(paymentType) {
+      initializeStripe();
+      currentSetupType = paymentType || 'card';
+
+      // Hide all forms first
+      document.getElementById('pmCardForm').style.display = 'none';
+      document.getElementById('pmACHForm').style.display = 'none';
+      document.getElementById('pmAddButtons').style.display = 'none';
+
+      if (currentSetupType === 'card') {
+        // Show card form
+        document.getElementById('pmCardForm').style.display = 'block';
+        if (cardElement && !cardElement._parent) {
+          cardElement.mount('#card-element');
+        }
+        cardElement.addEventListener('change', (event) => {
+          const errorDiv = document.getElementById('card-errors');
+          if (event.error) {
+            errorDiv.textContent = event.error.message;
+            errorDiv.style.display = 'block';
+          } else {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+          }
+        });
+      } else {
+        // Show ACH form
+        document.getElementById('pmACHForm').style.display = 'block';
+      }
 
       // Create SetupIntent via Edge Function
-      const confirmBtn = document.getElementById('pmConfirmBtn');
+      const confirmBtn = currentSetupType === 'card'
+        ? document.getElementById('pmConfirmCardBtn')
+        : document.getElementById('pmConfirmACHBtn');
       confirmBtn.disabled = true;
+      const origText = confirmBtn.textContent;
       confirmBtn.textContent = 'Preparing...';
 
       try {
         const { data, error } = await sb.functions.invoke('create-setup-intent', {
-          body: { contractor_id: contractorRecord.id }
+          body: { contractor_id: contractorRecord.id, payment_type: currentSetupType }
         });
 
         if (error) throw new Error(error.message || 'Failed to create setup intent');
@@ -1413,16 +1613,15 @@
 
         currentClientSecret = data.client_secret;
 
-        // Store the customer_id locally if it was just created
         if (data.customer_id && !contractorRecord.stripe_customer_id) {
           contractorRecord.stripe_customer_id = data.customer_id;
         }
 
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Save Card';
+        confirmBtn.textContent = origText;
       } catch (err) {
         console.error('SetupIntent creation error:', err);
-        const errorDiv = document.getElementById('card-errors');
+        const errorDiv = document.getElementById(currentSetupType === 'card' ? 'card-errors' : 'ach-errors');
         errorDiv.textContent = 'Setup error: ' + err.message;
         errorDiv.style.display = 'block';
         confirmBtn.textContent = 'Error — Try Again';
@@ -1432,39 +1631,30 @@
 
     // Cancel payment setup
     window.cancelPaymentSetup = function() {
-      document.getElementById('pmSetupForm').style.display = 'none';
+      document.getElementById('pmCardForm').style.display = 'none';
+      document.getElementById('pmACHForm').style.display = 'none';
+      document.getElementById('pmAddButtons').style.display = 'flex';
       document.getElementById('card-errors').textContent = '';
       document.getElementById('card-errors').style.display = 'none';
+      document.getElementById('ach-errors').textContent = '';
+      document.getElementById('ach-errors').style.display = 'none';
       currentClientSecret = null;
-
-      if (contractorRecord && contractorRecord.stripe_payment_method_id) {
-        document.getElementById('pmStatusSaved').style.display = 'block';
-        document.getElementById('pmStatusNoPayment').style.display = 'none';
-      } else {
-        document.getElementById('pmStatusNoPayment').style.display = 'block';
-        document.getElementById('pmStatusSaved').style.display = 'none';
-      }
+      currentSetupType = null;
     };
 
-    // Confirm SetupIntent and save payment method
-    window.confirmPaymentMethod = async function() {
-      if (!contractorRecord || !sb) {
-        alert('Error: Not connected to database. Please refresh the page.');
-        return;
-      }
-
-      if (!currentClientSecret) {
+    // Confirm card SetupIntent
+    window.confirmCardSetup = async function() {
+      if (!contractorRecord || !sb || !currentClientSecret) {
         alert('Error: Payment setup not initialized. Please try again.');
         return;
       }
 
-      const button = document.getElementById('pmConfirmBtn');
+      const button = document.getElementById('pmConfirmCardBtn');
       const originalText = button.textContent;
       button.disabled = true;
       button.textContent = 'Processing...';
 
       try {
-        // Confirm the SetupIntent with card details from CardElement
         const { setupIntent, error: confirmError } = await stripe.confirmCardSetup(
           currentClientSecret,
           {
@@ -1477,107 +1667,196 @@
           }
         );
 
-        if (confirmError) {
-          throw new Error(confirmError.message);
-        }
-
+        if (confirmError) throw new Error(confirmError.message);
         if (!setupIntent || setupIntent.status !== 'succeeded') {
           throw new Error('Setup failed with status: ' + (setupIntent?.status || 'unknown'));
         }
 
-        // Extract payment method ID from the confirmed SetupIntent
         const paymentMethodId = setupIntent.payment_method;
         let last4 = '••••';
         let brand = 'CARD';
 
-        // Retrieve card details from the payment method
         try {
           const { paymentMethod } = await stripe.retrievePaymentMethod(paymentMethodId);
           if (paymentMethod && paymentMethod.card) {
             last4 = paymentMethod.card.last4;
             brand = paymentMethod.card.brand.toUpperCase();
           }
-        } catch (pmErr) {
-          console.warn('Could not retrieve payment method details:', pmErr);
+        } catch (pmErr) { console.warn('Could not retrieve PM details:', pmErr); }
+
+        // Determine if this should be default (first method = auto-default)
+        const isFirstMethod = savedPaymentMethods.length === 0;
+
+        // Save to contractor_payment_methods table
+        const { error: insertError } = await sb
+          .from('contractor_payment_methods')
+          .insert({
+            contractor_id: contractorRecord.id,
+            stripe_payment_method_id: paymentMethodId,
+            payment_type: 'card',
+            last_four: last4,
+            brand: brand,
+            is_default: isFirstMethod,
+          });
+
+        if (insertError) throw insertError;
+
+        // Also update legacy fields on contractors table (for backward compat)
+        if (isFirstMethod) {
+          await sb
+            .from('contractors')
+            .update({
+              stripe_payment_method_id: paymentMethodId,
+              stripe_payment_method_last4: last4,
+              stripe_payment_method_brand: brand,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', contractorRecord.id);
         }
 
-        // Save to contractor record in Supabase
-        const { error: updateError } = await sb
-          .from('contractors')
-          .update({
-            stripe_payment_method_id: paymentMethodId,
-            stripe_payment_method_last4: last4,
-            stripe_payment_method_brand: brand,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', contractorRecord.id);
-
-        if (updateError) throw updateError;
-
-        // Update local record
-        contractorRecord.stripe_payment_method_id = paymentMethodId;
-        contractorRecord.stripe_payment_method_last4 = last4;
-        contractorRecord.stripe_payment_method_brand = brand;
-
-        // Update UI
-        updatePaymentMethodUI();
-        document.getElementById('pmSetupForm').style.display = 'none';
-        document.getElementById('pmStatusSaved').style.display = 'block';
-        document.getElementById('pmStatusNoPayment').style.display = 'none';
-        currentClientSecret = null;
-
-        button.textContent = 'Card Saved!';
-        button.style.backgroundColor = '#10B981';
-        setTimeout(() => {
-          button.textContent = originalText;
-          button.style.backgroundColor = '';
-          button.disabled = false;
-        }, 2000);
+        // Refresh UI
+        cancelPaymentSetup();
+        await loadPaymentMethods();
 
         gtag('event', 'payment_method_saved', {
           contractor_id: contractorRecord.id,
+          payment_type: 'card',
           card_brand: brand,
-          method: 'setup_intent',
         });
 
       } catch (err) {
-        console.error('Payment method setup error:', err);
+        console.error('Card setup error:', err);
         const errorDiv = document.getElementById('card-errors');
         errorDiv.textContent = 'Error: ' + err.message;
         errorDiv.style.display = 'block';
-
         button.textContent = 'Error — Try Again';
         button.style.backgroundColor = '#EF4444';
         button.style.color = '#FFFFFF';
         button.disabled = false;
-
-        setTimeout(() => {
-          button.textContent = originalText;
-          button.style.backgroundColor = '';
-          button.style.color = '';
-        }, 3000);
+        setTimeout(() => { button.textContent = originalText; button.style.backgroundColor = ''; button.style.color = ''; }, 3000);
       }
     };
 
-    // Update payment method UI based on saved status
-    function updatePaymentMethodUI() {
-      if (contractorRecord && contractorRecord.stripe_payment_method_id) {
-        // Show saved status
-        document.getElementById('pmStatusNoPayment').style.display = 'none';
-        document.getElementById('pmStatusSaved').style.display = 'block';
-        document.getElementById('pmSetupForm').style.display = 'none';
-
-        // Display card info
-        const last4 = contractorRecord.stripe_payment_method_last4 || '••••';
-        const brand = contractorRecord.stripe_payment_method_brand || 'Card';
-        document.getElementById('pmCardDisplay').textContent = `•••• •••• •••• ${last4}`;
-        document.getElementById('pmCardBrand').textContent = `(${brand})`;
-      } else {
-        // Show no payment method status
-        document.getElementById('pmStatusNoPayment').style.display = 'block';
-        document.getElementById('pmStatusSaved').style.display = 'none';
-        document.getElementById('pmSetupForm').style.display = 'none';
+    // Confirm ACH (us_bank_account) SetupIntent
+    window.confirmACHSetup = async function() {
+      if (!contractorRecord || !sb || !currentClientSecret) {
+        alert('Error: Payment setup not initialized. Please try again.');
+        return;
       }
+
+      const button = document.getElementById('pmConfirmACHBtn');
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Connecting...';
+
+      try {
+        // Use Stripe's collectBankAccountForSetup for the Financial Connections flow
+        const { setupIntent, error: confirmError } = await stripe.collectBankAccountForSetup({
+          clientSecret: currentClientSecret,
+          params: {
+            payment_method_type: 'us_bank_account',
+            payment_method_data: {
+              billing_details: {
+                name: contractorRecord.company_name || contractorRecord.contact_name || 'Contractor',
+                email: contractorRecord.email || '',
+              },
+            },
+          },
+        });
+
+        if (confirmError) throw new Error(confirmError.message);
+
+        // If status is requires_confirmation, confirm it
+        if (setupIntent && setupIntent.status === 'requires_confirmation') {
+          const { setupIntent: confirmedIntent, error: confirmErr2 } = await stripe.confirmUsBankAccountSetup(currentClientSecret);
+          if (confirmErr2) throw new Error(confirmErr2.message);
+
+          if (confirmedIntent && confirmedIntent.status === 'succeeded') {
+            await saveACHMethod(confirmedIntent);
+          } else if (confirmedIntent && confirmedIntent.status === 'requires_action') {
+            // Microdeposit verification needed — inform user
+            const achErrors = document.getElementById('ach-errors');
+            achErrors.innerHTML = '<span style="color:#92400E;">Your bank requires verification via micro-deposits (2-3 business days). You\'ll receive two small deposits in your account. Once received, return here to verify.</span>';
+            achErrors.style.display = 'block';
+            button.textContent = originalText;
+            button.disabled = false;
+            return;
+          } else {
+            throw new Error('Bank account setup failed with status: ' + (confirmedIntent?.status || 'unknown'));
+          }
+        } else if (setupIntent && setupIntent.status === 'succeeded') {
+          await saveACHMethod(setupIntent);
+        } else {
+          throw new Error('Bank account connection failed. Status: ' + (setupIntent?.status || 'unknown'));
+        }
+
+      } catch (err) {
+        console.error('ACH setup error:', err);
+        const errorDiv = document.getElementById('ach-errors');
+        errorDiv.textContent = 'Error: ' + err.message;
+        errorDiv.style.display = 'block';
+        button.textContent = 'Error — Try Again';
+        button.style.backgroundColor = '#EF4444';
+        button.style.color = '#FFFFFF';
+        button.disabled = false;
+        setTimeout(() => { button.textContent = originalText; button.style.backgroundColor = '#166534'; button.style.color = ''; }, 3000);
+      }
+    };
+
+    // Helper: save ACH method after successful setup
+    async function saveACHMethod(setupIntent) {
+      const paymentMethodId = setupIntent.payment_method;
+      let last4 = '••••';
+      let bankName = 'Bank Account';
+
+      try {
+        const { paymentMethod } = await stripe.retrievePaymentMethod(paymentMethodId);
+        if (paymentMethod && paymentMethod.us_bank_account) {
+          last4 = paymentMethod.us_bank_account.last4;
+          bankName = paymentMethod.us_bank_account.bank_name || 'Bank Account';
+        }
+      } catch (pmErr) { console.warn('Could not retrieve ACH PM details:', pmErr); }
+
+      const isFirstMethod = savedPaymentMethods.length === 0;
+
+      const { error: insertError } = await sb
+        .from('contractor_payment_methods')
+        .insert({
+          contractor_id: contractorRecord.id,
+          stripe_payment_method_id: paymentMethodId,
+          payment_type: 'us_bank_account',
+          last_four: last4,
+          bank_name: bankName,
+          is_default: isFirstMethod,
+        });
+
+      if (insertError) throw insertError;
+
+      if (isFirstMethod) {
+        await sb
+          .from('contractors')
+          .update({
+            stripe_payment_method_id: paymentMethodId,
+            stripe_payment_method_last4: last4,
+            stripe_payment_method_brand: bankName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', contractorRecord.id);
+      }
+
+      cancelPaymentSetup();
+      await loadPaymentMethods();
+
+      gtag('event', 'payment_method_saved', {
+        contractor_id: contractorRecord.id,
+        payment_type: 'us_bank_account',
+        bank_name: bankName,
+      });
+    }
+
+    // Update payment method UI — called from page load
+    function updatePaymentMethodUI() {
+      loadPaymentMethods();
     }
 
     // ── Auto-Bid Toggle Logic ──

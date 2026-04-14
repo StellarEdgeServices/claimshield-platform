@@ -1,7 +1,12 @@
 /**
  * OtterQuote Edge Function: create-setup-intent
  * Creates a Stripe SetupIntent for securely saving a contractor's payment method.
+ * Supports both credit/debit card and ACH bank account (us_bank_account) flows.
  * If the contractor doesn't have a Stripe Customer yet, creates one first.
+ *
+ * Request body:
+ *   contractor_id  (required)  UUID of the contractor
+ *   payment_type   (optional)  'card' (default) or 'us_bank_account'
  *
  * Environment variables:
  *   SUPABASE_URL
@@ -30,7 +35,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { contractor_id } = await req.json();
+    const { contractor_id, payment_type } = await req.json();
 
     if (!contractor_id) {
       return new Response(
@@ -41,6 +46,12 @@ serve(async (req) => {
         }
       );
     }
+
+    // Validate payment_type
+    const validTypes = ["card", "us_bank_account"];
+    const selectedType = payment_type && validTypes.includes(payment_type)
+      ? payment_type
+      : "card";
 
     // Look up contractor record
     const { data: contractor, error: contractorError } = await supabase
@@ -133,16 +144,35 @@ serve(async (req) => {
     // ── Step 2: Create SetupIntent ──
     const setupFormData = new URLSearchParams();
     setupFormData.append("customer", customerId);
-    setupFormData.append("payment_method_types[]", "card");
+    setupFormData.append("payment_method_types[]", selectedType);
     setupFormData.append("metadata[contractor_id]", contractor_id);
     setupFormData.append("metadata[platform]", "otterquote");
+    setupFormData.append("metadata[payment_type]", selectedType);
     setupFormData.append("usage", "off_session");
+
+    // For ACH (us_bank_account): add mandate_data for recurring off-session charges
+    if (selectedType === "us_bank_account") {
+      setupFormData.append(
+        "mandate_data[customer_acceptance][type]",
+        "online"
+      );
+      setupFormData.append(
+        "mandate_data[customer_acceptance][online][ip_address]",
+        req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "0.0.0.0"
+      );
+      setupFormData.append(
+        "mandate_data[customer_acceptance][online][user_agent]",
+        req.headers.get("user-agent") || "OtterQuote/1.0"
+      );
+    }
 
     console.log(
       "Creating SetupIntent for customer:",
       customerId,
       "contractor:",
-      contractor_id
+      contractor_id,
+      "type:",
+      selectedType
     );
 
     const setupResponse = await fetch(`${STRIPE_API_BASE}/setup_intents`, {
@@ -163,13 +193,14 @@ serve(async (req) => {
 
     const setupData = await setupResponse.json();
 
-    console.log("SetupIntent created:", setupData.id, "Status:", setupData.status);
+    console.log("SetupIntent created:", setupData.id, "Status:", setupData.status, "Type:", selectedType);
 
     return new Response(
       JSON.stringify({
         client_secret: setupData.client_secret,
         setup_intent_id: setupData.id,
         customer_id: customerId,
+        payment_type: selectedType,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

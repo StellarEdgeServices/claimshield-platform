@@ -32,6 +32,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const PLATFORM_URL = "https://otterquote.com";
 const SETTINGS_URL = `${PLATFORM_URL}/contractor-settings.html`;
 const ADMIN_EMAIL  = "dustinstohler1@gmail.com";
+const STRIPE_API_BASE = "https://api.stripe.com/v1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -733,10 +734,153 @@ serve(async (req) => {
     // MODE: TRIGGER — Payment just failed
     // ─────────────────────────────────────────────────────
     if (body?.quote_id && body?.contractor_id) {
-      console.log("TRIGGER mode: Creating dunning record for quote", body.quote_id);
+      console.log("TRIGGER mode: Attempting all payment methods before dunning for quote", body.quote_id);
 
       const { quote_id, contractor_id, claim_id, homeowner_id, amount_cents, stripe_error } = body;
       const now = new Date();
+
+      // ── MULTI-METHOD RETRY: Try ALL payment methods before initiating dunning ──
+      // This ensures dunning only triggers when every method on file has failed.
+      const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (stripeSecretKey) {
+        const basicAuth = btoa(`${stripeSecretKey}:`);
+
+        // Get contractor's Stripe customer ID
+        const { data: cData } = await supabase
+          .from("contractors")
+          .select("stripe_customer_id, stripe_payment_method_id")
+          .eq("id", contractor_id)
+          .single();
+
+        if (cData?.stripe_customer_id) {
+          // Fetch all payment methods from the multi-method table
+          const { data: allMethods } = await supabase
+            .from("contractor_payment_methods")
+            .select("*")
+            .eq("contractor_id", contractor_id)
+            .order("is_default", { ascending: false })
+            .order("payment_type", { ascending: true });
+
+          interface RetryMethod {
+            stripe_pm_id: string;
+            payment_type: string;
+            cpm_id: string | null;
+          }
+
+          const retryMethods: RetryMethod[] = [];
+
+          if (allMethods && allMethods.length > 0) {
+            // Order: default first, then ACH, then cards
+            const defaultM = allMethods.find(m => m.is_default);
+            const rest = allMethods.filter(m => !m.is_default);
+            const ach = rest.filter(m => m.payment_type === "us_bank_account");
+            const cards = rest.filter(m => m.payment_type === "card");
+
+            if (defaultM) retryMethods.push({ stripe_pm_id: defaultM.stripe_payment_method_id, payment_type: defaultM.payment_type, cpm_id: defaultM.id });
+            for (const m of ach) if (!defaultM || m.id !== defaultM.id) retryMethods.push({ stripe_pm_id: m.stripe_payment_method_id, payment_type: m.payment_type, cpm_id: m.id });
+            for (const m of cards) if (!defaultM || m.id !== defaultM.id) retryMethods.push({ stripe_pm_id: m.stripe_payment_method_id, payment_type: m.payment_type, cpm_id: m.id });
+          } else if (cData.stripe_payment_method_id) {
+            retryMethods.push({ stripe_pm_id: cData.stripe_payment_method_id, payment_type: "card", cpm_id: null });
+          }
+
+          // Skip the method that already failed (passed in stripe_error context)
+          // and try remaining methods
+          const failedMethodDetails: string[] = [];
+
+          for (const method of retryMethods) {
+            // Calculate charge amount (ACH = exact, card = add processing fee)
+            let chargeAmount = amount_cents;
+            let cardFee = 0;
+            if (method.payment_type === "card") {
+              chargeAmount = Math.ceil((amount_cents + 30) / (1 - 0.029));
+              cardFee = chargeAmount - amount_cents;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append("amount", String(chargeAmount));
+            formData.append("currency", "usd");
+            formData.append("customer", cData.stripe_customer_id);
+            formData.append("payment_method", method.stripe_pm_id);
+            formData.append("off_session", "true");
+            formData.append("confirm", "true");
+            formData.append("description", `OtterQuote platform fee — quote ${quote_id.substring(0, 8)}`);
+            formData.append("metadata[claim_id]", claim_id || "");
+            formData.append("metadata[type]", "platform_fee");
+            formData.append("metadata[contractor_id]", contractor_id);
+            formData.append("metadata[payment_type]", method.payment_type);
+            formData.append("metadata[platform_fee_cents]", String(amount_cents));
+            if (method.payment_type === "us_bank_account") {
+              formData.append("payment_method_types[]", "us_bank_account");
+            } else {
+              formData.append("payment_method_types[]", "card");
+            }
+
+            try {
+              const resp = await fetch(`${STRIPE_API_BASE}/payment_intents`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Basic ${basicAuth}`,
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: formData.toString(),
+              });
+
+              const respData = await resp.json();
+
+              if (resp.ok && respData.status !== "requires_action" && respData.status !== "requires_payment_method") {
+                // SUCCESS — payment went through on a retry method
+                console.log(`Dunning AVOIDED: Payment succeeded on method ${method.stripe_pm_id} (${method.payment_type}). PI: ${respData.id}`);
+
+                // Update quote with payment info
+                const quoteUpdate: Record<string, any> = {
+                  payment_intent_id: respData.id,
+                  payment_status: "paid",
+                  payment_method_type: method.payment_type,
+                };
+                if (method.cpm_id) quoteUpdate.payment_method_id = method.cpm_id;
+                if (cardFee > 0) quoteUpdate.card_fee_cents = cardFee;
+
+                await supabase.from("quotes").update(quoteUpdate).eq("id", quote_id);
+
+                return new Response(
+                  JSON.stringify({
+                    success: true,
+                    dunning_avoided: true,
+                    payment_intent_id: respData.id,
+                    payment_method_type: method.payment_type,
+                    message: `Payment succeeded on alternate method (${method.payment_type}). Dunning not initiated.`,
+                  }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+
+              // This method also failed
+              const errMsg = respData?.error?.message || respData.status || "unknown";
+              failedMethodDetails.push(`${method.payment_type}(****${method.stripe_pm_id.slice(-4)}): ${errMsg}`);
+
+              // Cancel stuck intent
+              if (respData.id && (respData.status === "requires_action" || respData.status === "requires_payment_method")) {
+                try {
+                  await fetch(`${STRIPE_API_BASE}/payment_intents/${respData.id}/cancel`, {
+                    method: "POST",
+                    headers: { Authorization: `Basic ${basicAuth}`, "Content-Type": "application/x-www-form-urlencoded" },
+                  });
+                } catch (_) { /* non-fatal */ }
+              }
+
+            } catch (fetchErr) {
+              failedMethodDetails.push(`${method.payment_type}(****${method.stripe_pm_id.slice(-4)}): ${fetchErr}`);
+            }
+          }
+
+          // All methods failed — log which ones and proceed to dunning
+          if (failedMethodDetails.length > 0) {
+            console.log(`All ${retryMethods.length} payment methods failed. Proceeding to dunning. Details: ${failedMethodDetails.join("; ")}`);
+          }
+        }
+      }
+
+      // ── All payment methods exhausted (or no methods on file) — initiate dunning ──
 
       // Look up contractor (including timezone + address_state for derivation)
       const { data: contractor } = await supabase
@@ -996,9 +1140,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("process-dunning error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("process-dunning error:", msg);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

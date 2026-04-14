@@ -3,7 +3,15 @@
  * Creates a Stripe PaymentIntent for three use cases:
  *   - Hover measurement purchases (~$49)
  *   - Deductible escrow
- *   - Contractor platform fees
+ *   - Contractor platform fees (5% of job value)
+ *
+ * Multi-payment-method support (v2):
+ *   - For platform_fee charges, tries payment methods from contractor_payment_methods table
+ *   - Priority: default method first, then ACH methods, then card methods
+ *   - ACH charges: exact platform fee (no surcharge)
+ *   - Card charges: adds processing fee on top (2.9% + $0.30)
+ *   - Records which payment method was used on the quote record
+ *
  * Rate-limited via Supabase check_rate_limit() RPC.
  *
  * Environment variables:
@@ -23,6 +31,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+/**
+ * Calculate the total amount to charge when using a credit card,
+ * so that after Stripe takes its 2.9% + $0.30, we receive the full platform fee.
+ *
+ * Formula: charge_amount = (platform_fee + 0.30) / (1 - 0.029)
+ * All amounts in cents.
+ */
+function calculateCardChargeAmount(platformFeeCents: number): number {
+  const chargeAmount = Math.ceil((platformFeeCents + 30) / (1 - 0.029));
+  return chargeAmount;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -165,109 +185,281 @@ serve(async (req) => {
       );
     }
 
+    const basicAuth = btoa(`${stripeSecretKey}:`);
+
     // ========== HANDLE OFF-SESSION CHARGING (Contractor Platform Fees) ==========
     let paymentIntentData;
 
     if (metadata.type === "platform_fee" && off_session && contractor_id) {
-      // Look up contractor's saved payment method
+      // Look up contractor's Stripe customer ID
       const { data: contractorData, error: contractorError } = await supabase
         .from("contractors")
-        .select("stripe_payment_method_id, stripe_customer_id")
+        .select("stripe_customer_id, stripe_payment_method_id")
         .eq("id", contractor_id)
         .single();
 
       if (contractorError || !contractorData) {
         throw new Error(
-          `Failed to look up contractor payment method: ${
+          `Failed to look up contractor: ${
             contractorError?.message || "contractor not found"
           }`
         );
       }
 
-      if (
-        !contractorData.stripe_payment_method_id ||
-        !contractorData.stripe_customer_id
-      ) {
+      if (!contractorData.stripe_customer_id) {
         throw new Error(
-          "Contractor does not have a payment method on file. Charge cannot proceed."
+          "Contractor does not have a Stripe customer on file. Charge cannot proceed."
+        );
+      }
+
+      // Fetch all payment methods from the new table, ordered: default first, then ACH, then cards
+      const { data: paymentMethods, error: pmError } = await supabase
+        .from("contractor_payment_methods")
+        .select("*")
+        .eq("contractor_id", contractor_id)
+        .order("is_default", { ascending: false })
+        .order("payment_type", { ascending: true }); // 'card' before 'us_bank_account' alphabetically — we re-sort below
+
+      if (pmError) {
+        console.error("Error fetching payment methods:", pmError);
+      }
+
+      // Build the ordered list of methods to try:
+      // 1. Default method first
+      // 2. ACH methods (free for contractor)
+      // 3. Card methods (processing fee applies)
+      // Fallback: legacy stripe_payment_method_id if no methods in new table
+      interface PaymentMethodAttempt {
+        stripe_payment_method_id: string;
+        payment_type: string;
+        id: string | null; // contractor_payment_methods.id (null for legacy fallback)
+      }
+
+      const methodsToTry: PaymentMethodAttempt[] = [];
+
+      if (paymentMethods && paymentMethods.length > 0) {
+        // Default first
+        const defaultMethod = paymentMethods.find(m => m.is_default);
+        const nonDefault = paymentMethods.filter(m => !m.is_default);
+
+        // Sort non-default: ACH first (cheaper), then cards
+        const achMethods = nonDefault.filter(m => m.payment_type === "us_bank_account");
+        const cardMethods = nonDefault.filter(m => m.payment_type === "card");
+
+        if (defaultMethod) {
+          methodsToTry.push({
+            stripe_payment_method_id: defaultMethod.stripe_payment_method_id,
+            payment_type: defaultMethod.payment_type,
+            id: defaultMethod.id,
+          });
+        }
+
+        // Add remaining ACH methods
+        for (const m of achMethods) {
+          if (!defaultMethod || m.id !== defaultMethod.id) {
+            methodsToTry.push({
+              stripe_payment_method_id: m.stripe_payment_method_id,
+              payment_type: m.payment_type,
+              id: m.id,
+            });
+          }
+        }
+
+        // Add remaining card methods
+        for (const m of cardMethods) {
+          if (!defaultMethod || m.id !== defaultMethod.id) {
+            methodsToTry.push({
+              stripe_payment_method_id: m.stripe_payment_method_id,
+              payment_type: m.payment_type,
+              id: m.id,
+            });
+          }
+        }
+      } else if (contractorData.stripe_payment_method_id) {
+        // Legacy fallback: single payment method on contractors table
+        methodsToTry.push({
+          stripe_payment_method_id: contractorData.stripe_payment_method_id,
+          payment_type: "card", // legacy was always card
+          id: null,
+        });
+      }
+
+      if (methodsToTry.length === 0) {
+        throw new Error(
+          "Contractor does not have any payment methods on file. Charge cannot proceed."
         );
       }
 
       console.log(
         "Creating off-session PaymentIntent for contractor",
         contractor_id,
-        "amount:",
+        "platform_fee:",
         amount,
-        currency
+        currency,
+        "methods_to_try:",
+        methodsToTry.length
       );
 
-      // Build URL-encoded form data for off-session charge
-      const offSessionFormData = new URLSearchParams();
-      offSessionFormData.append("amount", String(amount));
-      offSessionFormData.append("currency", currency);
-      offSessionFormData.append("customer", contractorData.stripe_customer_id);
-      offSessionFormData.append(
-        "payment_method",
-        contractorData.stripe_payment_method_id
-      );
-      offSessionFormData.append("off_session", "true");
-      offSessionFormData.append("confirm", "true"); // Automatically confirm the payment
-      offSessionFormData.append("description", description || "");
-      offSessionFormData.append("metadata[claim_id]", metadata.claim_id);
-      offSessionFormData.append("metadata[type]", metadata.type);
-      offSessionFormData.append("metadata[contractor_id]", contractor_id);
+      // Try each payment method in order until one succeeds
+      let lastError = "";
+      let usedMethod: PaymentMethodAttempt | null = null;
+      let chargedAmount = amount; // the actual amount charged (may include card fee)
+      let cardFeeCents = 0;
 
-      const basicAuth = btoa(`${stripeSecretKey}:`);
+      for (const method of methodsToTry) {
+        // Calculate charge amount based on payment type
+        let thisChargeAmount = amount;
+        let thisCardFee = 0;
 
-      const offSessionResponse = await fetch(
-        `${STRIPE_API_BASE}/payment_intents`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${basicAuth}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: offSessionFormData.toString(),
+        if (method.payment_type === "card") {
+          // Card: add processing fee on top so we net the full platform fee
+          thisChargeAmount = calculateCardChargeAmount(amount);
+          thisCardFee = thisChargeAmount - amount;
+          console.log(
+            `Card method ${method.stripe_payment_method_id}: platform_fee=${amount}, card_fee=${thisCardFee}, total_charge=${thisChargeAmount}`
+          );
+        } else {
+          // ACH: charge exact platform fee (no surcharge)
+          console.log(
+            `ACH method ${method.stripe_payment_method_id}: platform_fee=${amount}, no surcharge`
+          );
         }
-      );
 
-      if (!offSessionResponse.ok) {
-        const errorData = await offSessionResponse.text();
-        console.error(
-          "Stripe off-session PaymentIntent failed:",
-          offSessionResponse.status,
-          errorData
-        );
+        const offSessionFormData = new URLSearchParams();
+        offSessionFormData.append("amount", String(thisChargeAmount));
+        offSessionFormData.append("currency", currency);
+        offSessionFormData.append("customer", contractorData.stripe_customer_id);
+        offSessionFormData.append("payment_method", method.stripe_payment_method_id);
+        offSessionFormData.append("off_session", "true");
+        offSessionFormData.append("confirm", "true");
+        offSessionFormData.append("description", description || "");
+        offSessionFormData.append("metadata[claim_id]", metadata.claim_id);
+        offSessionFormData.append("metadata[type]", metadata.type);
+        offSessionFormData.append("metadata[contractor_id]", contractor_id);
+        offSessionFormData.append("metadata[payment_type]", method.payment_type);
+        offSessionFormData.append("metadata[platform_fee_cents]", String(amount));
+        if (thisCardFee > 0) {
+          offSessionFormData.append("metadata[card_fee_cents]", String(thisCardFee));
+        }
+
+        // For ACH: specify payment method type explicitly
+        if (method.payment_type === "us_bank_account") {
+          offSessionFormData.append("payment_method_types[]", "us_bank_account");
+        } else {
+          offSessionFormData.append("payment_method_types[]", "card");
+        }
+
+        try {
+          const offSessionResponse = await fetch(
+            `${STRIPE_API_BASE}/payment_intents`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${basicAuth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: offSessionFormData.toString(),
+            }
+          );
+
+          const responseData = await offSessionResponse.json();
+
+          if (!offSessionResponse.ok) {
+            lastError = responseData?.error?.message || `HTTP ${offSessionResponse.status}`;
+            console.warn(
+              `Payment method ${method.stripe_payment_method_id} (${method.payment_type}) failed:`,
+              lastError
+            );
+            continue; // Try next method
+          }
+
+          // Check for statuses that indicate the payment didn't go through
+          if (responseData.status === "requires_action" || responseData.status === "requires_payment_method") {
+            lastError = `Payment ${responseData.status} for method ${method.stripe_payment_method_id}`;
+            console.warn(lastError);
+
+            // Cancel this failed intent so it doesn't linger
+            try {
+              await fetch(`${STRIPE_API_BASE}/payment_intents/${responseData.id}/cancel`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Basic ${basicAuth}`,
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              });
+            } catch (cancelErr) {
+              console.warn("Failed to cancel stuck PaymentIntent:", cancelErr);
+            }
+
+            continue; // Try next method
+          }
+
+          // Success!
+          paymentIntentData = responseData;
+          usedMethod = method;
+          chargedAmount = thisChargeAmount;
+          cardFeeCents = thisCardFee;
+          console.log(
+            `Payment succeeded with method ${method.stripe_payment_method_id} (${method.payment_type}). Status:`,
+            responseData.status
+          );
+          break;
+
+        } catch (fetchErr) {
+          lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+          console.warn(
+            `Payment attempt error for method ${method.stripe_payment_method_id}:`,
+            lastError
+          );
+          continue;
+        }
+      }
+
+      // If no method succeeded, throw with details
+      if (!paymentIntentData) {
+        const failedMethodsSummary = methodsToTry.map(m =>
+          `${m.payment_type} (****${m.stripe_payment_method_id.slice(-4)})`
+        ).join(", ");
         throw new Error(
-          `Stripe off-session charge failed (HTTP ${offSessionResponse.status}): ${errorData}`
+          `All ${methodsToTry.length} payment methods failed. Tried: ${failedMethodsSummary}. Last error: ${lastError}`
         );
       }
 
-      paymentIntentData = await offSessionResponse.json();
+      // Record which payment method was used on the quote
+      if (metadata.quote_id || metadata.claim_id) {
+        const quoteUpdate: Record<string, any> = {
+          payment_method_type: usedMethod!.payment_type,
+        };
+        if (usedMethod!.id) {
+          quoteUpdate.payment_method_id = usedMethod!.id;
+        }
+        if (cardFeeCents > 0) {
+          quoteUpdate.card_fee_cents = cardFeeCents;
+        }
 
-      // Check payment intent status
-      if (paymentIntentData.status === "requires_action") {
-        throw new Error(
-          "Payment requires additional authentication. Please update your payment method."
-        );
-      }
-
-      if (paymentIntentData.status === "requires_payment_method") {
-        throw new Error(
-          "Payment method failed. Please update your payment method and try again."
-        );
+        // Update the quote if we have a quote_id in metadata
+        if (metadata.quote_id) {
+          await supabase
+            .from("quotes")
+            .update(quoteUpdate)
+            .eq("id", metadata.quote_id);
+        }
       }
 
       console.log(
         "Off-session PaymentIntent status:",
         paymentIntentData.status,
         "ID:",
-        paymentIntentData.id
+        paymentIntentData.id,
+        "Method type:",
+        usedMethod!.payment_type,
+        "Charged:",
+        chargedAmount,
+        "Card fee:",
+        cardFeeCents
       );
     } else {
       // ========== CREATE PAYMENT INTENT (Standard flow for homeowner/measurement fees) ==========
-      const basicAuth = btoa(`${stripeSecretKey}:`);
-
       // Build URL-encoded form data
       const formData = new URLSearchParams();
       formData.append("amount", String(amount));
@@ -313,18 +505,6 @@ serve(async (req) => {
 
       paymentIntentData = await paymentIntentResponse.json();
     }
-    /*
-     * paymentIntentData shape:
-     * {
-     *   id: "pi_xxx",
-     *   client_secret: "pi_xxx_secret_xxx",
-     *   amount: 4900,
-     *   currency: "usd",
-     *   status: "requires_payment_method",
-     *   metadata: { claim_id: "...", type: "..." },
-     *   ...
-     * }
-     */
 
     console.log(
       "Stripe PaymentIntent created/confirmed. ID:",
