@@ -12,10 +12,15 @@ window.Auth = {
     return session;
   },
 
-  /** Get current user */
+  /** Get current user — uses server-validated call to prevent stale session caching */
   async getUser() {
-    const session = await this.getSession();
-    return session?.user || null;
+    if (!sb) return null;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      return user || null;
+    } catch (e) {
+      return null;
+    }
   },
 
   /**
@@ -291,6 +296,16 @@ window.Auth = {
       try {
         const data = JSON.parse(contractorSignupData);
 
+        // GUARD: only process if the stored email matches the current authenticated user.
+        // Prevents stale cs_contractor_signup data from a previous contractor session
+        // from being applied to a homeowner who logs in afterward.
+        if (data.email && user.email && data.email.toLowerCase() !== user.email.toLowerCase()) {
+          console.warn('[Auth] cs_contractor_signup email mismatch — clearing stale data. stored:', data.email, 'current:', user.email);
+          localStorage.removeItem('cs_contractor_signup');
+          sessionStorage.removeItem('cs_contractor_signup');
+          // Fall through to homeowner routing
+        } else {
+
         // Create or update profile for contractor
         await this.updateProfile({
           full_name: data.contact_name,
@@ -417,8 +432,9 @@ Log in to the admin panel to review and approve this contractor.`;
           }
         }
 
-        localStorage.removeItem('cs_contractor_signup');
-        sessionStorage.removeItem('cs_contractor_signup');
+          localStorage.removeItem('cs_contractor_signup');
+          sessionStorage.removeItem('cs_contractor_signup');
+        } // end email-match guard else block
       } catch (err) {
         console.error('Error creating contractor profile:', err);
       }

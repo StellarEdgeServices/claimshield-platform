@@ -949,9 +949,28 @@
           // magic link is sent. When the contractor clicks the link and lands here, we need
           // to run handleAuthCallback to create the profile + contractor record in the DB,
           // then reload the page with a live contractor record.
-          if (currentUser && localStorage.getItem('cs_contractor_signup')) {
-            await Auth.handleAuthCallback();
-            return; // handleAuthCallback calls redirectToDashboard(), which reloads this page
+          const rawSignupData = localStorage.getItem('cs_contractor_signup') || sessionStorage.getItem('cs_contractor_signup');
+          if (currentUser && rawSignupData) {
+            // Guard: only process signup data if it belongs to the current user.
+            // Prevents stale contractor signup localStorage from corrupting a homeowner session.
+            try {
+              const signupParsed = JSON.parse(rawSignupData);
+              const storedEmail = (signupParsed.email || '').toLowerCase();
+              const currentEmail = (currentUser.email || '').toLowerCase();
+              if (!storedEmail || storedEmail === currentEmail) {
+                await Auth.handleAuthCallback();
+                return; // handleAuthCallback calls redirectToDashboard(), which reloads this page
+              } else {
+                // Email mismatch — clear stale data and continue as normal contractor
+                console.warn('[Dashboard] cs_contractor_signup email mismatch, clearing. stored:', storedEmail, 'current:', currentEmail);
+                localStorage.removeItem('cs_contractor_signup');
+                sessionStorage.removeItem('cs_contractor_signup');
+              }
+            } catch (e) {
+              // Malformed signup data — clear it
+              localStorage.removeItem('cs_contractor_signup');
+              sessionStorage.removeItem('cs_contractor_signup');
+            }
           }
 
           // Load contractor profile
