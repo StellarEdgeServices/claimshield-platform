@@ -944,6 +944,16 @@
             return;
           }
 
+          // Handle fresh contractor signup — process stored signup data from localStorage.
+          // contractor-join.html saves form data under 'cs_contractor_signup' before the
+          // magic link is sent. When the contractor clicks the link and lands here, we need
+          // to run handleAuthCallback to create the profile + contractor record in the DB,
+          // then reload the page with a live contractor record.
+          if (currentUser && localStorage.getItem('cs_contractor_signup')) {
+            await Auth.handleAuthCallback();
+            return; // handleAuthCallback calls redirectToDashboard(), which reloads this page
+          }
+
           // Load contractor profile
           if (currentUser && !CONFIG.DEMO_MODE && sb) {
             try {
