@@ -23,9 +23,12 @@ const Nav = {
     const isContractor = this._isContractorPage();
 
     const links = isContractor ? [
-      { href: '/contractor-dashboard.html',      label: 'Home',         id: 'home' },
-      { href: '/contractor-how-it-works.html',   label: 'How It Works', id: 'how-it-works' },
-      { href: '/contractor-faq.html',            label: 'FAQ',          id: 'faq' },
+      { href: '/contractor-dashboard.html',      label: 'Home',          id: 'home' },
+      { href: '/contractor-opportunities.html',  label: 'Opportunities', id: 'opportunities' },
+      { href: '/contractor-profile.html',        label: 'Profile',       id: 'profile' },
+      { href: '/contractor-settings.html',       label: 'Settings',      id: 'settings' },
+      { href: '/contractor-how-it-works.html',   label: 'How It Works',  id: 'how-it-works' },
+      { href: '/contractor-faq.html',            label: 'FAQ',           id: 'faq' },
     ] : [
       { href: '/index.html',        label: 'Home',         id: 'home' },
       { href: '/how-it-works.html',  label: 'How It Works', id: 'how-it-works' },
@@ -43,9 +46,15 @@ const Nav = {
             <a href="${l.href}" class="nav-link ${active === l.id ? 'active' : ''}">${l.label}</a>
           `).join('')}
           ${showAuth ? '<div class="nav-mobile-auth" id="nav-mobile-auth-slot"></div>' : ''}
+          ${isContractor && !showAuth ? `
+            <a href="#" class="nav-link nav-mobile-cta-secondary" onclick="Auth.signOut(); return false;">Log Out</a>
+          ` : ''}
         </div>
         <div class="nav-actions" id="nav-actions">
           ${showAuth ? '<div id="nav-auth-slot"></div>' : ''}
+          ${isContractor && !showAuth ? `
+            <button class="btn btn-sm btn-ghost" onclick="Auth.signOut()">Log Out</button>
+          ` : ''}
         </div>
         <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
           <span></span><span></span><span></span>
@@ -82,9 +91,12 @@ const Nav = {
     if (isContractorByUrl === isContractorByRole) return; // nothing to fix
 
     const links = isContractorByRole ? [
-      { href: '/contractor-dashboard.html',    label: 'Home' },
-      { href: '/contractor-how-it-works.html', label: 'How It Works' },
-      { href: '/contractor-faq.html',          label: 'FAQ' },
+      { href: '/contractor-dashboard.html',     label: 'Home' },
+      { href: '/contractor-opportunities.html', label: 'Opportunities' },
+      { href: '/contractor-profile.html',       label: 'Profile' },
+      { href: '/contractor-settings.html',      label: 'Settings' },
+      { href: '/contractor-how-it-works.html',  label: 'How It Works' },
+      { href: '/contractor-faq.html',           label: 'FAQ' },
     ] : [
       { href: '/index.html',       label: 'Home' },
       { href: '/how-it-works.html', label: 'How It Works' },
@@ -293,7 +305,7 @@ const Nav = {
         document.getElementById('support-form-wrap').style.display = 'none';
         document.getElementById('support-success').style.display = 'block';
       } catch {
-        errEl.textContent = 'Something went wrong. Please email support@otterquote.com directly.';
+        errEl.textContent = 'Something went wrong. Please email info@otterquote.com or call (844) 875-3412.';
         errEl.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Send Message';
