@@ -1147,9 +1147,10 @@
             }
           }
 
-          // Handle pending approval message from URL
+          // Show pending approval banner if contractor status is not active OR URL param says so
           const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('msg') === 'pending_approval') {
+          if (urlParams.get('msg') === 'pending_approval' ||
+              (currentContractor && currentContractor.status && currentContractor.status !== 'active')) {
             document.getElementById('pendingApprovalBanner').classList.add('show');
           }
 

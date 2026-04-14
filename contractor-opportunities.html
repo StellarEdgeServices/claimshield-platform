@@ -238,7 +238,7 @@
 
               // Check approval status — pending contractors cannot view opportunities
               if (currentContractor && currentContractor.status !== 'active') {
-                window.location.href = '/contractor-dashboard.html';
+                window.location.href = '/contractor-dashboard.html?msg=pending_approval';
                 return;
               }
             } catch (err) {
