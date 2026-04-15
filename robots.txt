@@ -15,8 +15,10 @@ Disallow: /partner-dashboard.html
 Disallow: /refer-a-friend.html
 Disallow: /ref.html
 Disallow: /status.html
-Disallow: /admin.html
+Disallow: /admin
 Disallow: /quotes.html
 Disallow: /contractor-leads.html
+Disallow: /contractor-onboarding.html
+Disallow: /landing.html
 
 Sitemap: https://otterquote.com/sitemap.xml

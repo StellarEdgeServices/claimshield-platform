@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://otterquote.com/</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-04-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -24,12 +24,7 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  <url>
-    <loc>https://otterquote.com/landing.html</loc>
-    <lastmod>2026-03-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
+
   <url>
     <loc>https://otterquote.com/help-estimate.html</loc>
     <lastmod>2026-03-24</lastmod>
@@ -116,13 +111,13 @@
   </url>
   <url>
     <loc>https://otterquote.com/blog/what-to-do-after-storm-damages-roof.html</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-04-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://otterquote.com/blog/how-to-negotiate-better-roof-repair-insurance-claim.html</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-04-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
