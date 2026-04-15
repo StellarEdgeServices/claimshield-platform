@@ -703,7 +703,7 @@ async function handleNewOpportunity(
   supabaseUrl: string,
   supabaseKey: string
 ): Promise<Response> {
-  const { claim_id, claim_zip, claim_city, claim_state, trade_types, job_type } = body;
+  const { claim_id, claim_zip, claim_city, claim_state, claim_county, trade_types, job_type } = body;
 
   if (!claim_id || !claim_zip || !claim_city || !claim_state) {
     return new Response(
@@ -737,7 +737,7 @@ async function handleNewOpportunity(
   // Find matching contractors (capped at 6 per D-030)
   const { data: contractors, error: contractorsError } = await supabase
     .from("contractors")
-    .select("id, user_id, email, phone, contact_name, notification_emails, notification_phones, notification_preferences, trades")
+    .select("id, user_id, email, phone, contact_name, notification_emails, notification_phones, notification_preferences, trades, service_counties")
     .eq("status", "active")
     .limit(6);
 
@@ -766,6 +766,31 @@ async function handleNewOpportunity(
       if (!c.trades || c.trades.length === 0) return true;
       return c.trades.some((t: string) => requestedTrades.includes(t.toLowerCase()));
     });
+  }
+
+  // Filter by service_counties — only when claim_county is provided in the payload.
+  // Conservative fallback: if claim_county is absent, skip this filter (notify all matching contractors).
+  // Handles both storage formats: "IN:Hamilton" (new) and "Hamilton" (legacy).
+  if (claim_county && claim_state) {
+    const countyKeyFull = `${claim_state.toUpperCase()}:${claim_county}`.toUpperCase(); // e.g. "IN:HAMILTON"
+    const countyKeyShort = claim_county.toUpperCase(); // e.g. "HAMILTON"
+    matchedContractors = matchedContractors.filter((c: any) => {
+      // No service area configured → conservative fallback: include (do not penalize
+      // contractors who haven't set coverage yet — avoids silently dropping them).
+      if (!c.service_counties || c.service_counties.length === 0) return true;
+      return c.service_counties.some(
+        (sc: string) => {
+          const scUp = (sc || "").trim().toUpperCase();
+          return scUp === countyKeyFull || scUp === countyKeyShort;
+        }
+      );
+    });
+    console.log(
+      `notify-contractors: county filter applied (${countyKeyFull}), ` +
+      `${matchedContractors.length} contractor(s) remain after filter`
+    );
+  } else {
+    console.log("notify-contractors: claim_county not provided — county filter skipped (conservative fallback)");
   }
 
   const notifiedContractors = [];
