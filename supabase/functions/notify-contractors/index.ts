@@ -37,6 +37,40 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Determine whether a notification should be sent to a contractor based on their
+ * saved notification_preferences JSONB.
+ *
+ * Key mapping — MUST match the keys written by contractor-settings.html:
+ *   new_opportunity      → notification_preferences.new_opportunity
+ *   contract_signed      → notification_preferences.contract_signed
+ *   bid_update_confirmed → notification_preferences.bid_update_confirmed
+ *   auto_bid_selected    → notification_preferences.auto_bid_placed
+ *   agreement_requested  → notification_preferences.agreement_requested
+ *
+ * Defaults to TRUE (send) when the preference key is absent, null, or undefined.
+ * Only suppresses when the key is explicitly set to false.
+ */
+function shouldNotify(
+  contractor: Record<string, any>,
+  notificationType: string
+): boolean {
+  const prefs: Record<string, any> = contractor.notification_preferences || {};
+
+  // Map event names → JSONB keys saved by contractor-settings.html.
+  // auto_bid_selected uses the "auto_bid_placed" key (the label used in settings).
+  const keyMap: Record<string, string> = {
+    new_opportunity: "new_opportunity",
+    contract_signed: "contract_signed",
+    bid_update_confirmed: "bid_update_confirmed",
+    auto_bid_selected: "auto_bid_placed",
+    agreement_requested: "agreement_requested",
+  };
+
+  const prefKey = keyMap[notificationType] ?? notificationType;
+  return prefs[prefKey] !== false;
+}
+
 function normalizePhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`;
@@ -174,8 +208,7 @@ async function handleContractSigned(
   }
 
   // Respect notification preferences
-  const prefs = contractor.notification_preferences || {};
-  if (prefs.contract_signed === false) {
+  if (!shouldNotify(contractor, "contract_signed")) {
     console.log("Contractor", contractor.id, "opted out of contract_signed notifications");
     return new Response(
       JSON.stringify({ notified: false, reason: "opt_out" }),
@@ -312,8 +345,7 @@ async function handleBidUpdateConfirmed(
   }
 
   // Respect notification preferences
-  const prefs = contractor.notification_preferences || {};
-  if (prefs.bid_updates === false) {
+  if (!shouldNotify(contractor, "bid_update_confirmed")) {
     return new Response(
       JSON.stringify({ notified: false, reason: "opt_out" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -460,8 +492,8 @@ async function handleNewOpportunity(
     let emailSent = false;
     let smsSent = false;
 
-    const prefs = contractor.notification_preferences || {};
-    if (prefs.new_opportunity === false) {
+    // Respect notification preferences
+    if (!shouldNotify(contractor, "new_opportunity")) {
       notifiedContractors.push({ id: contractor.id, email_sent: false, sms_sent: false, skipped: true });
       continue;
     }
@@ -560,7 +592,7 @@ support@otterquote.com | (844) 875-3412`;
 // HANDLER: agreement_requested (D-134)
 // Called from bids.html when a homeowner clicks "Request Agreement" on an
 // unsigned auto-bid. Sends email + SMS + dashboard notification to contractor:
-// "A homeowner is interested in your bid for [address]. Sign now to be selected."
+// "A homeowner is interested — sign your agreement now to be selected."
 // =============================================================================
 async function handleAgreementRequested(
   body: Record<string, any>,
@@ -610,8 +642,7 @@ async function handleAgreementRequested(
   }
 
   // Respect notification preferences
-  const prefs = contractor.notification_preferences || {};
-  if (prefs.agreement_requested === false) {
+  if (!shouldNotify(contractor, "agreement_requested")) {
     return new Response(
       JSON.stringify({ notified: false, reason: "opt_out" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
