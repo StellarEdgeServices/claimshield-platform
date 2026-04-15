@@ -4,6 +4,11 @@
  * Role-based routing: homeowner vs contractor
  */
 
+/** Escape user-supplied strings before interpolating into HTML email templates. */
+function escapeHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 window.Auth = {
   /** Get current session */
   async getSession() {
@@ -412,7 +417,7 @@ https://otterquote.com`;
         <tr>
           <td style="padding:32px 32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
             <p style="margin:0 0 6px;color:#64748B;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Application Received</p>
-            <h2 style="margin:0 0 20px;color:#0F172A;font-size:22px;font-weight:700;line-height:1.3;">Welcome to OtterQuote, ${greeting}!</h2>
+            <h2 style="margin:0 0 20px;color:#0F172A;font-size:22px;font-weight:700;line-height:1.3;">Welcome to OtterQuote, ${escapeHtml(greeting)}!</h2>
             <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">We received your application to the OtterQuote contractor network. Here&rsquo;s what happens next:</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8FAFC;border-radius:8px;margin-bottom:24px;">
               <tr><td style="padding:16px 20px;border-bottom:1px solid #E2E8F0;">
