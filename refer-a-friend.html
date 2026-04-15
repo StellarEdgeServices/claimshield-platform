@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-  <title>Refer a Friend — Earn $250 — OtterQuote</title>
-  <meta name="description" content="Share your unique referral link and earn $250 for every friend who completes a job over $10K through OtterQuote.">
+  <title>Refer a Friend — Earn $200 — OtterQuote</title>
+  <meta name="description" content="Share your unique referral link and earn $200 for every friend who completes a job over $10K through OtterQuote.">
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
   <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
@@ -548,8 +548,8 @@
 
       <!-- Hero Section -->
       <section class="hero-section">
-        <h1>Love Your Project Results? Share the Love — and Earn $250</h1>
-        <p class="subtitle">For every friend you refer who completes a project over $10,000 through OtterQuote, you earn $250. Share your unique link and we'll handle the rest.</p>
+        <h1>Love Your Project Results? Share the Love — and Earn $200</h1>
+        <p class="subtitle">For every friend you refer who completes a project over $10,000 through OtterQuote, you earn $200. Share your unique link and we'll handle the rest.</p>
       </section>
 
       <!-- Your Referral Link -->
@@ -761,8 +761,8 @@
           </div>
           <div class="how-step">
             <div class="how-step-number">3</div>
-            <h4>You Earn $250</h4>
-            <p>When their job completes (over $10K), you earn $250 in commission.</p>
+            <h4>You Earn $200</h4>
+            <p>When their job completes (over $10K), you earn $200 in commission.</p>
           </div>
         </div>
       </section>
@@ -1143,14 +1143,21 @@ Best regards`;
 
     function populateReferralsTable(referrals) {
       const tbody = document.getElementById('referrals-tbody');
-      tbody.innerHTML = referrals.map(ref => `
+      tbody.innerHTML = referrals.map(ref => {
+        // Use actual per-row commission if present (reflects current $200
+        // structure per D-139). Fall back to $200 for older rows with no
+        // commission_amount persisted.
+        const amount = Number(ref.commission_amount) || 200;
+        const amountStr = `$${amount}`;
+        return `
         <tr>
           <td>${ref.referred_name || 'N/A'}</td>
           <td>${new Date(ref.created_at).toLocaleDateString()}</td>
           <td><span class="status-badge status-${(ref.status || 'clicked').toLowerCase()}">${formatStatus(ref.status)}</span></td>
-          <td>${ref.status === 'paid' ? '$250' : (ref.status === 'completed' ? 'Pending' : '—')}</td>
+          <td>${ref.status === 'paid' ? amountStr : (ref.status === 'completed' ? 'Pending' : '—')}</td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function calculateSummary(referrals) {
@@ -1158,8 +1165,9 @@ Best regards`;
       let pending = 0;
 
       referrals.forEach(ref => {
-        if (ref.status === 'paid') earned += 250;
-        if (ref.status === 'completed') pending += 250;
+        const amount = Number(ref.commission_amount) || 200;
+        if (ref.status === 'paid') earned += amount;
+        if (ref.status === 'completed') pending += amount;
       });
 
       document.getElementById('total-earned').textContent = `$${earned}`;
