@@ -836,11 +836,22 @@
                   return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">Sign Contract →</a>`;
                 }
                 if (cs === 'awarded') return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
-                // Show signing status badge on each bid card
-                const signingBadge = bid.contractor_signed_at
-                  ? '<span style="color:#16A34A;font-size:0.8rem;font-weight:600;margin-right:8px;">✓ Contract-Ready</span>'
-                  : (bid.is_auto_bid ? '<span style="color:#6B7280;font-size:0.8rem;margin-right:8px;">Auto-Bid</span>' : '');
-                return `${signingBadge}<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
+                // D-134 / IC 24-5-11: Homeowner may only select contractors with a signed agreement
+                if (bid.contractor_signed_at) {
+                  return `<span style="color:#16A34A;font-size:0.8rem;font-weight:600;margin-right:8px;">✓ Contract-Ready</span><button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
+                } else {
+                  // Unsigned bid — disable Select, offer Request Agreement for auto-bids
+                  const requestBtn = bid.is_auto_bid
+                    ? `<button class="btn btn-sm" style="background:none;border:1.5px solid #F59E0B;color:#F59E0B;font-family:var(--font-body);font-size:0.75rem;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;" onclick="requestAgreement('${bid.id}')">Request Agreement</button>`
+                    : '';
+                  return `<div style="width:100%;">
+                    <div style="font-size:0.78rem;color:#9CA3AF;margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span>⏳</span><span>Awaiting contractor's signed agreement</span></div>
+                    <div style="display:flex;gap:var(--sp-2);">
+                      <button class="btn btn-sm btn-ghost" disabled style="opacity:0.3;cursor:not-allowed;flex:1;">Select This Contractor</button>
+                      ${requestBtn}
+                    </div>
+                  </div>`;
+                }
               })()}
             </div>
           </div>
@@ -1008,11 +1019,16 @@
         </div>
       `;
 
-      // Select CTA
-      document.getElementById('profileSelectCTA').innerHTML = `
+      // Select CTA — D-134: only allow selection if contractor has signed
+      const hasSignedAgreement = !!bid.contractor_signed_at;
+      document.getElementById('profileSelectCTA').innerHTML = hasSignedAgreement ? `
         <h3>Ready to Choose ${esc(c.company_name)}?</h3>
         <p style="color:var(--slate);margin-bottom:var(--sp-6);">Selecting this contractor will begin the contract signing process. Remember, you can switch to another OtterQuote contractor at no cost up to 3 days before installation.</p>
         <button class="btn btn-primary btn-lg" onclick="selectContractor('${bid.id}')">Select ${esc(c.company_name)}</button>
+      ` : `
+        <h3 style="color:var(--amber);">⏳ Agreement Pending</h3>
+        <p style="color:var(--slate);margin-bottom:var(--sp-4);">Indiana law requires ${esc(c.company_name)} to sign their contract before you can select them. ${bid.is_auto_bid ? 'This was an auto-bid — the contractor needs to review and sign.' : 'The contractor has not yet signed their agreement.'}</p>
+        ${bid.is_auto_bid ? `<button class="btn btn-ghost btn-lg" onclick="requestAgreement('${bid.id}')" style="border:2px solid var(--amber);color:var(--amber);">Request Agreement from ${esc(c.company_name)}</button>` : ''}
       `;
 
       gtag('event', 'view_contractor_profile', {
@@ -1033,6 +1049,18 @@
     window.selectContractor = function(bidId) {
       const bid = bids.find(b => b.id === bidId);
       if (!bid) return;
+
+      // D-134 / IC 24-5-11 guard: contractor must have a signed agreement before homeowner can select
+      if (!bid.contractor_signed_at) {
+        document.getElementById('modalTitle').textContent = 'Agreement Not Yet Signed';
+        document.getElementById('modalBody').innerHTML = 'This contractor must sign their agreement before you can select them. ' +
+          (bid.is_auto_bid ? 'Use the <strong>Request Agreement</strong> button on their bid card to send them a reminder.' : 'Please check back once they have signed.');
+        document.getElementById('modalActions').innerHTML = '<button class="btn btn-sm btn-ghost" onclick="closeModal()">Got It</button>';
+        document.getElementById('modalActions').style.display = 'flex';
+        document.getElementById('modalSpinner').style.display = 'none';
+        document.getElementById('confirmModal').classList.add('active');
+        return;
+      }
 
       // Guard: already awarded or signed — should not reach here via button, but protect anyway
       if (currentClaim && (currentClaim.status === 'awarded' || currentClaim.status === 'contract_signed')) {
@@ -1057,6 +1085,53 @@
     window.closeModal = function() {
       document.getElementById('confirmModal').classList.remove('active');
       pendingBidId = null;
+    };
+
+    // ── Request Agreement (D-134) ──
+    // Homeowner nudges an unsigned contractor to sign their auto-bid agreement.
+    window.requestAgreement = async function(bidId) {
+      const bid = bids.find(b => b.id === bidId);
+      if (!bid || !currentClaim) return;
+      const c = contractors[bid.contractor_id] || {};
+
+      // Show processing state in modal
+      document.getElementById('modalTitle').textContent = 'Sending Request...';
+      document.getElementById('modalBody').textContent = '';
+      document.getElementById('modalActions').style.display = 'none';
+      document.getElementById('modalSpinner').style.display = 'block';
+      document.getElementById('confirmModal').classList.add('active');
+
+      try {
+        await sb.functions.invoke('notify-contractors', {
+          body: {
+            event_type: 'agreement_requested',
+            claim_id: currentClaim.id,
+            contractor_id: bid.contractor_id,
+            quote_id: bidId,
+          },
+        });
+
+        document.getElementById('modalTitle').textContent = '✓ Request Sent';
+        document.getElementById('modalBody').innerHTML =
+          `<strong>${esc(c.company_name || 'The contractor')}</strong> has been notified that you're interested in their bid and are waiting for their signed agreement.` +
+          `<br><br><span style="color:#9CA3AF;font-size:0.9rem;">Contractors who sign promptly get selected first — we'll notify you when their agreement is ready.</span>`;
+        document.getElementById('modalSpinner').style.display = 'none';
+        document.getElementById('modalActions').innerHTML = '<button class="btn btn-sm btn-ghost" onclick="closeModal()">OK</button>';
+        document.getElementById('modalActions').style.display = 'flex';
+
+        gtag('event', 'agreement_requested', {
+          bid_id: bidId,
+          contractor_id: bid.contractor_id,
+          claim_id: currentClaim.id,
+        });
+      } catch (err) {
+        console.error('Request agreement failed:', err);
+        document.getElementById('modalTitle').textContent = 'Request Failed';
+        document.getElementById('modalBody').textContent = 'Could not send the request. Please try again or contact support.';
+        document.getElementById('modalSpinner').style.display = 'none';
+        document.getElementById('modalActions').innerHTML = '<button class="btn btn-sm btn-ghost" onclick="closeModal()">Close</button>';
+        document.getElementById('modalActions').style.display = 'flex';
+      }
     };
 
     window.confirmSelection = async function() {
@@ -1167,35 +1242,10 @@
           price: bid.total_price,
         });
 
-        // 5. Determine signing flow based on contractor_signed_at and is_auto_bid
-        const contractorSigned = bid.contractor_signed_at;
-        const isAutoBid = bid.is_auto_bid;
-
-        if (contractorSigned) {
+        // 5. Proceed to contract signing — contractor_signed_at is guaranteed non-null
+        //    (selectContractor() enforces D-134 guard before this point)
+        if (bid.contractor_signed_at) {
           window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bidId)}`;
-
-        } else if (isAutoBid) {
-          document.getElementById('modalTitle').textContent = 'Your Contractor Is Preparing Your Agreement';
-          document.getElementById('modalBody').innerHTML =
-            '<p style="margin-bottom: 1rem;">This contractor submitted an auto-bid and needs to review and sign the contract before you can sign.</p>' +
-            '<p style="margin-bottom: 1rem;">They\'ve been notified and will typically respond within a few hours.</p>' +
-            '<p style="color: #6B7280; font-size: 0.9rem;">We\'ll send you an email when the agreement is ready for your signature.</p>';
-          document.getElementById('modalSpinner').style.display = 'none';
-          document.getElementById('modalActions').innerHTML =
-            '<a href="/dashboard.html" class="btn btn-primary" style="text-decoration:none;">Go to Dashboard</a>';
-          document.getElementById('modalActions').style.display = 'flex';
-
-          try {
-            await sb.functions.invoke('notify-contractors', {
-              body: {
-                event_type: 'auto_bid_selected',
-                claim_id: currentClaim.id,
-                contractor_id: bid.contractor_id,
-              },
-            });
-          } catch (notifErr) {
-            console.warn('Auto-bid selection notification failed (non-fatal):', notifErr);
-          }
 
         } else {
           window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bidId)}`;

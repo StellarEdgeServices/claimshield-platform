@@ -2591,8 +2591,51 @@
         const startDateEl = document.getElementById('startDate');
         if (startDateEl && !startDateEl.value) startDateEl.value = today;
 
-        // Multi-trade project check
         const urlParams = new URLSearchParams(window.location.search);
+
+        // D-134: action=sign — contractor navigating from dashboard to sign an unsigned auto-bid agreement
+        // Hides the bid form and jumps straight to the DocuSign contractor signing flow.
+        const actionParam = urlParams.get('action');
+        if (actionParam === 'sign') {
+          const quoteIdParam = urlParams.get('quote_id');
+          if (quoteIdParam && currentClaim && currentContractor && sb) {
+            try {
+              const { data: existingQuote } = await sb
+                .from('quotes')
+                .select('id, is_auto_bid, contractor_signed_at')
+                .eq('id', quoteIdParam)
+                .eq('contractor_id', currentContractor.id)
+                .single();
+
+              if (existingQuote && existingQuote.is_auto_bid && !existingQuote.contractor_signed_at) {
+                // Set the global quote ID so initContractorSigning() updates the right row
+                window._newQuoteId = existingQuote.id;
+
+                // Hide the bid form and submit section — contractor only needs to sign here
+                const bidFormEl = document.getElementById('bidForm');
+                const submitSectionEl = document.querySelector('.submit-section');
+                if (bidFormEl) bidFormEl.style.display = 'none';
+                if (submitSectionEl) submitSectionEl.style.display = 'none';
+
+                // Show the contract signing step
+                const signingStepEl = document.getElementById('contractSigningStep');
+                if (signingStepEl) {
+                  signingStepEl.style.display = 'block';
+                  signingStepEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                // Auto-trigger signing
+                await initContractorSigning();
+                return;
+              }
+            } catch (err) {
+              console.warn('action=sign: could not load quote for auto-signing:', err);
+              // Fall through to normal bid form behavior
+            }
+          }
+        }
+
+        // Multi-trade project check
         const tradesParam = urlParams.get('trades');
         if (tradesParam) {
           try { initTradeSelection(JSON.parse(tradesParam)); } catch(e) {}

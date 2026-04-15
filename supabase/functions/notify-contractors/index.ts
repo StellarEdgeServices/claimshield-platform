@@ -1,7 +1,7 @@
 /**
  * OtterQuote Edge Function: notify-contractors
  *
- * Handles three event types:
+ * Handles four event types:
  *
  *   1. new_opportunity (default) — called when a homeowner submits for bidding.
  *      Notifies all matching active contractors via email + SMS.
@@ -13,6 +13,10 @@
  *
  *   3. bid_update_confirmed — called from contractor-bid-form.html after a successful
  *      bid update. Sends a confirmation email to the contractor who submitted the update.
+ *
+ *   4. agreement_requested (D-134) — called from bids.html when a homeowner clicks
+ *      "Request Agreement" on an unsigned auto-bid. Sends email + SMS + dashboard
+ *      notification to the contractor: "A homeowner is interested — sign your agreement now."
  *
  * Environment variables:
  *   SUPABASE_URL
@@ -553,6 +557,177 @@ support@otterquote.com | (844) 875-3412`;
 }
 
 // =============================================================================
+// HANDLER: agreement_requested (D-134)
+// Called from bids.html when a homeowner clicks "Request Agreement" on an
+// unsigned auto-bid. Sends email + SMS + dashboard notification to contractor:
+// "A homeowner is interested in your bid for [address]. Sign now to be selected."
+// =============================================================================
+async function handleAgreementRequested(
+  body: Record<string, any>,
+  supabase: ReturnType<typeof createClient>,
+  mailgunApiKey: string,
+  mailgunDomain: string,
+  supabaseUrl: string,
+  supabaseKey: string
+): Promise<Response> {
+  const { claim_id, contractor_id, quote_id } = body;
+
+  if (!claim_id || !contractor_id || !quote_id) {
+    return new Response(
+      JSON.stringify({ error: "agreement_requested requires claim_id, contractor_id, and quote_id" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Look up the claim for address context
+  const { data: claim, error: claimErr } = await supabase
+    .from("claims")
+    .select("id, property_address")
+    .eq("id", claim_id)
+    .single();
+
+  if (claimErr || !claim) {
+    console.error("agreement_requested: could not find claim", claim_id, claimErr?.message);
+    return new Response(
+      JSON.stringify({ error: "Claim not found", detail: claimErr?.message }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Look up the contractor
+  const { data: contractor, error: contractorErr } = await supabase
+    .from("contractors")
+    .select("id, user_id, email, phone, contact_name, company_name, notification_emails, notification_phones, notification_preferences")
+    .eq("id", contractor_id)
+    .single();
+
+  if (contractorErr || !contractor) {
+    console.error("agreement_requested: could not find contractor", contractor_id, contractorErr?.message);
+    return new Response(
+      JSON.stringify({ error: "Contractor not found", detail: contractorErr?.message }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Respect notification preferences
+  const prefs = contractor.notification_preferences || {};
+  if (prefs.agreement_requested === false) {
+    return new Response(
+      JSON.stringify({ notified: false, reason: "opt_out" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const emailRecipients: string[] =
+    contractor.notification_emails?.length > 0
+      ? contractor.notification_emails
+      : contractor.email ? [contractor.email] : [];
+
+  const rawPhones: string[] =
+    contractor.notification_phones?.length > 0
+      ? contractor.notification_phones
+      : contractor.phone ? [contractor.phone] : [];
+
+  const phoneRecipients = rawPhones
+    .map((p: string) => normalizePhone(p))
+    .filter((p: string | null): p is string => p !== null);
+
+  const contractorName = contractor.contact_name || contractor.company_name || "Contractor";
+  const fromAddress = `OtterQuote <notifications@${mailgunDomain}>`;
+
+  // Privacy: strip full address — show only city and state to contractor
+  const addrParts = (claim.property_address || "").split(",");
+  const displayLocation = addrParts.length >= 2
+    ? addrParts.slice(1).join(",").trim()
+    : claim.property_address || "your project";
+
+  const signingLink = `https://otterquote.com/contractor-bid-form.html?claim_id=${claim_id}&quote_id=${quote_id}&action=sign`;
+
+  const emailSubject = `A homeowner is waiting — sign your agreement to be selected`;
+  const emailBody = `Hi ${contractorName},
+
+A homeowner reviewing bids for a project in ${displayLocation} is interested in working with you.
+
+To be selected, you need to sign your contractor agreement. Contractors who sign promptly get selected first — slower contractors lose to competitors who are ready.
+
+Sign your agreement now:
+${signingLink}
+
+This takes about 2 minutes and keeps your bid active.
+
+Best regards,
+OtterQuote Team
+support@otterquote.com | (844) 875-3412`;
+
+  const smsMessage = `OtterQuote: A homeowner wants to select you for a project in ${displayLocation}. Sign your agreement now to stay in the running: ${signingLink}`;
+
+  let emailSent = false;
+  let smsSent = false;
+
+  // Send emails
+  for (const recipientEmail of emailRecipients) {
+    try {
+      const ok = await sendMailgunEmail(
+        mailgunApiKey, mailgunDomain, recipientEmail, fromAddress, emailSubject, emailBody
+      );
+      if (ok) {
+        emailSent = true;
+        await supabase.from("notifications").insert({
+          user_id: contractor.user_id,
+          claim_id,
+          channel: "email",
+          notification_type: "agreement_requested",
+          recipient: recipientEmail,
+          message_preview: `A homeowner is waiting — sign your agreement for ${displayLocation}`,
+        });
+        console.log("agreement_requested email sent to", recipientEmail, "for claim", claim_id);
+      }
+    } catch (err) {
+      console.error("Error sending agreement_requested email:", err);
+    }
+  }
+
+  // Send SMS
+  for (const phone of phoneRecipients) {
+    try {
+      const ok = await sendSmsViaEdgeFunction(supabaseUrl, supabaseKey, phone, smsMessage, contractor.id);
+      if (ok) {
+        smsSent = true;
+        await supabase.from("notifications").insert({
+          user_id: contractor.user_id,
+          claim_id,
+          channel: "sms",
+          notification_type: "agreement_requested",
+          recipient: phone,
+          message_preview: smsMessage.substring(0, 100),
+        });
+      }
+    } catch (err) {
+      console.error("Error sending agreement_requested SMS:", err);
+    }
+  }
+
+  // Always insert an in-app dashboard notification
+  try {
+    await supabase.from("notifications").insert({
+      user_id: contractor.user_id,
+      claim_id,
+      channel: "dashboard",
+      notification_type: "agreement_requested",
+      message_preview: `A homeowner is interested in your bid for ${displayLocation} — sign your agreement now to be selected`,
+      metadata: { quote_id, signing_link: signingLink },
+    });
+  } catch (err) {
+    console.warn("Could not insert dashboard notification for agreement_requested:", err);
+  }
+
+  return new Response(
+    JSON.stringify({ notified: true, email_sent: emailSent, sms_sent: smsSent }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// =============================================================================
 // MAIN ENTRY POINT
 // =============================================================================
 serve(async (req) => {
@@ -586,6 +761,10 @@ serve(async (req) => {
 
     if (event_type === "bid_update_confirmed") {
       return await handleBidUpdateConfirmed(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN);
+    }
+
+    if (event_type === "agreement_requested") {
+      return await handleAgreementRequested(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey);
     }
 
     // Default: new_opportunity
