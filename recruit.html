@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+    <title>OtterQuote — Recruit Router</title>
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/nav.css">
+    <style>
+        body {
+            background-color: var(--navy, #0A1E2C);
+            color: var(--white, #FFFFFF);
+            font-family: inherit;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .recruit-container {
+            text-align: center;
+            max-width: 440px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background-color: var(--amber, #14B8A6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 32px;
+            color: var(--navy, #0A1E2C);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(20, 184, 166, 0.2);
+            border-top: 3px solid var(--amber, #14B8A6);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 1.5rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--slate, #94A3B8);
+        }
+    </style>
+</head>
+<body>
+
+<header id="site-header" data-active=""></header>
+
+<main>
+    <div class="recruit-container">
+        <div class="logo">OQ</div>
+        <div class="spinner"></div>
+        <p class="message" id="message">Redirecting you to sign up...</p>
+    </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<!-- Supabase UMD (must come before config.js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/nav.js"></script>
+
+<script>
+/**
+ * recruit.html — Recruit Link Router
+ *
+ * Flow:
+ *  1. Read ?code= from URL (format: r-XXXXXX)
+ *  2. Store the code in localStorage as cs_recruit_code so the downstream
+ *     partner signup page can pick it up after redirect.
+ *  3. Look up the recruiter in referral_agents by recruit_code to determine
+ *     which signup page is the best fit for this recruit (recruiter's type
+ *     is a reasonable proxy — a real-estate agent tends to recruit other
+ *     RE agents, etc.). If lookup fails, fall back to the inspector signup
+ *     page — that's our primary channel.
+ *  4. Redirect.
+ *
+ * Note: agent_type on the recruiter drives the redirect; the recruit itself
+ * selects their own agent_type on the signup page. Default to partner-inspectors.html
+ * on any unknown / lookup failure per spec.
+ */
+
+const DEFAULT_DESTINATION = 'partner-inspectors.html';
+
+const DESTINATIONS = {
+    home_inspector:  'partner-inspectors.html',
+    re_agent:        'partner-re.html',
+    insurance_agent: 'partner-insurance.html',
+    customer:        'refer-a-friend.html',
+};
+
+async function handleRecruit() {
+    try {
+        if (typeof initNav === 'function') initNav();
+    } catch (_) { /* nav is nice-to-have, never block the redirect */ }
+
+    const params = new URLSearchParams(window.location.search);
+    const code = (params.get('code') || '').trim();
+
+    // No code — nothing to route on. Fall through to the default signup page.
+    if (!code) {
+        window.location.replace('/' + DEFAULT_DESTINATION);
+        return;
+    }
+
+    // Persist the code so the partner signup page can attribute this recruit.
+    try {
+        localStorage.setItem('cs_recruit_code', code);
+    } catch (_) {
+        // localStorage disabled (private browsing / storage quota) — non-fatal.
+        // The signup page will still fall back to the ?recruit= URL param.
+    }
+
+    let agentType = null;
+    try {
+        if (typeof sb !== 'undefined' && sb) {
+            const { data: recruiter, error } = await sb
+                .from('referral_agents')
+                .select('agent_type, status')
+                .eq('recruit_code', code)
+                .eq('status', 'active')
+                .maybeSingle();
+
+            if (error) {
+                console.warn('Recruit lookup failed:', error.message);
+            } else if (recruiter) {
+                agentType = recruiter.agent_type;
+            }
+        } else {
+            console.warn('Supabase client not initialized — skipping recruit lookup');
+        }
+    } catch (err) {
+        console.warn('Recruit lookup threw:', err);
+    }
+
+    const destination = DESTINATIONS[agentType] || DEFAULT_DESTINATION;
+
+    // Pass ?recruit= through as a fallback in case localStorage was blocked.
+    window.location.replace(`/${destination}?recruit=${encodeURIComponent(code)}`);
+}
+
+document.addEventListener('DOMContentLoaded', handleRecruit);
+</script>
+
+</body>
+</html>

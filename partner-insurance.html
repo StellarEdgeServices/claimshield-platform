@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-    <title>Insurance Agent Partner Program — Earn $250 Per Referral · OtterQuote</title>
-    <meta name="description" content="Join OtterQuote's insurance agent partner program. Earn $250 for every completed insurance repair job you refer. Get your unique referral link today.">
+    <title>Insurance Agent Partner Program — Earn $200 Per Referral · OtterQuote</title>
+    <meta name="description" content="Join OtterQuote's insurance agent partner program. Earn $200 for every completed insurance repair job you refer. Get your unique referral link today.">
     <link rel="canonical" href="https://otterquote.com/partner-insurance.html">
-    <meta property="og:title" content="Insurance Agent Partner Program — Earn $250 Per Referral · OtterQuote">
-    <meta property="og:description" content="Join OtterQuote's insurance agent partner program. Earn $250 for every completed insurance repair job you refer. Get your unique referral link today.">
+    <meta property="og:title" content="Insurance Agent Partner Program — Earn $200 Per Referral · OtterQuote">
+    <meta property="og:description" content="Join OtterQuote's insurance agent partner program. Earn $200 for every completed insurance repair job you refer. Get your unique referral link today.">
     <meta property="og:url" content="https://otterquote.com/partner-insurance.html">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="OtterQuote">
@@ -821,8 +821,8 @@
                     </div>
                     <div class="step-card">
                         <div class="step-number">3</div>
-                        <h3>Earn $250 Per Job</h3>
-                        <p>When the job completes (over $10,000), you earn $250. Track everything in your dashboard.</p>
+                        <h3>Earn $200 Per Job</h3>
+                        <p>When the job completes (over $10,000), you earn $200. Track everything in your dashboard. Bonus: recruit another agent to OtterQuote and earn an extra $50 every time one of their referrals completes a $10K+ job.</p>
                     </div>
                 </div>
             </div>
@@ -866,8 +866,12 @@
                     <h3>Your Earnings</h3>
                     <div class="commission-grid">
                         <div class="commission-item">
-                            <div class="commission-amount">$250</div>
-                            <p>Per completed job over $10,000</p>
+                            <div class="commission-amount">$200</div>
+                            <p>Per Completed Job Over $10,000</p>
+                        </div>
+                        <div class="commission-item">
+                            <div class="commission-amount">+ $50</div>
+                            <p>For Every Job From a Partner You Recruit</p>
                         </div>
                         <div class="commission-item">
                             <div class="commission-amount">Paid</div>
@@ -879,6 +883,8 @@
                         </div>
                     </div>
                 </div>
+
+                <p style="text-align: center; color: var(--slate); margin-bottom: var(--sp-4); font-size: 0.95rem; max-width: 720px; margin-left: auto; margin-right: auto;">Know another agent who'd benefit? Share your recruit link and earn $50 every time their referral completes a job over $10K. One level — simple, transparent, no MLM.</p>
 
                 <p style="text-align: center; color: var(--slate); margin-bottom: 0; font-size: 0.95rem;">For smaller jobs: your value is a better client experience, stronger retention, and a portfolio of wins.</p>
             </div>
@@ -952,7 +958,7 @@
                                     <div class="referral-link-text" id="referralLink">Loading...</div>
                                     <button class="copy-btn" id="copyBtn">Copy Link</button>
                                 </div>
-                                <p style="margin-top: 20px; color: var(--slate);">Share this link with your policyholders when they file a claim. You'll start earning $250 per completed job.</p>
+                                <p style="margin-top: 20px; color: var(--slate);">Share this link with your policyholders when they file a claim. You'll start earning $200 per completed job — plus a $50 recruit bonus for every job completed from a referral sent by an agent you personally recruit.</p>
                             </div>
 
                             <form id="insuranceAgentForm">
@@ -1007,6 +1013,11 @@
                                 <div class="form-group">
                                     <label for="websiteUrl" class="form-label">Website URL (optional)</label>
                                     <input type="url" id="websiteUrl" name="websiteUrl" class="form-input" placeholder="https://example.com">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="referredBy" class="form-label">Who Told You About Us? (optional)</label>
+                                    <input type="text" id="referredBy" name="referredBy" class="form-input" placeholder="Name or company of the person who recommended OtterQuote">
                                 </div>
 
                                 <div class="checkbox-group">
@@ -1102,6 +1113,16 @@
                             <p>Hover measurements are optional and paid upfront (rebated if they use an OtterQuote contractor). The bidding and contract process is 100% free. Your clients pay nothing unless they choose to add measurements, which helps contractors provide more accurate bids.</p>
                         </div>
                     </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h4>What's the recruit bonus?</h4>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>When you bring another agent to OtterQuote using your recruit link, you earn $50 for every job over $10,000 that their referrals complete. It's one level only — you earn on the people you personally recruit, not on anyone they recruit. Your recruit link is on your partner dashboard.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1131,6 +1152,57 @@
             });
         });
 
+        // Recruit context populated by detectRecruitCode() and consumed on submit.
+        let recruitContext = { recruitCode: null, recruiterId: null };
+
+        /**
+         * Detect whether this visitor arrived via a recruit link.
+         * Checks localStorage (set by recruit.html) first, then falls back to
+         * the ?recruit= URL param. If a valid active recruiter is found,
+         * pre-fills and locks the "Who Told You About Us?" field.
+         */
+        async function detectRecruitCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const recruitCode = localStorage.getItem('cs_recruit_code') || urlParams.get('recruit');
+            if (!recruitCode) return;
+
+            try {
+                const { data: recruiter, error } = await sb
+                    .from('referral_agents')
+                    .select('id, first_name, last_name, company')
+                    .eq('recruit_code', recruitCode)
+                    .eq('status', 'active')
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn('Recruit code lookup failed:', error.message);
+                    return;
+                }
+                if (!recruiter) return;
+
+                recruitContext = { recruitCode, recruiterId: recruiter.id };
+
+                const referredByInput = document.getElementById('referredBy');
+                if (referredByInput) {
+                    const displayName = `${recruiter.first_name || ''} ${recruiter.last_name || ''}`.trim()
+                        || recruiter.company
+                        || 'OtterQuote Partner';
+                    referredByInput.value = displayName;
+                    referredByInput.readOnly = true;
+                    referredByInput.style.background = 'rgba(20, 184, 166, 0.08)';
+                    referredByInput.style.borderColor = 'var(--amber)';
+                    referredByInput.style.color = 'var(--amber)';
+                    referredByInput.style.cursor = 'not-allowed';
+                    referredByInput.title = 'You arrived via a recruit link — this field is locked.';
+                }
+            } catch (err) {
+                console.warn('Recruit code lookup threw:', err);
+            }
+        }
+
+        // Kick off recruit detection on load
+        detectRecruitCode();
+
         // Handle form submission
         document.getElementById('insuranceAgentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1145,6 +1217,7 @@
                 licenseNumber: formData.get('licenseNumber') || null,
                 serviceArea: formData.get('serviceArea'),
                 websiteUrl: formData.get('websiteUrl') || null,
+                referredBy: (formData.get('referredBy') || '').toString().trim() || null,
                 agreeToTerms: formData.get('agreeToTerms') === 'on',
                 submittedAt: new Date().toISOString(),
                 agent_type: 'insurance_agent'
@@ -1186,16 +1259,19 @@
                 const { data: agentData, error: agentError } = await sb
                     .from('referral_agents')
                     .insert({
-                        agent_type:   'insurance_agent',
-                        first_name:   data.firstName,
-                        last_name:    data.lastName,
-                        email:        data.email,
-                        phone:        data.phone,
-                        company:      data.agencyName,
-                        service_area: data.serviceArea,
-                        website:      data.websiteUrl || null,
-                        unique_code:  refCode,
-                        metadata:     { license_number: data.licenseNumber || null },
+                        agent_type:       'insurance_agent',
+                        first_name:       data.firstName,
+                        last_name:        data.lastName,
+                        email:            data.email,
+                        phone:            data.phone,
+                        company:          data.agencyName,
+                        service_area:     data.serviceArea,
+                        website:          data.websiteUrl || null,
+                        unique_code:      refCode,
+                        metadata:         { license_number: data.licenseNumber || null },
+                        referred_by_note: data.referredBy,
+                        recruited_by_id:  recruitContext.recruiterId || null,
+                        recruited_at:     recruitContext.recruiterId ? new Date().toISOString() : null,
                         // user_id intentionally NULL — linked after magic-link click
                     })
                     .select('id, unique_code')
@@ -1212,6 +1288,10 @@
                     unique_code: finalCode,
                 }));
                 localStorage.setItem('cs_auth_role', 'insurance_agent');
+
+                // Recruit code consumed — clear so a future signup on this
+                // device doesn't accidentally attribute to the same recruiter.
+                localStorage.removeItem('cs_recruit_code');
 
                 // 4. Send magic link → redirects to partner-dashboard.html
                 await Auth.sendMagicLink(data.email, 'insurance_agent');

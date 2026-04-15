@@ -108,6 +108,26 @@
             border: 1px solid rgba(20, 184, 166, 0.2);
         }
 
+        .link-hint {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--slate);
+            margin-top: var(--sp-2);
+            line-height: 1.4;
+        }
+
+        .recruit-link-section {
+            margin-top: var(--sp-3);
+        }
+
+        .th-info {
+            color: var(--slate);
+            font-size: 0.9em;
+            margin-left: 4px;
+            cursor: help;
+            text-transform: none;
+        }
+
         .copy-btn {
             background: var(--amber);
             color: var(--navy);
@@ -706,6 +726,15 @@
                     <button class="copy-btn" id="copyLinkBtn">Copy Link</button>
                 </div>
             </div>
+
+            <div class="referral-link-section recruit-link-section">
+                <div class="referral-link-label">Your Recruit Link</div>
+                <div class="referral-link-display">
+                    <div class="referral-link-url" id="recruitLink">otterquote.com/recruit.html?code=—</div>
+                    <button class="copy-btn" id="copyRecruitLinkBtn">Copy Link</button>
+                </div>
+                <p class="link-hint">Share this with other professionals. When they sign up and their referrals close jobs, you earn $50 per job.</p>
+            </div>
         </div>
 
         <!-- Stats Grid -->
@@ -729,6 +758,16 @@
                 <span class="stat-card-label">Total Earned</span>
                 <span class="stat-card-value" id="totalEarned">$0</span>
                 <span class="stat-card-subtext" id="totalEarnedSubtext">—</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-label">Partners Recruited</span>
+                <span class="stat-card-value" id="partnersRecruited">0</span>
+                <span class="stat-card-subtext" id="partnersRecruitedSubtext">—</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-label">Recruit Earnings</span>
+                <span class="stat-card-value" id="recruitEarnings">$0</span>
+                <span class="stat-card-subtext" id="recruitEarningsSubtext">—</span>
             </div>
         </div>
 
@@ -842,6 +881,29 @@ Let me know if you have any questions!
             <p class="empty-state-text">You haven't made any referrals yet. Share your link or send it directly to a client above!</p>
         </div>
 
+        <!-- Your Recruit Network -->
+        <h2 class="section-header">Your Recruit Network</h2>
+        <table class="referrals-table" id="recruitsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Signed Up</th>
+                    <th>Their Referrals</th>
+                    <th title="Paid on completed jobs over $10,000. Smaller jobs earn no recruit bonus.">Your Earnings <span class="th-info" aria-hidden="true">ⓘ</span></th>
+                </tr>
+            </thead>
+            <tbody id="recruitsTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+
+        <div id="recruitsEmptyState" class="empty-state" style="display: none;">
+            <span class="empty-state-icon">🤝</span>
+            <h3 class="empty-state-title">No Recruits Yet</h3>
+            <p class="empty-state-text">You haven't recruited any partners yet. Share your recruit link with other professionals to start earning recruit bonuses.</p>
+        </div>
+
         <!-- Profile Settings -->
         <h2 class="section-header">Profile Settings</h2>
         <div class="profile-section">
@@ -913,6 +975,7 @@ Let me know if you have any questions!
         let currentUser = null;
         let currentPartner = null;
         let allReferrals = [];
+        let allRecruits = [];
         let contactMethod = 'sms';
         let widgetStyle = 'button';
 
@@ -964,6 +1027,7 @@ Let me know if you have any questions!
                     updateUI();
                     await loadReferrals();
                     await loadStats();
+                    await loadRecruits();
                 } catch (err) {
                     console.error('Error loading partner data:', err);
                     if (CONFIG.DEMO_MODE) {
@@ -999,6 +1063,21 @@ Let me know if you have any questions!
 
             // Update landing page URL
             document.getElementById('landingPageUrl').textContent = referralLink;
+
+            // Update recruit link (schema column: recruit_code — added in v36)
+            // If recruit_code is missing (partner record pre-dates v36 backfill),
+            // show a graceful "being generated" message instead of the URL.
+            const recruitLinkEl = document.getElementById('recruitLink');
+            const copyRecruitBtn = document.getElementById('copyRecruitLinkBtn');
+            if (currentPartner.recruit_code) {
+                recruitLinkEl.textContent = `otterquote.com/recruit.html?code=${currentPartner.recruit_code}`;
+                copyRecruitBtn.disabled = false;
+                copyRecruitBtn.style.opacity = '';
+            } else {
+                recruitLinkEl.textContent = 'Your recruit link is being generated. Refresh the page in a moment.';
+                copyRecruitBtn.disabled = true;
+                copyRecruitBtn.style.opacity = '0.5';
+            }
 
             // Populate profile form (combined name field — split for display)
             document.getElementById('profileName').value = agentName;
@@ -1076,6 +1155,136 @@ Let me know if you have any questions!
             } catch (err) {
                 console.error('Error loading stats:', err);
             }
+        }
+
+        async function loadRecruits() {
+            if (!currentPartner || !sb) return;
+
+            try {
+                // Partners this user recruited (v36: recruited_by_id FK on referral_agents)
+                const { data: recruits } = await sb
+                    .from('referral_agents')
+                    .select('*')
+                    .eq('recruited_by_id', currentPartner.id)
+                    .order('created_at', { ascending: false });
+
+                allRecruits = recruits || [];
+
+                // For each recruit, sum their recruit_commission_amount (v36 column,
+                // populated by the DB trigger only on jobs > $10K per D-139). This
+                // makes per-row "Your Earnings" reconcile exactly with the
+                // authoritative "Recruit Earnings" stat card sourced from
+                // currentPartner.recruit_earnings. We intentionally do NOT compute
+                // count × $50 — that would include sub-$10K jobs that pay nothing.
+                if (allRecruits.length > 0) {
+                    const recruitIds = allRecruits.map(r => r.id);
+                    const { data: paidRefs } = await sb
+                        .from('referrals')
+                        .select('referral_agent_id, recruit_commission_amount')
+                        .in('referral_agent_id', recruitIds)
+                        .not('recruit_commission_amount', 'is', null);
+
+                    const earningsByRecruit = {};
+                    (paidRefs || []).forEach(r => {
+                        earningsByRecruit[r.referral_agent_id] =
+                            (earningsByRecruit[r.referral_agent_id] || 0) +
+                            Number(r.recruit_commission_amount || 0);
+                    });
+
+                    allRecruits.forEach(r => {
+                        r._yourEarnings = earningsByRecruit[r.id] || 0;
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading recruits:', err);
+                allRecruits = [];
+            }
+
+            populateRecruitsTable();
+            updateRecruitStats();
+        }
+
+        function updateRecruitStats() {
+            const count = allRecruits.length;
+            const earnings = Number(currentPartner && currentPartner.recruit_earnings || 0);
+
+            document.getElementById('partnersRecruited').textContent = count;
+            document.getElementById('recruitEarnings').textContent =
+                `$${earnings.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('partnersRecruitedSubtext').textContent =
+                count === 1 ? '1 partner' : `${count} partners`;
+            document.getElementById('recruitEarningsSubtext').textContent =
+                'from recruit bonuses';
+        }
+
+        function populateRecruitsTable() {
+            const tbody = document.getElementById('recruitsTableBody');
+            const emptyState = document.getElementById('recruitsEmptyState');
+            const table = document.getElementById('recruitsTable');
+
+            if (!allRecruits || allRecruits.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            table.style.display = '';
+
+            const typeLabels = {
+                're_agent':        'RE Agent',
+                'insurance_agent': 'Insurance Agent',
+                'home_inspector':  'Home Inspector',
+                'customer':        'Customer'
+            };
+
+            tbody.innerHTML = allRecruits.map(recruit => {
+                const name = [recruit.first_name, recruit.last_name]
+                    .filter(Boolean).join(' ') || recruit.email || 'Partner';
+                const type = typeLabels[recruit.agent_type] || 'Partner';
+                const signedUp = formatRelativeDate(recruit.created_at);
+                const theirReferrals = recruit.total_referrals || 0;
+                const yourEarnings = Number(recruit._yourEarnings || 0);
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(name)}</td>
+                        <td>${type}</td>
+                        <td>${signedUp}</td>
+                        <td>${theirReferrals}</td>
+                        <td>$${yourEarnings.toLocaleString('en-US')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function formatRelativeDate(dateStr) {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '—';
+            const diffMs = Date.now() - date.getTime();
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) {
+                const w = Math.floor(diffDays / 7);
+                return `${w} week${w === 1 ? '' : 's'} ago`;
+            }
+            if (diffDays < 365) {
+                const m = Math.floor(diffDays / 30);
+                return `${m} month${m === 1 ? '' : 's'} ago`;
+            }
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => (
+                {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+            ));
         }
 
         function loadDemoData() {
@@ -1226,6 +1435,26 @@ Let me know if you have any questions!`;
             try {
                 await navigator.clipboard.writeText(link);
                 const btn = document.getElementById('copyLinkBtn');
+                btn.classList.add('copied');
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = 'Copy Link';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        });
+
+        // Copy recruit link
+        document.getElementById('copyRecruitLinkBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('copyRecruitLinkBtn');
+            if (btn.disabled) return;
+            // Copy with protocol for usability, since display omits https:// to keep it compact
+            const displayed = document.getElementById('recruitLink').textContent;
+            const link = displayed.startsWith('http') ? displayed : `https://${displayed}`;
+            try {
+                await navigator.clipboard.writeText(link);
                 btn.classList.add('copied');
                 btn.textContent = '✓ Copied!';
                 setTimeout(() => {
