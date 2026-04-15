@@ -33,10 +33,26 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FUNCTION_NAME = "create-docusign-envelope";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// CORS tightened Apr 15, 2026 (Session 195): sensitive function (contract
+// envelope creation + DocuSign signing URL generation) — origin allowlisted
+// instead of wildcard. Matches the Session 181 pattern applied to send-sms,
+// send-adjuster-email, create-payment-intent, create-setup-intent,
+// admin-contractor-action, and switch-contractor.
+const ALLOWED_ORIGINS = [
+  "https://otterquote.com",
+  "https://jade-alpaca-b82b5e.netlify.app",
+];
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 // ========== TOKEN CACHE ==========
 interface CachedToken {
@@ -781,7 +797,8 @@ async function autoPopulateFields(
 async function handleContractorSign(
   supabase: any,
   requestBody: any,
-  tokenInfo: CachedToken
+  tokenInfo: CachedToken,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, fields: providedFields, return_url, quote_id } = requestBody;
 
@@ -1016,7 +1033,8 @@ async function handleContractorSign(
 async function handleHomeownerSign(
   supabase: any,
   requestBody: any,
-  tokenInfo: CachedToken
+  tokenInfo: CachedToken,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, return_url, quote_id } = requestBody;
 
@@ -1105,7 +1123,8 @@ async function handleHomeownerSign(
 async function handleLegacyFlow(
   supabase: any,
   requestBody: any,
-  tokenInfo: CachedToken
+  tokenInfo: CachedToken,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const {
     claim_id,
@@ -1333,6 +1352,7 @@ async function handleLegacyFlow(
 
 // ========== MAIN HANDLER ==========
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -1418,15 +1438,15 @@ serve(async (req) => {
     // ========== ROUTE BY DOCUMENT TYPE ==========
     switch (document_type) {
       case "contractor_sign":
-        return await handleContractorSign(supabase, requestBody, tokenInfo);
+        return await handleContractorSign(supabase, requestBody, tokenInfo, corsHeaders);
 
       case "homeowner_sign":
-        return await handleHomeownerSign(supabase, requestBody, tokenInfo);
+        return await handleHomeownerSign(supabase, requestBody, tokenInfo, corsHeaders);
 
       case "contract":
       case "color_confirmation":
       case "project_confirmation":
-        return await handleLegacyFlow(supabase, requestBody, tokenInfo);
+        return await handleLegacyFlow(supabase, requestBody, tokenInfo, corsHeaders);
 
       default:
         throw new Error(`Unhandled document type: ${document_type}`);
