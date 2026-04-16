@@ -438,10 +438,20 @@ serve(async (req) => {
         );
       }
 
-      // Record which payment method was used on the quote
+      // Record payment result on the quote — payment_status + payment_intent_id
+      // are required to fire the v40 commission trigger (AFTER UPDATE OF payment_status).
       if (metadata.quote_id || metadata.claim_id) {
+        // ACH (us_bank_account) returns Stripe status 'processing' — authorized but
+        // not yet settled (3-5 business days). Map to 'succeeded' in our DB because
+        // (a) the DB constraint quotes_payment_status_check does not include 'processing',
+        // and (b) for contractor platform fees, ACH authorization = commitment to pay.
+        const dbPaymentStatus = paymentIntentData.status === "processing"
+          ? "succeeded"
+          : paymentIntentData.status;
         const quoteUpdate: Record<string, any> = {
           payment_method_type: usedMethod!.payment_type,
+          payment_status: dbPaymentStatus,
+          payment_intent_id: paymentIntentData.id,
         };
         if (usedMethod!.id) {
           quoteUpdate.payment_method_id = usedMethod!.id;
