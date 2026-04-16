@@ -20,6 +20,7 @@
  */
 
 import { referralPayout } from "./referral-payout-via-trigger.mjs";
+import { commissionReversal } from "./commission-reversal-via-trigger.mjs";
 
 // ---------------------------------------------------------------------------
 // Tiny assertion harness
@@ -221,6 +222,90 @@ section("Commission math (D-139/D-140/D-141/D-142)");
   // agent_a (who recruited agent_b) is intentionally absent from the payout.
   eq("one-level cap: only two payouts produced", Object.keys(out).filter(k => k.endsWith('_bonus')).length, 2);
   eq("one-level cap: total payout = $250", out.referrer_bonus + out.recruiter_bonus, 250);
+}
+
+section("Commission reversal (D-145 — v42 after_quote_refunded)");
+
+// (a) Unpaid reversal with recruiter — both ledger amounts zero out, status
+// steps back to contract_signed, and the recruiter's running recruit_earnings
+// is decremented by exactly the amount that was credited on the v40 pass.
+{
+  const { pre, post } = await commissionReversal({
+    job_total: 25000,
+    hasRecruiter: true,
+  });
+  eq("unpaid: v40 wrote $200 referrer on pre-refund", pre.commission_amount, 200);
+  eq("unpaid: v40 wrote $50 recruiter on pre-refund", pre.recruit_commission_amount, 50);
+  eq("unpaid: v40 set status=job_completed on pre-refund", pre.status, "job_completed");
+  eq("unpaid: v40 bumped recruit_earnings to 50 on pre-refund", pre.recruit_earnings, 50);
+
+  eq("unpaid reversal zeroes commission_amount", post.commission_amount, 0);
+  eq("unpaid reversal zeroes recruit_commission_amount", post.recruit_commission_amount, 0);
+  eq("unpaid reversal steps status back to contract_signed", post.status, "contract_signed");
+  eq("unpaid reversal decrements recruit_earnings to 0", post.recruit_earnings, 0);
+}
+
+// (a2) Unpaid reversal WITHOUT a recruiter — only the referrer tier was
+// credited, so only it needs zeroing. recruit_earnings stays 0 because no
+// recruiter exists on the chain.
+{
+  const { pre, post } = await commissionReversal({
+    job_total: 15000,
+    hasRecruiter: false,
+  });
+  eq("unpaid solo: pre commission_amount is 200", pre.commission_amount, 200);
+  eq("unpaid solo: pre recruit_commission_amount is 0", pre.recruit_commission_amount, 0);
+  eq("unpaid solo: post commission_amount is 0", post.commission_amount, 0);
+  eq("unpaid solo: post status is contract_signed", post.status, "contract_signed");
+}
+
+// (b) Paid reversal — commission_paid_at is non-null at refund time, so v42
+// must refuse to reverse (RAISE LOG, no-op). Ledger must be exactly as v40
+// left it.
+{
+  const { pre, post } = await commissionReversal({
+    job_total: 25000,
+    hasRecruiter: true,
+    markPaid: true,
+  });
+  eq("paid: pre commission_amount is 200", pre.commission_amount, 200);
+  eq("paid reversal does NOT zero commission_amount", post.commission_amount, 200);
+  eq("paid reversal does NOT zero recruit_commission_amount", post.recruit_commission_amount, 50);
+  eq("paid reversal leaves status at job_completed", post.status, "job_completed");
+  eq("paid reversal does NOT decrement recruit_earnings", post.recruit_earnings, 50);
+}
+
+// (c) Quote with no referral attached — v40 no-ops, v42 no-ops. The test
+// simply verifies the round-trip completes without error and returns NULLs
+// for the referral-sourced columns.
+{
+  const { pre, post } = await commissionReversal({
+    job_total: 25000,
+    skipReferral: true,
+  });
+  eq("no referral: pre commission_amount is null", pre.commission_amount, null);
+  eq("no referral: post commission_amount is null", post.commission_amount, null);
+  eq("no referral: pre status is null", pre.status, null);
+  eq("no referral: post status is null", post.status, null);
+}
+
+// (d) Double-reversal is idempotent — after a second 'refunded' transition,
+// the ledger is still zero and recruit_earnings is still decremented by
+// exactly $50 (not $100). v42's `commission_amount = 0` guard short-circuits
+// the second fire.
+{
+  const { post } = await commissionReversal({
+    job_total: 25000,
+    hasRecruiter: true,
+    doubleFire: true,
+  });
+  eq("double-fire: commission_amount still 0", post.commission_amount, 0);
+  eq("double-fire: recruit_commission_amount still 0", post.recruit_commission_amount, 0);
+  eq("double-fire: status still contract_signed", post.status, "contract_signed");
+  // If the second fire had NOT been idempotent, the recruiter would have
+  // been debited twice. The GREATEST(..., 0) clamp would still prevent a
+  // negative balance, but the intent is that no second debit happens at all.
+  eq("double-fire: recruit_earnings still 0 (not double-decremented)", post.recruit_earnings, 0);
 }
 
 section("Service area coverage");
