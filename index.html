@@ -21,6 +21,8 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-JNQ6XR3LX2');
+  // A/B test variant identifier — used to segment conversions in GA4
+  gtag('set', 'user_properties', { ab_test_variant: 'B_speed_trust' });
 </script>
 
 <!-- Supabase -->
@@ -588,34 +590,34 @@
     <img src="/img/otter-logo.svg" alt="OtterQuote" class="hero-logo">
     <div class="hero-brand-name">OtterQuote</div>
     <div class="hero-badge">&#x1F30E; Serving Homeowners Nationwide</div>
-    <h1>Get competing quotes on <em>your home</em> — without the runaround.</h1>
+    <h1>Stop chasing contractors. <em>Let them compete for you.</em></h1>
 
-    <!-- You compare / You choose / You pay nothing — visually prominent -->
+    <!-- Speed / Trust / Free — visually prominent -->
     <div class="hero-callout-block">
       <div class="hero-callout-inner">
         <div class="hero-callout-item">
-          <span class="hero-callout-icon">&#x1F4CB;</span>
-          <span class="hero-callout-label">Step 1</span>
-          <span class="hero-callout-text">You compare</span>
+          <span class="hero-callout-icon">&#x26A1;</span>
+          <span class="hero-callout-label">Fast</span>
+          <span class="hero-callout-text">Quotes in 48 hours</span>
         </div>
         <div class="hero-callout-item">
-          <span class="hero-callout-icon">&#x2714;&#xFE0F;</span>
-          <span class="hero-callout-label">Step 2</span>
-          <span class="hero-callout-text">You choose</span>
+          <span class="hero-callout-icon">&#x1F6E1;&#xFE0F;</span>
+          <span class="hero-callout-label">Trusted</span>
+          <span class="hero-callout-text">Licensed &amp; insured only</span>
         </div>
         <div class="hero-callout-item">
-          <span class="hero-callout-icon">&#x1F49A;</span>
-          <span class="hero-callout-label">Always</span>
-          <span class="hero-callout-text">You pay nothing</span>
+          <span class="hero-callout-icon">&#x1F4B0;</span>
+          <span class="hero-callout-label">Free</span>
+          <span class="hero-callout-text">You pay nothing — ever</span>
         </div>
       </div>
     </div>
 
     <p class="hero-subtitle">
-      Whether you have an insurance claim or are paying out of pocket, OtterQuote brings qualified, licensed contractors to you — competing for your business with their best quote. We handle everything up to a signed agreement.
+      Describe your project in 2 minutes. We match you with licensed contractors who send their best bid — no phone tag, no site visits, no pressure. Insurance claim or out-of-pocket, OtterQuote handles the paperwork up to a signed contract.
     </p>
     <div class="hero-cta">
-      <a href="get-started.html" class="btn btn-primary btn-lg">Get Started Free</a>
+      <a href="get-started.html" class="btn btn-primary btn-lg">Get My Free Quotes</a>
       <a href="contractor-login.html" class="btn btn-secondary btn-lg">I'm a Contractor</a>
     </div>
     <div class="hero-trust">
