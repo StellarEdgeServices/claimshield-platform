@@ -1372,6 +1372,104 @@
           </div>
         </div>
 
+        <!-- ── Siding Trade Section (retail siding jobs) ── -->
+        <div class="form-section" id="sidingTradeSection" style="grid-column: 1 / -1; display: none;">
+          <h3 style="font-size:1.1rem;margin-bottom:var(--sp-2);">🧱 Siding Project Details</h3>
+          <p style="font-size:0.85rem;color:#6B7280;margin-bottom:var(--sp-6);">This is a retail siding project. The homeowner uses Hover to design their siding, so you can see exactly what product and color was selected before bidding.</p>
+
+          <!-- Hover Design Summary Panel -->
+          <div id="hoverDesignPanel" style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:var(--radius-md);padding:var(--sp-5);margin-bottom:var(--sp-8);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3);">
+              <strong style="color:#0369A1;">Hover Design Summary</strong>
+              <button type="button" id="loadHoverSidingDataBtn" class="btn-sm primary" onclick="loadHoverSidingData()" style="font-size:0.8rem;">Load Design Data</button>
+            </div>
+            <div id="hoverDesignContent" style="font-size:0.875rem;color:#6B7280;">
+              Click <strong>Load Design Data</strong> to fetch the homeowner's product and color selections from Hover.
+            </div>
+            <div id="hoverDesignLink" style="margin-top:var(--sp-3);display:none;">
+              <a id="hoverJobLink" href="#" target="_blank" rel="noopener" style="color:#0284C7;font-size:0.875rem;font-weight:600;">View 3D Design in Hover →</a>
+            </div>
+          </div>
+
+          <!-- Siding Pricing Grid (shown only for siding-only jobs; hidden when combined with roofing) -->
+          <div id="sidingPricingGrid" style="display:none;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--sp-6);margin-bottom:var(--sp-8);">
+            <div class="form-group">
+              <label class="form-label" for="sidingInstallPerSquare">Installation — Per Square</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="sidingInstallPerSquare" name="sidingInstallPerSquare" step="0.01" min="0" placeholder="Your installed price per square">
+              </div>
+              <p id="sidingSquaresNote" style="font-size:0.78rem;color:#6B7280;margin-top:var(--sp-2);"></p>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sidingTrimPrice">Trim / Soffit / Fascia</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="sidingTrimPrice" name="sidingTrimPrice" step="0.01" min="0" placeholder="Total trim package">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sidingWindowWrapPrice">Window Wrap</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="sidingWindowWrapPrice" name="sidingWindowWrapPrice" step="0.01" min="0" placeholder="Total window wrap">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sidingTeardownPrice">Teardown &amp; Disposal</label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="sidingTeardownPrice" name="sidingTeardownPrice" step="0.01" min="0" placeholder="Haul-away and disposal">
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Supply Confirmation -->
+          <div class="form-group va-box" style="margin-bottom:var(--sp-8);">
+            <label class="form-label" style="margin-bottom:var(--sp-3);">Can you supply the homeowner's selected siding product?</label>
+            <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+              <label style="display:flex;align-items:flex-start;gap:var(--sp-3);cursor:pointer;">
+                <input type="radio" name="sidingProductSupply" value="yes_exact" style="margin-top:3px;">
+                <span style="font-size:0.9rem;"><strong>Yes</strong> — I can supply the exact product and color selected</span>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:var(--sp-3);cursor:pointer;">
+                <input type="radio" name="sidingProductSupply" value="equivalent" style="margin-top:3px;">
+                <span style="font-size:0.9rem;"><strong>Equivalent product</strong> — I'll use a comparable substitute (describe below)</span>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:var(--sp-3);cursor:pointer;">
+                <input type="radio" name="sidingProductSupply" value="labor_only" style="margin-top:3px;">
+                <span style="font-size:0.9rem;"><strong>Labor only</strong> — Homeowner will source materials; I'll provide installation only</span>
+              </label>
+            </div>
+            <div id="sidingEquivalentGroup" style="display:none;margin-top:var(--sp-4);">
+              <label class="form-label" for="sidingEquivalentProduct" style="font-size:0.85rem;">Describe the equivalent product you'll use</label>
+              <input type="text" id="sidingEquivalentProduct" name="sidingEquivalentProduct" placeholder="e.g., LP SmartSide LP1 in Mountain Sage — comparable grade, similar profile" style="width:100%;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;">
+            </div>
+          </div>
+
+          <!-- Rotten Sheathing Notice -->
+          <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-4);">
+            <p style="font-weight:700;color:#92400E;margin-bottom:var(--sp-1);">⚠️ Note — Rotten Sheathing</p>
+            <p style="font-size:0.9rem;color:#78350F;">Rotten wall sheathing discovered during tear-off will need to be replaced at an additional charge.</p>
+          </div>
+          <div class="form-group" style="margin-bottom:var(--sp-8);">
+            <label class="form-label" for="sidingRottenSheathingPricing">Rotten Sheathing Replacement Pricing</label>
+            <textarea id="sidingRottenSheathingPricing" name="sidingRottenSheathingPricing" placeholder="e.g., $X per sheet for OSB/plywood replacement, plus labor. Describe your per-sheet rate and any minimum charge so the homeowner knows what to expect." style="min-height:100px;width:100%;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;"></textarea>
+          </div>
+
+          <!-- Additional Notes -->
+          <div class="form-group" style="margin-bottom:var(--sp-8);">
+            <label class="form-label" for="sidingAdditionalNotes">Additional Notes About Your Services</label>
+            <textarea id="sidingAdditionalNotes" name="sidingAdditionalNotes" placeholder="Describe your installation process, how you handle house wrap / moisture barrier, flashing details, scheduling, cleanup, and anything else that sets your work apart…" style="min-height:160px;width:100%;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;"></textarea>
+          </div>
+
+          <!-- Warranty -->
+          <div class="form-group">
+            <label class="form-label" for="sidingWarrantyInfo">Warranty Information</label>
+            <textarea id="sidingWarrantyInfo" name="sidingWarrantyInfo" placeholder="Describe your warranty coverage — manufacturer product warranty (e.g., James Hardie 30-year), your labor warranty (years and scope), and any exclusions or conditions…" style="min-height:160px;width:100%;padding:var(--sp-3);border:1px solid #CBD5E1;border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;resize:vertical;"></textarea>
+          </div>
+        </div>
+
         <div class="form-group" style="grid-column: 1 / -1;">
           <label for="homeownerMessage">Message to Homeowner</label>
           <textarea id="homeownerMessage" name="homeownerMessage" placeholder="Add a personal note for the homeowner (optional)" maxlength="500"></textarea>
@@ -1514,6 +1612,7 @@
     // Job-type state (set by applyJobTypeCustomizations)
     let isRetailJob = false;
     let gutterTradeActive = false;
+    let sidingTradeActive = false;
     let gutterGuardCount = 0;
 
     // Fee calculator configuration
@@ -1581,6 +1680,97 @@
       return guards;
     }
 
+    // ── Hover Siding Data Loader ──
+    async function loadHoverSidingData() {
+      const btn     = document.getElementById('loadHoverSidingDataBtn');
+      const content = document.getElementById('hoverDesignContent');
+      if (!currentClaim || !btn || !content) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Loading…';
+      content.innerHTML = '<span style="color:#6B7280;">Fetching design data from Hover…</span>';
+
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/get-hover-siding-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (session?.access_token || ''),
+            'apikey': CONFIG.SUPABASE_ANON,
+          },
+          body: JSON.stringify({ claim_id: currentClaim.id }),
+        });
+
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        // Show "View in Hover" link regardless
+        if (data.hover_job_id) {
+          const linkDiv = document.getElementById('hoverDesignLink');
+          const linkEl  = document.getElementById('hoverJobLink');
+          if (linkDiv) linkDiv.style.display = 'block';
+          if (linkEl)  linkEl.href = 'https://app.hover.to/jobs/' + data.hover_job_id;
+        }
+
+        // Update squares note if we got wall area
+        if (data.wall_squares) {
+          const note = document.getElementById('sidingSquaresNote');
+          if (note) note.textContent = 'Hover reports ' + data.wall_squares + ' squares of siding area';
+        }
+
+        // Build material summary
+        if (data.siding_materials && data.siding_materials.length > 0) {
+          let html = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
+          html += '<thead><tr>'
+               + '<th style="text-align:left;padding:4px 8px;border-bottom:1px solid #BAE6FD;color:#0369A1;">Product</th>'
+               + '<th style="text-align:left;padding:4px 8px;border-bottom:1px solid #BAE6FD;color:#0369A1;">Color</th>'
+               + '<th style="text-align:right;padding:4px 8px;border-bottom:1px solid #BAE6FD;color:#0369A1;">Qty</th>'
+               + '<th style="text-align:left;padding:4px 8px;border-bottom:1px solid #BAE6FD;color:#0369A1;">Units</th>'
+               + '</tr></thead><tbody>';
+          data.siding_materials.forEach(m => {
+            html += '<tr>'
+                 + '<td style="padding:4px 8px;border-bottom:1px solid #E0F2FE;">' + escHtmlBid(m.product_name || '—') + '</td>'
+                 + '<td style="padding:4px 8px;border-bottom:1px solid #E0F2FE;">' + escHtmlBid(m.color || '—') + '</td>'
+                 + '<td style="padding:4px 8px;border-bottom:1px solid #E0F2FE;text-align:right;">' + (m.quantity != null ? parseFloat(m.quantity).toFixed(1) : '—') + '</td>'
+                 + '<td style="padding:4px 8px;border-bottom:1px solid #E0F2FE;">' + escHtmlBid(m.units || '') + '</td>'
+                 + '</tr>';
+          });
+          html += '</tbody></table>';
+          content.innerHTML = html;
+        } else {
+          content.innerHTML = data.message
+            ? '<span style="color:#6B7280;">' + escHtmlBid(data.message) + '</span>'
+            : '<span style="color:#6B7280;">No product data available — use the Hover link above to view design details.</span>';
+        }
+
+        // Show rendered design images if any
+        if (data.design_images && data.design_images.length > 0) {
+          const imgDiv = document.createElement('div');
+          imgDiv.style.cssText = 'display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;';
+          data.design_images.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Hover design';
+            img.style.cssText = 'height:120px;border-radius:6px;object-fit:cover;border:1px solid #BAE6FD;';
+            imgDiv.appendChild(img);
+          });
+          content.appendChild(imgDiv);
+        }
+
+        btn.textContent = 'Refresh';
+        btn.disabled = false;
+      } catch (err) {
+        console.warn('loadHoverSidingData error:', err);
+        content.innerHTML = '<span style="color:#DC2626;">Could not load design data. Use the Hover link to view manually.</span>';
+        // Still show the Hover link even on failure so contractor isn't blocked
+        const linkDiv = document.getElementById('hoverDesignLink');
+        if (linkDiv) linkDiv.style.display = 'block';
+        btn.textContent = 'Retry';
+        btn.disabled = false;
+      }
+    }
+
     // ── Job-Type Customizations ──
     // Called after claim + contractor are loaded. Adapts the form for retail and trade-specific bids.
     function applyJobTypeCustomizations() {
@@ -1592,6 +1782,7 @@
       const hasRoofing = trades.includes('roofing');
       const hasSiding  = trades.includes('siding');
       gutterTradeActive = hasGutters && !hasRoofing && !hasSiding;
+      sidingTradeActive = hasSiding && isRetailJob;
 
       // ── 1. Retail: replace RCV/Other selector with simple price input ──
       if (isRetailJob) {
@@ -1660,8 +1851,36 @@
             });
           }
         }
+      } else if (sidingTradeActive && !hasRoofing) {
+        // ── 3. Pure siding retail (no roofing): siding pricing replaces retailPriceSection ──
+        // Decking and brand/product sections are roofing-specific — hide them
+        const deckEl = document.getElementById('deckingSection');
+        if (deckEl) {
+          deckEl.style.display = 'none';
+          deckEl.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
+        }
+        const brandEl = document.getElementById('brandProductGroup');
+        if (brandEl) {
+          brandEl.style.display = 'none';
+          brandEl.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
+        }
+        const shingleItem = document.getElementById('summaryShingle')?.closest('.summary-item');
+        if (shingleItem) shingleItem.style.display = 'none';
+        // Wire siding price inputs to fee calculator
+        function syncSidingTotal() {
+          const install = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || 0;
+          const trim    = parseFloat(document.getElementById('sidingTrimPrice')?.value) || 0;
+          const wrap    = parseFloat(document.getElementById('sidingWindowWrapPrice')?.value) || 0;
+          const demo    = parseFloat(document.getElementById('sidingTeardownPrice')?.value) || 0;
+          const total   = install + trim + wrap + demo;
+          document.getElementById('totalPrice').value = total > 0 ? total : '';
+          updateFeeCalculator();
+        }
+        ['sidingInstallPerSquare','sidingTrimPrice','sidingWindowWrapPrice','sidingTeardownPrice'].forEach(id => {
+          document.getElementById(id)?.addEventListener('input', syncSidingTotal);
+        });
       } else if (isRetailJob) {
-        // Non-gutter retail (e.g., retail roofing): show simple price input
+        // ── 4. Retail roofing (or roofing+siding): show combined total price input ──
         document.getElementById('retailPriceSection')?.style.setProperty('display', 'block');
         const retailInput = document.getElementById('retailBidPrice');
         if (retailInput) {
@@ -1670,6 +1889,24 @@
             updateFeeCalculator();
           });
         }
+      }
+
+      // ── 5. Siding section (all retail siding jobs — pure siding AND roofing+siding) ──
+      if (sidingTradeActive) {
+        const sidingSection = document.getElementById('sidingTradeSection');
+        if (sidingSection) sidingSection.style.display = 'block';
+        // Show the pricing grid only for siding-only jobs
+        const pricingGrid = document.getElementById('sidingPricingGrid');
+        if (pricingGrid) pricingGrid.style.display = hasRoofing ? 'none' : 'grid';
+        // Wire "equivalent product" field visibility
+        document.querySelectorAll('[name="sidingProductSupply"]').forEach(radio => {
+          radio.addEventListener('change', () => {
+            const eqGroup = document.getElementById('sidingEquivalentGroup');
+            if (eqGroup) eqGroup.style.display = (radio.value === 'equivalent' && radio.checked) ? 'block' : 'none';
+          });
+        });
+        // Auto-load Hover design data
+        loadHoverSidingData();
       }
     }
 
@@ -1958,10 +2195,30 @@
       if (Array.isArray(va.gutter_guards_retail) && va.gutter_guards_retail.length > 0) {
         va.gutter_guards_retail.forEach(g => addGutterGuardEntry(g));
       }
-      // Restore retail bid price
-      if (isRetailJob && !gutterTradeActive && quote.total_price) {
+      // Restore retail bid price (roofing retail or roofing+siding retail)
+      const _restoreTrades = Array.isArray(currentClaim?.trades) ? currentClaim.trades : [];
+      if (isRetailJob && !gutterTradeActive && !sidingTradeActive && quote.total_price) {
+        setVal('retailBidPrice', quote.total_price);
+      } else if (isRetailJob && sidingTradeActive && _restoreTrades.includes('roofing') && quote.total_price) {
         setVal('retailBidPrice', quote.total_price);
       }
+
+      // Restore siding trade fields
+      if (va.siding_install_per_square != null) setVal('sidingInstallPerSquare', va.siding_install_per_square);
+      if (va.siding_trim_price != null)         setVal('sidingTrimPrice', va.siding_trim_price);
+      if (va.siding_window_wrap_price != null)  setVal('sidingWindowWrapPrice', va.siding_window_wrap_price);
+      if (va.siding_teardown_price != null)     setVal('sidingTeardownPrice', va.siding_teardown_price);
+      if (va.siding_rotten_sheathing_pricing)   setVal('sidingRottenSheathingPricing', va.siding_rotten_sheathing_pricing);
+      if (va.siding_additional_notes)           setVal('sidingAdditionalNotes', va.siding_additional_notes);
+      if (va.siding_warranty)                   setVal('sidingWarrantyInfo', va.siding_warranty);
+      if (va.siding_product_supply) {
+        const supplyRadio = document.querySelector(`[name="sidingProductSupply"][value="${va.siding_product_supply}"]`);
+        if (supplyRadio) {
+          supplyRadio.checked = true;
+          supplyRadio.dispatchEvent(new Event('change'));
+        }
+      }
+      if (va.siding_equivalent_product) setVal('sidingEquivalentProduct', va.siding_equivalent_product);
 
       // Trigger bid type UI sync
       document.querySelectorAll('input[name="bidTypeOption"]').forEach(r => r.dispatchEvent(new Event('change')));
@@ -2473,6 +2730,7 @@
       const totalPriceVal = parseFloat(document.getElementById('totalPrice').value) || 0;
 
       // Gutter-specific validation: at least one gutter price required
+      const _claimTrades = Array.isArray(currentClaim?.trades) ? currentClaim.trades : [];
       if (gutterTradeActive) {
         const g5 = parseFloat(document.getElementById('gutter5InchPrice')?.value) || 0;
         const g6 = parseFloat(document.getElementById('gutter6InchPrice')?.value) || 0;
@@ -2480,8 +2738,15 @@
           alert('Please enter at least one gutter price (5" or 6" gutters and downspouts).');
           return;
         }
+      } else if (sidingTradeActive && !_claimTrades.includes('roofing')) {
+        // Siding-only retail: installation price required
+        const installPrice = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || 0;
+        if (installPrice <= 0) {
+          alert('Please enter your installation price per square for siding.');
+          return;
+        }
       } else if (isRetailJob) {
-        // Retail non-gutter: validate retail price input
+        // Retail with roofing (or roofing+siding): validate combined total price
         const retailPrice = parseFloat(document.getElementById('retailBidPrice')?.value) || 0;
         if (retailPrice <= 0) {
           alert('Please enter your total bid price.');
@@ -2609,6 +2874,24 @@
             valueAdds.rotten_wood_pricing = document.getElementById('rottenWoodPricing')?.value?.trim() || null;
             valueAdds.gutter_additional_notes = document.getElementById('gutterAdditionalNotes')?.value?.trim() || null;
             valueAdds.gutter_warranty = document.getElementById('gutterWarrantyInfo')?.value?.trim() || null;
+          }
+
+          // Append siding trade fields if this is a siding retail bid
+          if (sidingTradeActive) {
+            const productSupplyEl = document.querySelector('[name="sidingProductSupply"]:checked');
+            valueAdds.siding_product_supply = productSupplyEl?.value || null;
+            valueAdds.siding_equivalent_product = document.getElementById('sidingEquivalentProduct')?.value?.trim() || null;
+            valueAdds.siding_rotten_sheathing_pricing = document.getElementById('sidingRottenSheathingPricing')?.value?.trim() || null;
+            valueAdds.siding_additional_notes = document.getElementById('sidingAdditionalNotes')?.value?.trim() || null;
+            valueAdds.siding_warranty = document.getElementById('sidingWarrantyInfo')?.value?.trim() || null;
+            // Pricing fields (siding-only jobs)
+            const trades = Array.isArray(currentClaim?.trades) ? currentClaim.trades : [];
+            if (!trades.includes('roofing')) {
+              valueAdds.siding_install_per_square = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || null;
+              valueAdds.siding_trim_price         = parseFloat(document.getElementById('sidingTrimPrice')?.value) || null;
+              valueAdds.siding_window_wrap_price  = parseFloat(document.getElementById('sidingWindowWrapPrice')?.value) || null;
+              valueAdds.siding_teardown_price     = parseFloat(document.getElementById('sidingTeardownPrice')?.value) || null;
+            }
           }
 
           const quoteData = {
