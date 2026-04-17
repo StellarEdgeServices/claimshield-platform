@@ -905,7 +905,7 @@
               <div class="callout-icon">&#x2696;&#xFE0F;</div>
               <div class="callout-text">
                 <div class="callout-title">Your Right to Cancel (Indiana Law IC 24-5-11)</div>
-                <div class="callout-description">You may cancel this contract at any time before midnight on the third business day after signing. A Notice of Cancellation form is included in the contract documents. Your contractor has already signed this agreement.</div>
+                <div class="callout-description">You may cancel this contract at any time before midnight on the third business day after signing. A Notice of Cancellation form is included in the contract documents. Both you and the contractor will sign this agreement.</div>
               </div>
             </div>
 
@@ -1097,7 +1097,7 @@
       envelopeId: null,
       contractSigned: false,
       templateUrl: null,
-      // IC 24-5-11 flow: contractor signs first, homeowner signs second
+      // IC 24-5-11 flow: after homeowner selects, contract goes to contractor first, then homeowner
       contractorAlreadySigned: false,
       existingEnvelopeId: null,
     };
@@ -1482,9 +1482,9 @@
           || state.currentUser.user_metadata?.full_name
           || state.currentUser.email;
 
-        // IC 24-5-11 Flow: Use 'homeowner_sign' if contractor already signed
-        // (retrieves existing envelope instead of creating a new one).
-        // Falls back to 'contract' (legacy) if no existing envelope.
+        // New signing flow: after homeowner selects contractor, contract is distributed to both parties.
+        // Use 'homeowner_sign' if contractor already signed (retrieves existing envelope).
+        // Use 'contract' to create a new envelope — contractor signs first (IC 24-5-11), then homeowner.
         const docType = state.contractorAlreadySigned && state.existingEnvelopeId
           ? 'homeowner_sign'
           : 'contract';

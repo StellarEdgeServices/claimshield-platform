@@ -213,7 +213,7 @@ function contractSignedEmailHtml(contractorName: string, claimId: string): strin
     <h2 style="margin:0 0 20px;color:#0F172A;font-size:22px;font-weight:700;line-height:1.3;">Your Project Package Is Ready</h2>
 
     <p style="margin:0 0 6px;color:#374151;font-size:15px;">Hi ${contractorName},</p>
-    <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">The homeowner has countersigned the contract. Your complete project package is waiting in your dashboard.</p>
+    <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">Both parties have signed the contract. Your complete project package is waiting in your dashboard.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;margin-bottom:24px;">
       <tr><td style="padding:16px 20px;">
@@ -244,7 +244,7 @@ function contractSignedEmailHtml(contractorName: string, claimId: string): strin
 function contractSignedEmailText(contractorName: string): string {
   return `Hi ${contractorName},
 
-The homeowner has countersigned your contract. Your complete project package is ready in your OtterQuote dashboard.
+Both parties have signed your contract. Your complete project package is ready in your OtterQuote dashboard.
 
 What's included:
 - Fully executed contract

@@ -831,28 +831,11 @@
                 const cs = currentClaim ? currentClaim.status : null;
                 if (cs === 'contract_signed') return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-ghost" style="border:1px solid var(--green);color:var(--green);">✓ Contract Signed</a>`;
                 if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) {
-                  if (bid.is_auto_bid && !bid.contractor_signed_at) {
-                    return `<span class="btn btn-sm btn-ghost" style="border:1px solid #F59E0B;color:#F59E0B;cursor:default;">⏳ Contractor Preparing Agreement</span>`;
-                  }
-                  return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">Sign Contract →</a>`;
+                  return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">View Contract Status →</a>`;
                 }
                 if (cs === 'awarded') return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
-                // D-134 / IC 24-5-11: Homeowner may only select contractors with a signed agreement
-                if (bid.contractor_signed_at) {
-                  return `<span style="color:#16A34A;font-size:0.8rem;font-weight:600;margin-right:8px;">✓ Contract-Ready</span><button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
-                } else {
-                  // Unsigned bid — disable Select, offer Request Agreement for auto-bids
-                  const requestBtn = bid.is_auto_bid
-                    ? `<button class="btn btn-sm" style="background:none;border:1.5px solid #F59E0B;color:#F59E0B;font-family:var(--font-body);font-size:0.75rem;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;" onclick="requestAgreement('${bid.id}')">Request Agreement</button>`
-                    : '';
-                  return `<div style="width:100%;">
-                    <div style="font-size:0.78rem;color:#9CA3AF;margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span>⏳</span><span>Awaiting contractor's signed agreement</span></div>
-                    <div style="display:flex;gap:var(--sp-2);">
-                      <button class="btn btn-sm btn-ghost" disabled style="opacity:0.3;cursor:not-allowed;flex:1;">Select This Contractor</button>
-                      ${requestBtn}
-                    </div>
-                  </div>`;
-                }
+                // All contractors with bids are selectable — contract is distributed to both parties after selection
+                return `<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
               })()}
             </div>
           </div>
@@ -1052,17 +1035,6 @@
       if (!bid) return;
 
       // D-134 / IC 24-5-11 guard: contractor must have a signed agreement before homeowner can select
-      if (!bid.contractor_signed_at) {
-        document.getElementById('modalTitle').textContent = 'Agreement Not Yet Signed';
-        document.getElementById('modalBody').innerHTML = 'This contractor must sign their agreement before you can select them. ' +
-          (bid.is_auto_bid ? 'Use the <strong>Request Agreement</strong> button on their bid card to send them a reminder.' : 'Please check back once they have signed.');
-        document.getElementById('modalActions').innerHTML = '<button class="btn btn-sm btn-ghost" onclick="closeModal()">Got It</button>';
-        document.getElementById('modalActions').style.display = 'flex';
-        document.getElementById('modalSpinner').style.display = 'none';
-        document.getElementById('confirmModal').classList.add('active');
-        return;
-      }
-
       // Guard: already awarded or signed — should not reach here via button, but protect anyway
       if (currentClaim && (currentClaim.status === 'awarded' || currentClaim.status === 'contract_signed')) {
         document.getElementById('modalTitle').textContent = 'Project Already Awarded';
@@ -1076,7 +1048,7 @@
       pendingBidId = bidId;
 
       document.getElementById('modalBody').innerHTML =
-        `You're selecting <span class="contractor-highlight">${esc(c.company_name || 'this contractor')}</span>. They'll be notified and your contract will be prepared. Continue?`;
+        `You're selecting <span class="contractor-highlight">${esc(c.company_name || 'this contractor')}</span>. Once confirmed, the contract will be sent to both you and the contractor for signature. Continue?`;
       document.getElementById('modalActions').style.display = 'flex';
       document.getElementById('modalSpinner').style.display = 'none';
       document.getElementById('modalConfirmBtn').disabled = false;

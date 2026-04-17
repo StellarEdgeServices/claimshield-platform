@@ -1491,17 +1491,35 @@
         <div class="fee-row">
           <span class="fee-label">
             <span class="fee-check">✓</span>
-            <span>Platform Fee</span>
+            <span>Contract Signing (base)</span>
             <span class="fee-percentage">5.0%</span>
           </span>
           <span class="fee-amount" id="feeContractSigning">$0.00</span>
+        </div>
+
+        <div class="fee-row">
+          <span class="fee-label">
+            <span class="fee-check">✓</span>
+            <span>Color Selection</span>
+            <span class="fee-percentage">3.0%</span>
+          </span>
+          <span class="fee-amount" id="feeColorSelection">$0.00</span>
+        </div>
+
+        <div class="fee-row">
+          <span class="fee-label">
+            <span class="fee-check">✓</span>
+            <span>Deductible Collection</span>
+            <span class="fee-percentage">5.0%</span>
+          </span>
+          <span class="fee-amount" id="feeDeductibleCollection">$0.00</span>
         </div>
       </div>
 
       <div class="fee-row total">
         <span>Total Platform Fee</span>
         <div>
-          <span class="fee-amount" id="totalFeePercent">5.0%</span>
+          <span class="fee-amount" id="totalFeePercent">13.0%</span>
           <span style="margin-left: var(--sp-2); font-weight: 400;">= <span class="fee-amount" id="totalFeeAmount">$0.00</span></span>
         </div>
       </div>
@@ -1512,9 +1530,9 @@
       </div>
 
       <div class="fee-info">
-        <div>ℹ 5% of the job value, charged when the homeowner signs the contract.</div>
-        <a href="contractor-agreement.html" class="fee-info-link">
-          View Contractor Partner Agreement →
+        <div>ℹ Color selection and scheduling fees based on your service tier settings. Deductible collection is mandatory.</div>
+        <a href="contractor-settings.html" class="fee-info-link">
+          Adjust your service tier → Settings
         </a>
       </div>
     </div>
@@ -1533,7 +1551,7 @@
       </div>
     </div>
 
-    <!-- CONTRACT SIGNING STEP (IC 24-5-11: Contractor signs first) -->
+    <!-- CONTRACT SIGNING STEP (DEPRECATED: signing now happens after homeowner selection, not at bid submission) -->
     <div id="contractSigningStep" style="display: none; margin-top: var(--sp-8);">
       <div style="background: #FFFBEB; border: 2px solid #F59E0B; border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6);">
         <h3 style="color: var(--navy); margin-bottom: var(--sp-3); font-size: 1.15rem;">⚖️ Sign Your Contract — Required by Indiana Law</h3>
@@ -1599,7 +1617,15 @@
 
     // Fee calculator configuration
     const PLATFORM_FEES = {
-      contractSigning: 0.05    // 5% flat platform fee
+      contractSigning: 0.05,    // 5%
+      colorSelection: 0.03,     // 3%
+      deductibleCollection: 0.05 // 5%
+    };
+
+    // Contractor tier settings (demo)
+    const contractorTiers = {
+      colorSelection: true,
+      deductibleCollection: true
     };
 
     // State
@@ -2480,13 +2506,20 @@
     function updateFeeCalculator() {
       const bidAmount = parseFloat(document.getElementById('totalPrice').value) || 0;
 
-      const platformFee = bidAmount * PLATFORM_FEES.contractSigning;
-      const netAmount = bidAmount - platformFee;
+      const contractSigningFee = bidAmount * PLATFORM_FEES.contractSigning;
+      const colorSelectionFee = contractorTiers.colorSelection ? bidAmount * PLATFORM_FEES.colorSelection : 0;
+      const deductibleCollectionFee = contractorTiers.deductibleCollection ? bidAmount * PLATFORM_FEES.deductibleCollection : 0;
+
+      const totalFee = contractSigningFee + colorSelectionFee + deductibleCollectionFee;
+      const totalFeePercent = bidAmount > 0 ? (totalFee / bidAmount * 100).toFixed(1) : 0;
+      const netAmount = bidAmount - totalFee;
 
       document.getElementById('displayBid').textContent = formatCurrency(bidAmount);
-      document.getElementById('feeContractSigning').textContent = formatCurrency(platformFee);
-      document.getElementById('totalFeePercent').textContent = '5.0%';
-      document.getElementById('totalFeeAmount').textContent = formatCurrency(platformFee);
+      document.getElementById('feeContractSigning').textContent = formatCurrency(contractSigningFee);
+      document.getElementById('feeColorSelection').textContent = formatCurrency(colorSelectionFee);
+      document.getElementById('feeDeductibleCollection').textContent = formatCurrency(deductibleCollectionFee);
+      document.getElementById('totalFeePercent').textContent = totalFeePercent + '%';
+      document.getElementById('totalFeeAmount').textContent = formatCurrency(totalFee);
       document.getElementById('yourNet').textContent = formatCurrency(netAmount);
     }
 
@@ -2748,7 +2781,7 @@
           await new Promise(resolve => setTimeout(resolve, 800));
         } else if (sb && currentUser && currentClaim) {
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          const feePercentage = 5.0;
+          const feePercentage = 13.0;
 
           const scopeSummary = JSON.stringify({
             brand: formData.get('brandProduct') || null,
@@ -2971,18 +3004,13 @@
             <div style="margin-top: 1rem;"><a href="contractor-dashboard.html" style="color: var(--amber); font-weight: 600; text-decoration: none;">← Back to Dashboard</a></div>
           `;
         } else {
-          // NEW BID: Show contract signing step (IC 24-5-11 — contractor signs first)
+          // NEW BID: Bid submitted — contract signing happens after homeowner selects
           successState.innerHTML = `
             <div class="success-icon">✓</div>
             <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--sp-3);">Bid submitted!</div>
-            <div>Now sign the contract below to make your bid contract-ready.</div>
+            <div>Your bid is live. If the homeowner selects you, the contract will be sent to both of you for signature.</div>
+            <div style="margin-top: 1rem;"><a href="contractor-dashboard.html" style="color: var(--amber); font-weight: 600; text-decoration: none;">← Back to Dashboard</a></div>
           `;
-          // Trigger contractor signing step
-          setTimeout(() => {
-            document.getElementById('contractSigningStep').style.display = 'block';
-            document.getElementById('contractSigningStep').scrollIntoView({ behavior: 'smooth' });
-            initContractorSigning();
-          }, 800);
         }
         successState.classList.add('show');
       } catch (err) {
@@ -3085,46 +3113,12 @@
 
         const urlParams = new URLSearchParams(window.location.search);
 
-        // D-134: action=sign — contractor navigating from dashboard to sign an unsigned auto-bid agreement
-        // Hides the bid form and jumps straight to the DocuSign contractor signing flow.
+        // action=sign is deprecated — contract signing now happens after homeowner selection,
+        // not at bid submission time. If a contractor arrives via an old link, show them their bid.
         const actionParam = urlParams.get('action');
         if (actionParam === 'sign') {
-          const quoteIdParam = urlParams.get('quote_id');
-          if (quoteIdParam && currentClaim && currentContractor && sb) {
-            try {
-              const { data: existingQuote } = await sb
-                .from('quotes')
-                .select('id, is_auto_bid, contractor_signed_at')
-                .eq('id', quoteIdParam)
-                .eq('contractor_id', currentContractor.id)
-                .single();
-
-              if (existingQuote && existingQuote.is_auto_bid && !existingQuote.contractor_signed_at) {
-                // Set the global quote ID so initContractorSigning() updates the right row
-                window._newQuoteId = existingQuote.id;
-
-                // Hide the bid form and submit section — contractor only needs to sign here
-                const bidFormEl = document.getElementById('bidForm');
-                const submitSectionEl = document.querySelector('.submit-section');
-                if (bidFormEl) bidFormEl.style.display = 'none';
-                if (submitSectionEl) submitSectionEl.style.display = 'none';
-
-                // Show the contract signing step
-                const signingStepEl = document.getElementById('contractSigningStep');
-                if (signingStepEl) {
-                  signingStepEl.style.display = 'block';
-                  signingStepEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                // Auto-trigger signing
-                await initContractorSigning();
-                return;
-              }
-            } catch (err) {
-              console.warn('action=sign: could not load quote for auto-signing:', err);
-              // Fall through to normal bid form behavior
-            }
-          }
+          console.log('action=sign is deprecated — contract signing occurs after homeowner selection');
+          // Fall through to normal bid form behavior
         }
 
         // Multi-trade project check
@@ -3155,9 +3149,10 @@
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * After a new bid is submitted, this function creates a DocuSign envelope
-     * with document_type='contractor_sign' and presents the signing iframe.
-     * The contractor signs first; the homeowner signs later when they select this bid.
+     * DEPRECATED: This function is no longer called after bid submission.
+     * Contract signing now happens after homeowner selection, not at bid time.
+     * Kept for backward compatibility but should not be triggered in normal flow.
+     * IC 24-5-11: Contractor signs first, then homeowner — both after selection.
      */
     async function initContractorSigning() {
       const loadingEl = document.getElementById('contractorDocusignLoading');

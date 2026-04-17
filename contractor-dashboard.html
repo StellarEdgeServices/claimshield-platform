@@ -694,19 +694,9 @@
             </div>
         </div>
 
-        <!-- D-134 HICA Compliance: Unsigned Auto-Bid Agreements (shown when contractor has auto-bids that need signing) -->
-        <div id="unsignedAutoBidsSection" style="display:none; background:#FFFBEB; border:2px solid #F59E0B; border-radius:0.75rem; padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
-            <div style="display:flex; align-items:flex-start; gap:1rem;">
-                <span style="font-size:1.75rem; flex-shrink:0; line-height:1;">✍️</span>
-                <div style="flex:1;">
-                    <div style="font-weight:700; color:#92400E; font-size:1rem; margin-bottom:0.35rem;">Action Required — Sign Your Agreement</div>
-                    <p style="color:#78350F; font-size:0.875rem; line-height:1.6; margin:0 0 0.75rem 0;">
-                        Indiana law (IC 24-5-11) requires you to sign your contract <strong>before</strong> a homeowner can select you.
-                        The bids below were submitted automatically. Sign each agreement now — contractors who sign first get selected first.
-                    </p>
-                    <div id="unsignedAutoBidsList"></div>
-                </div>
-            </div>
+        <!-- Unsigned auto-bid section removed — contract signing now happens after homeowner selection -->
+        <div id="unsignedAutoBidsSection" style="display:none;">
+            <div id="unsignedAutoBidsList"></div>
         </div>
 
         <!-- Pending Approval Banner -->
@@ -1096,45 +1086,8 @@
                 const totalEarnings = (earnData || []).reduce((sum, q) => sum + (parseFloat(q.fee_amount) || 0), 0);
                 document.getElementById('earningsAmount').textContent = '$' + totalEarnings.toLocaleString();
 
-                // ── D-134 HICA Compliance: Load unsigned auto-bids ──
-                // Auto-bids fire automatically but require contractor to sign before homeowner can select.
-                // Surface prominently so contractors act quickly (slow signers lose to competitors).
-                try {
-                  const { data: unsignedBids } = await sb
-                    .from('quotes')
-                    .select('id, claim_id, total_price, created_at, claims(property_address)')
-                    .eq('contractor_id', contractor.id)
-                    .eq('is_auto_bid', true)
-                    .is('contractor_signed_at', null)
-                    .not('status', 'in', '("declined","lost")')
-                    .order('created_at', { ascending: false })
-                    .limit(10);
-
-                  if (unsignedBids && unsignedBids.length > 0) {
-                    const section = document.getElementById('unsignedAutoBidsSection');
-                    const listEl = document.getElementById('unsignedAutoBidsList');
-                    if (section && listEl) {
-                      listEl.innerHTML = unsignedBids.map(bid => {
-                        const addr = (bid.claims && bid.claims.property_address) || '';
-                        // Show city + state only (not full address — contractor hasn't won yet)
-                        const parts = addr.split(',');
-                        const displayLocation = parts.length >= 2 ? parts.slice(1).join(',').trim() : (addr || 'Unknown location');
-                        const bidAmt = bid.total_price ? '$' + Number(bid.total_price).toLocaleString() : 'Auto-bid';
-                        const signUrl = `contractor-bid-form.html?claim_id=${encodeURIComponent(bid.claim_id)}&quote_id=${encodeURIComponent(bid.id)}&action=sign`;
-                        return `<div style="background:white;border:1px solid #FDE68A;border-radius:0.5rem;padding:0.875rem 1rem;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-                          <div>
-                            <div style="font-weight:600;color:#92400E;font-size:0.9rem;">${displayLocation}</div>
-                            <div style="font-size:0.8rem;color:#78350F;">Bid: ${bidAmt} · Auto-bid pending signature</div>
-                          </div>
-                          <a href="${signUrl}" style="background:#F59E0B;color:white;text-decoration:none;padding:0.5rem 1rem;border-radius:0.5rem;font-weight:600;font-size:0.85rem;white-space:nowrap;">Sign Agreement →</a>
-                        </div>`;
-                      }).join('');
-                      section.style.display = 'block';
-                    }
-                  }
-                } catch (err) {
-                  console.warn('Could not load unsigned auto-bids:', err);
-                }
+                // D-134 unsigned auto-bid section removed — contract signing now happens after
+                // homeowner selection, not at bid submission time.
 
                 // Load all quotes — pending bids and won/active/completed projects
                 // D-074: Full address hidden for submitted-only bids; revealed once bid is awarded.

@@ -3,8 +3,9 @@
  * Creates DocuSign envelopes for the contract signing flow.
  *
  * SIGNING ORDER (IC 24-5-11-11 compliance):
- *   1. Contractor signs FIRST (at bid submission or upon auto-bid selection)
- *   2. Homeowner signs SECOND (after selecting contractor)
+ *   1. Once a homeowner selects a contractor, the contract is distributed to both parties
+ *   2. Contractor signs FIRST (after homeowner selection)
+ *   3. Homeowner signs SECOND
  *
  * Supported document_type values:
  *   - "contractor_sign"          — Creates envelope with contractor as sole signer (Step A)
