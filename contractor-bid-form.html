@@ -1569,7 +1569,7 @@
       <div class="fee-row total">
         <span>Total Platform Fee</span>
         <div>
-          <span class="fee-amount" id="totalFeePercent">13.0%</span>
+          <span class="fee-amount" id="totalFeePercent">5.0%</span>
           <span style="margin-left: var(--sp-2); font-weight: 400;">= <span class="fee-amount" id="totalFeeAmount">$0.00</span></span>
         </div>
       </div>
@@ -1661,6 +1661,27 @@
     let gutterTradeActive = false;
     let sidingTradeActive = false;
     let gutterGuardCount = 0;
+    let sidingWallSquares = null; // populated from Hover data; used by syncSidingTotal
+
+    // ── Siding Total Sync (module-level so loadHoverSidingData + Change Bid can call it) ──
+    // For siding-only retail jobs the fee calculator derives total from per-sq × wall_squares + fixed items.
+    // If wall_squares is not yet loaded the function is a no-op so we don't write a garbage total.
+    function syncSidingTotal() {
+      if (!sidingTradeActive) return;
+      const install = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || 0;
+      const trim    = parseFloat(document.getElementById('sidingTrimPrice')?.value) || 0;
+      const wrap    = parseFloat(document.getElementById('sidingWindowWrapPrice')?.value) || 0;
+      const demo    = parseFloat(document.getElementById('sidingTeardownPrice')?.value) || 0;
+      if (sidingWallSquares > 0) {
+        const total = (install * sidingWallSquares) + trim + wrap + demo;
+        document.getElementById('totalPrice').value = total > 0 ? total : '';
+      } else {
+        // Wall squares not yet loaded — use raw input sum as placeholder (warn in note)
+        const total = install + trim + wrap + demo;
+        document.getElementById('totalPrice').value = total > 0 ? total : '';
+      }
+      updateFeeCalculator();
+    }
 
     // Fee calculator configuration — flat 5% only (Session 216 + 226 cleanup)
     const PLATFORM_FEES = {
@@ -1752,10 +1773,13 @@
           if (linkEl)  linkEl.href = 'https://app.hover.to/jobs/' + data.hover_job_id;
         }
 
-        // Update squares note if we got wall area
+        // Update squares note if we got wall area; store for fee-calculator math
         if (data.wall_squares) {
+          sidingWallSquares = parseFloat(data.wall_squares) || 0;
           const note = document.getElementById('sidingSquaresNote');
           if (note) note.textContent = 'Hover reports ' + data.wall_squares + ' squares of siding area';
+          // Re-sync the fee calculator now that we have accurate wall area
+          syncSidingTotal();
         }
 
         // Build material summary
@@ -1905,16 +1929,7 @@
         }
         const shingleItem = document.getElementById('summaryShingle')?.closest('.summary-item');
         if (shingleItem) shingleItem.style.display = 'none';
-        // Wire siding price inputs to fee calculator
-        function syncSidingTotal() {
-          const install = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || 0;
-          const trim    = parseFloat(document.getElementById('sidingTrimPrice')?.value) || 0;
-          const wrap    = parseFloat(document.getElementById('sidingWindowWrapPrice')?.value) || 0;
-          const demo    = parseFloat(document.getElementById('sidingTeardownPrice')?.value) || 0;
-          const total   = install + trim + wrap + demo;
-          document.getElementById('totalPrice').value = total > 0 ? total : '';
-          updateFeeCalculator();
-        }
+        // Wire siding price inputs to fee calculator (module-level syncSidingTotal)
         ['sidingInstallPerSquare','sidingTrimPrice','sidingWindowWrapPrice','sidingTeardownPrice'].forEach(id => {
           document.getElementById(id)?.addEventListener('input', syncSidingTotal);
         });
@@ -2268,6 +2283,12 @@
         }
       }
       if (va.siding_equivalent_product) setVal('sidingEquivalentProduct', va.siding_equivalent_product);
+
+      // For siding-only retail: re-sync the fee calculator from restored per-sq fields.
+      // (Wall squares may not be available yet; syncSidingTotal is tolerant of null sidingWallSquares.)
+      if (sidingTradeActive && !_restoreTrades.includes('roofing')) {
+        syncSidingTotal();
+      }
 
       // Trigger bid type UI sync
       document.querySelectorAll('input[name="bidTypeOption"]').forEach(r => r.dispatchEvent(new Event('change')));
