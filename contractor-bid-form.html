@@ -2442,14 +2442,18 @@
         ? currentContractor.trades.map(t => t.toLowerCase())
         : null;
 
+      // Handle both prompt-schema field names (line_items, section_name) and
+      // LLM-variant field names (items, name) for resilience
       const filteredSections = [];
       (parsed.sections || []).forEach(section => {
-        const items = (section.line_items || []).filter(item => {
+        const sectionItems = section.line_items || section.items || [];
+        const sectionName = section.section_name || section.name;
+        const items = sectionItems.filter(item => {
           if (!contractorTrades) return true;
-          return matchesTrade(section.section_name, item.description, contractorTrades);
+          return matchesTrade(sectionName, item.description, contractorTrades);
         });
         if (items.length > 0) {
-          filteredSections.push({ ...section, line_items: items });
+          filteredSections.push({ ...section, section_name: sectionName, line_items: items });
         }
       });
 
@@ -2478,10 +2482,11 @@
 
         let rowsHtml = section.line_items.map(item => {
           const noteHtml = item.notes ? '<span class="item-note">' + escHtmlBid(item.notes) + '</span>' : '';
+          const rcVal = item.rc ?? item.rcv;
           return '<tr>'
             + '<td class="desc">' + escHtmlBid(item.description || '') + noteHtml + '</td>'
             + '<td class="num">' + escHtmlBid(fmtQty(item.quantity, item.unit)) + '</td>'
-            + '<td class="num">' + fmtMoney(item.rc) + '</td>'
+            + '<td class="num">' + fmtMoney(rcVal) + '</td>'
             + '<td class="num">' + fmtMoney(item.depreciation) + '</td>'
             + '<td class="num">' + fmtMoney(item.acv) + '</td>'
             + '</tr>';
@@ -2552,12 +2557,18 @@
     }
 
     // ── Fee Calculator — flat 5% only (Session 216 + 226 cleanup) ──
+    // Insurance jobs: fee is 5% of RCV (from loss sheet), not 5% of bid amount.
+    // Retail jobs: fee is 5% of bid amount as before.
     function updateFeeCalculator() {
       const bidAmount = parseFloat(document.getElementById('totalPrice').value) || 0;
 
-      const contractSigningFee = bidAmount * PLATFORM_FEES.contractSigning;
+      // For insurance jobs, fee base is RCV; for retail, fee base is bid amount
+      const isInsurance = currentClaim && currentClaim.job_type === 'insurance_rcv';
+      const feeBase = (isInsurance && claimRcv) ? claimRcv : bidAmount;
+
+      const contractSigningFee = feeBase * PLATFORM_FEES.contractSigning;
       const totalFee = contractSigningFee;
-      const totalFeePercent = bidAmount > 0 ? (totalFee / bidAmount * 100).toFixed(1) : 0;
+      const totalFeePercent = feeBase > 0 ? (totalFee / feeBase * 100).toFixed(1) : 0;
       const netAmount = bidAmount - totalFee;
 
       document.getElementById('displayBid').textContent = formatCurrency(bidAmount);
@@ -2565,6 +2576,16 @@
       document.getElementById('totalFeePercent').textContent = totalFeePercent + '%';
       document.getElementById('totalFeeAmount').textContent = formatCurrency(totalFee);
       document.getElementById('yourNet').textContent = formatCurrency(netAmount);
+
+      // Show fee basis note for insurance jobs
+      const feeInfoEl = document.querySelector('.fee-info');
+      if (feeInfoEl) {
+        if (isInsurance && claimRcv) {
+          feeInfoEl.innerHTML = '<div>ℹ A flat 5% platform fee based on the RCV (' + formatCurrency(claimRcv) + ') applies upon contract signing.</div>';
+        } else {
+          feeInfoEl.innerHTML = '<div>ℹ A flat 5% platform fee applies to all projects upon contract signing.</div>';
+        }
+      }
     }
 
     function formatCurrency(value) {
@@ -2827,6 +2848,17 @@
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
           const feePercentage = 5.0;
 
+          // Insurance jobs: fee is based on RCV from loss sheet, not bid amount
+          let feeBase = totalPrice;
+          if (currentClaim.job_type === 'insurance_rcv' && currentClaim.parsed_line_items) {
+            const pli = typeof currentClaim.parsed_line_items === 'string'
+              ? JSON.parse(currentClaim.parsed_line_items)
+              : currentClaim.parsed_line_items;
+            if (pli && pli.summary && pli.summary.rcv) {
+              feeBase = pli.summary.rcv;
+            }
+          }
+
           const scopeSummary = JSON.stringify({
             brand: formData.get('brandProduct') || null,
             estimated_start_date: formData.get('startDate') || null,
@@ -2937,7 +2969,7 @@
             contractor_id: currentContractor.id,
             total_price: totalPrice,
             fee_percentage: feePercentage,
-            fee_amount: totalPrice * (feePercentage / 100),
+            fee_amount: feeBase * (feePercentage / 100),
             scope_summary: scopeSummary,
             notes: formData.get('homeownerMessage') || null,
             decking_price_per_sheet: parseFloat(formData.get('deckingPricePerSheet')) || null,
