@@ -14,9 +14,9 @@
  *   3. bid_update_confirmed — called from contractor-bid-form.html after a successful
  *      bid update. Sends a confirmation email to the contractor who submitted the update.
  *
- *   4. agreement_requested (D-134) — called from bids.html when a homeowner clicks
- *      "Request Agreement" on an unsigned auto-bid. Sends email + SMS + dashboard
- *      notification to the contractor: "A homeowner is interested — sign your agreement now."
+ *   4. agreement_requested (DEPRECATED — D-134 removed) — formerly called from bids.html
+ *      when a homeowner clicked "Request Agreement." No longer triggered in the current
+ *      flow since signing happens after homeowner selection, not before.
  *
  * Environment variables:
  *   SUPABASE_URL
