@@ -1278,16 +1278,65 @@
         items.push(esc(va.other_offers.trim()));
       }
 
-      if (items.length === 0) return '';
+      // Other Shingles Available — new array format or legacy object format
+      let shingleItems = [];
+      if (va.other_shingles) {
+        if (Array.isArray(va.other_shingles) && va.other_shingles.length > 0) {
+          // New format: ["GAF|Timberline HDZ", "Owens Corning|Duration", ...]
+          // Group by brand for display
+          const byBrand = {};
+          va.other_shingles.forEach(v => {
+            const parts = v.split('|');
+            const brand = parts[0] || 'Other';
+            const product = parts[1] || v;
+            if (!byBrand[brand]) byBrand[brand] = [];
+            byBrand[brand].push(product);
+          });
+          Object.keys(byBrand).forEach(brand => {
+            shingleItems.push(`<strong>${esc(brand)}:</strong> ${byBrand[brand].map(p => esc(p)).join(', ')}`);
+          });
+        } else if (typeof va.other_shingles === 'object' && !Array.isArray(va.other_shingles)) {
+          // Legacy format: {impact: true, designer: true, metal: false, ...}
+          const labels = { impact: 'Impact Resistant (Class 4)', designer: 'Designer / Luxury', metal: 'Metal Roofing', premium_arch: 'Premium Architectural' };
+          Object.keys(labels).forEach(key => {
+            if (va.other_shingles[key]) shingleItems.push(esc(labels[key]));
+          });
+          if (va.other_shingles.other_text) shingleItems.push(esc(va.other_shingles.other_text));
+        }
+      }
 
-      return `
-        <div style="margin: var(--sp-4) 0; padding: var(--sp-4); background: #F0FDF4; border: 1px solid #86EFAC; border-radius: var(--radius-md);">
-          <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; margin-bottom: var(--sp-2);">What's Included / Available</div>
-          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-1);">
-            ${items.map(item => `<li style="font-size: 0.875rem; color: #14532D;">${item}</li>`).join('')}
-          </ul>
-        </div>
-      `;
+      if (items.length === 0 && shingleItems.length === 0) return '';
+
+      let html = '';
+
+      if (items.length > 0) {
+        html += `
+          <div style="margin: var(--sp-4) 0; padding: var(--sp-4); background: #F0FDF4; border: 1px solid #86EFAC; border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; margin-bottom: var(--sp-2);">What's Included / Available</div>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-1);">
+              ${items.map(item => `<li style="font-size: 0.875rem; color: #14532D;">${item}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      if (shingleItems.length > 0) {
+        const notesHtml = (va.other_shingles_notes || (va.other_shingles && typeof va.other_shingles === 'object' && !Array.isArray(va.other_shingles) && va.other_shingles.notes))
+          ? `<div style="margin-top:var(--sp-2);font-size:0.8rem;color:#374151;font-style:italic;">${esc(va.other_shingles_notes || va.other_shingles.notes)}</div>`
+          : '';
+        html += `
+          <div style="margin: var(--sp-4) 0; padding: var(--sp-4); background: #EFF6FF; border: 1px solid #93C5FD; border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #1E3A5F; margin-bottom: var(--sp-2);">Also Available at Insurance Price</div>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-1);">
+              ${shingleItems.map(item => `<li style="font-size: 0.875rem; color: #1E3A5F;">${item}</li>`).join('')}
+            </ul>
+            ${notesHtml}
+            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingles other than the contractor's preferred product. Ask the contractor about specific warranty coverage before making your selection.</div>
+          </div>
+        `;
+      }
+
+      return html;
     }
 
     // ── Init ──
