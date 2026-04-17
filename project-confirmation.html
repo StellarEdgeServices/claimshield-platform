@@ -920,6 +920,9 @@
               </div>
             </div>
 
+            <!-- ══ Sections 2–6: ROOFING-SPECIFIC (hidden for non-roofing claims) ══ -->
+            <div id="roofingSections">
+
             <!-- ══ Section 2: Shingle & Material Selections ══ -->
             <div class="form-section">
               <div class="section-header">
@@ -1184,7 +1187,181 @@
               </div>
             </div>
 
-            <!-- ══ Section 7: Work NOT Being Done ══ -->
+            </div><!-- /roofingSections -->
+
+            <!-- ══ Section 7: Siding Details (hidden for non-siding claims) ══ -->
+            <div id="sidingSection" style="display:none;">
+            <div class="form-section">
+              <div class="section-header">
+                <h2>🏠 Siding Details</h2>
+                <p class="section-subtitle">Confirm your siding material, color, and project scope.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="sidingMaterial">Siding Material</label>
+                  <select id="sidingMaterial" name="sidingMaterial" class="form-select">
+                    <option value="">Select material…</option>
+                    <option value="Vinyl">Vinyl</option>
+                    <option value="James Hardie">James Hardie (Fiber Cement)</option>
+                    <option value="LP SmartSide">LP SmartSide (Engineered Wood)</option>
+                    <option value="Wood">Wood / Cedar</option>
+                    <option value="Aluminum">Aluminum</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="sidingProfile">Siding Profile / Style</label>
+                  <select id="sidingProfile" name="sidingProfile" class="form-select">
+                    <option value="">Select profile…</option>
+                    <option value="Dutch Lap">Dutch Lap</option>
+                    <option value="Clapboard">Clapboard / Beveled</option>
+                    <option value="Board and Batten">Board and Batten</option>
+                    <option value="Shakes">Shakes / Shingles</option>
+                    <option value="Smooth Panel">Smooth Panel</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label required" for="sidingColor">Siding Color / Color Name</label>
+                <input type="text" id="sidingColor" name="sidingColor" class="form-input"
+                  placeholder="e.g., Sandstone Beige, Arctic White, Autumn Red…">
+                <p class="form-hint">Enter the exact color name from the manufacturer's catalog.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="trimColorType">Trim Color</label>
+                  <select id="trimColorType" name="trimColorType" class="form-select" onchange="handleTrimColorChange()">
+                    <option value="">Select…</option>
+                    <option value="Same as siding">Same as siding</option>
+                    <option value="Other">Different color</option>
+                  </select>
+                  <div id="trimColorOtherGroup" style="display:none; margin-top:var(--sp-2);">
+                    <input type="text" id="trimColorOther" name="trimColorOther" class="form-input"
+                      placeholder="Trim color name…">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="soffitFascia">Soffit &amp; Fascia</label>
+                  <select id="soffitFascia" name="soffitFascia" class="form-select">
+                    <option value="">Select…</option>
+                    <option value="Included">Included in scope</option>
+                    <option value="Not Included">Not included</option>
+                    <option value="Damaged Only">Included — damaged areas only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="windowWraps">Window Wraps</label>
+                <select id="windowWraps" name="windowWraps" class="form-select" onchange="handleWindowWrapsChange()">
+                  <option value="">Select…</option>
+                  <option value="Included - All">Included — all windows</option>
+                  <option value="Included - Damaged Only">Included — damaged windows only</option>
+                  <option value="Not Included">Not included</option>
+                </select>
+                <div id="windowWrapsColorGroup" style="display:none; margin-top:var(--sp-2);">
+                  <input type="text" id="windowWrapsColor" name="windowWrapsColor" class="form-input"
+                    placeholder="Window wrap color…">
+                </div>
+              </div>
+
+              <!-- Rotten Sheathing -->
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="rottenSheathing">Rotten Sheathing Expectation</label>
+                  <select id="rottenSheathing" name="rottenSheathing" class="form-select" onchange="handleRottenSheathingChange()">
+                    <option value="Unexpected">Unexpected — not anticipated</option>
+                    <option value="Expected">Expected — I know some exists</option>
+                  </select>
+                </div>
+                <div id="rottenSheathingSqFtGroup" style="display:none;">
+                  <label class="form-label" for="rottenSheathingSqFt">Estimated sq ft of rotten sheathing</label>
+                  <input type="number" id="rottenSheathingSqFt" name="rottenSheathingSqFt" class="form-input"
+                    min="0" placeholder="0">
+                </div>
+              </div>
+
+              <!-- Rotten Sheathing Disclosure + Ack -->
+              <div class="disclosure-text" id="sidingDisclosureBox">
+                <h4 class="disclosure-heading">Rotten Sheathing</h4>
+                <p>Rotten or damaged wall sheathing cannot be fully inspected until the existing siding is removed. On the day of install, [Contractor] is required to replace all rotten sheathing found. Sheathing replacement costs will be communicated to me before work begins and submitted to my insurance company. If my insurance company will not pay for sheathing replacement, I will be responsible for the cost.</p>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" class="ack-checkbox" id="ackRottenSheathing" name="ackRottenSheathing">
+                <label class="ack-label" for="ackRottenSheathing">
+                  I have read and understand the Rotten Sheathing Disclosure above. <em>(Initial)</em>
+                </label>
+              </div>
+            </div><!-- /form-section siding -->
+            </div><!-- /sidingSection -->
+
+            <!-- ══ Section 8: Gutter Details (hidden for non-gutter claims) ══ -->
+            <div id="guttersSection" style="display:none;">
+            <div class="form-section">
+              <div class="section-header">
+                <h2>🌧️ Gutter Details</h2>
+                <p class="section-subtitle">Confirm your gutter and downspout specifications.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="gutterSize">Gutter Size</label>
+                  <select id="gutterSize" name="gutterSize" class="form-select">
+                    <option value="">Select size…</option>
+                    <option value='5" K-Style'>5" K-Style (standard)</option>
+                    <option value='6" K-Style'>6" K-Style (premium)</option>
+                    <option value="Half-Round">Half-Round</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="gutterColorInput">Gutter Color</label>
+                  <input type="text" id="gutterColorInput" name="gutterColorInput" class="form-input"
+                    placeholder="e.g., White, Musket Brown, Bronze…">
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="downspoutColorType">Downspout Color</label>
+                  <select id="downspoutColorType" name="downspoutColorType" class="form-select" onchange="handleDownspoutColorChange()">
+                    <option value="">Select…</option>
+                    <option value="Same as gutters">Same as gutters</option>
+                    <option value="Other">Different color</option>
+                  </select>
+                  <div id="downspoutColorOtherGroup" style="display:none; margin-top:var(--sp-2);">
+                    <input type="text" id="downspoutColorOther" name="downspoutColorOther" class="form-input"
+                      placeholder="Downspout color…">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="splashBlocks">Splash Blocks</label>
+                  <select id="splashBlocks" name="splashBlocks" class="form-select">
+                    <option value="">Select…</option>
+                    <option value="Include">Include splash blocks</option>
+                    <option value="Replace Existing">Replace existing only</option>
+                    <option value="Not Needed">Not needed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="gutterNotes">Additional Gutter Notes (optional)</label>
+                <textarea id="gutterNotes" name="gutterNotes" class="form-textarea" rows="3"
+                  placeholder="Any special gutter requirements, custom miters, end caps, etc.…"></textarea>
+              </div>
+            </div><!-- /form-section gutters -->
+            </div><!-- /guttersSection -->
+
+            <!-- ══ Section 9: Work NOT Being Done ══ -->
             <div class="form-section">
               <div class="section-header">
                 <h2>&#x274C; Work NOT Being Done</h2>
@@ -1196,7 +1373,7 @@
               </div>
             </div>
 
-            <!-- ══ Section 8: Project Notes ══ -->
+            <!-- ══ Section 10: Project Notes ══ -->
             <div class="form-section">
               <div class="section-header">
                 <h2>&#x1F4AC; Project Notes</h2>
@@ -1208,7 +1385,7 @@
               </div>
             </div>
 
-            <!-- ══ Section 9: Disclosures ══ -->
+            <!-- ══ Section 11: Disclosures ══ -->
             <div class="form-section">
               <div class="section-header">
                 <h2>&#x270F;&#xFE0F; Disclosures &amp; Acknowledgments</h2>
@@ -1331,6 +1508,8 @@
       winningQuote: null,
       depreciation: null,
       deckingRatePerSheet: null,
+      selectedTrades: [],   // populated from claim.selected_trades on init
+      isInsuranceClaim: false,
     };
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1618,13 +1797,61 @@
       }
     }
 
+    // ── Siding conditional handlers ────────────────────────────────────────────
+    function handleTrimColorChange() {
+      const val = document.getElementById('trimColorType').value;
+      const otherGroup = document.getElementById('trimColorOtherGroup');
+      if (otherGroup) otherGroup.style.display = val === 'Other' ? 'block' : 'none';
+    }
+
+    function handleWindowWrapsChange() {
+      const val = document.getElementById('windowWraps').value;
+      const colorGroup = document.getElementById('windowWrapsColorGroup');
+      if (colorGroup) {
+        colorGroup.style.display = (val === 'Included - All' || val === 'Included - Damaged Only') ? 'block' : 'none';
+      }
+    }
+
+    function handleRottenSheathingChange() {
+      const val = document.getElementById('rottenSheathing').value;
+      const sqFtGroup = document.getElementById('rottenSheathingSqFtGroup');
+      if (sqFtGroup) sqFtGroup.style.display = val === 'Expected' ? 'block' : 'none';
+    }
+
+    // ── Gutters conditional handlers ───────────────────────────────────────────
+    function handleDownspoutColorChange() {
+      const val = document.getElementById('downspoutColorType').value;
+      const otherGroup = document.getElementById('downspoutColorOtherGroup');
+      if (otherGroup) otherGroup.style.display = val === 'Other' ? 'block' : 'none';
+    }
+
     // ── Validate & Enable Submit ───────────────────────────────────────────────
-    const ACK_IDS = ['ackBadDecking', 'ackDepreciation', 'ackPaymentTerms', 'ackProjectChanges', 'ackInfoCorrect'];
+    // ACK_IDS is built dynamically after trade detection runs in init().
+    // Always required: ackPaymentTerms, ackProjectChanges, ackInfoCorrect.
+    // Trade/claim-specific: ackBadDecking (roofing), ackRottenSheathing (siding),
+    //                       ackDepreciation (insurance claims only).
+    let ACK_IDS = ['ackPaymentTerms', 'ackProjectChanges', 'ackInfoCorrect'];
+
+    function buildAckIds() {
+      const ids = [];
+      const trades = state.selectedTrades;
+      const hasRoofing = trades.length === 0 || trades.includes('roofing');
+      const hasSiding  = trades.includes('siding');
+      if (hasRoofing)            ids.push('ackBadDecking');
+      if (hasSiding)             ids.push('ackRottenSheathing');
+      if (state.isInsuranceClaim) ids.push('ackDepreciation');
+      ids.push('ackPaymentTerms', 'ackProjectChanges', 'ackInfoCorrect');
+      return ids;
+    }
 
     function allAcksChecked() {
       return ACK_IDS.every(id => {
         const el = document.getElementById(id);
-        return el && el.checked;
+        // Skip hidden acks (trade not applicable)
+        if (!el) return true;
+        const section = el.closest('.ack-item');
+        if (section && section.style.display === 'none') return true;
+        return el.checked;
       });
     }
 
@@ -1634,8 +1861,14 @@
 
     // ── Build Payload ──────────────────────────────────────────────────────────
     function buildPayload() {
+      const trades = state.selectedTrades;
+      const hasRoofing = trades.length === 0 || trades.includes('roofing');
+      const hasSiding  = trades.includes('siding');
+      const hasGutters = trades.includes('gutters') || trades.includes('downspouts');
+
       return {
-        trade: 'roofing',
+        // Which trades are confirmed in this submission
+        activeTrades: trades.length > 0 ? trades : ['roofing'],
         submittedAt: new Date().toISOString(),
 
         // Structures
@@ -1679,6 +1912,31 @@
         // Exclusions & notes
         exclusions:          getInputVal('exclusions')               || '',
         projectNotes:        getInputVal('projectNotes')             || '',
+
+        // ── Siding (only populated when siding is an active trade) ──
+        ...(hasSiding ? {
+          sidingMaterial:        getSelectVal('sidingMaterial')        || '',
+          sidingProfile:         getSelectVal('sidingProfile')         || '',
+          sidingColor:           getInputVal('sidingColor')            || '',
+          trimColorType:         getSelectVal('trimColorType')         || '',
+          trimColorOther:        getInputVal('trimColorOther')         || '',
+          soffitFascia:          getSelectVal('soffitFascia')          || '',
+          windowWraps:           getSelectVal('windowWraps')           || '',
+          windowWrapsColor:      getInputVal('windowWrapsColor')       || '',
+          rottenSheathing:       getSelectVal('rottenSheathing')       || 'Unexpected',
+          rottenSheathingSqFt:   parseInt(getInputVal('rottenSheathingSqFt')) || 0,
+          ackRottenSheathing:    getCheckVal('ackRottenSheathing'),
+        } : {}),
+
+        // ── Gutters (only populated when gutters is an active trade) ──
+        ...(hasGutters ? {
+          gutterSize:            getSelectVal('gutterSize')            || '',
+          gutterColorInput:      getInputVal('gutterColorInput')       || '',
+          downspoutColorType:    getSelectVal('downspoutColorType')    || '',
+          downspoutColorOther:   getInputVal('downspoutColorOther')    || '',
+          splashBlocks:          getSelectVal('splashBlocks')          || '',
+          gutterNotes:           getInputVal('gutterNotes')            || '',
+        } : {}),
 
         // Disclosures
         ackBadDecking:       getCheckVal('ackBadDecking'),
@@ -1757,6 +2015,38 @@
       // Exclusions & notes
       setInput('exclusions',    data.exclusions);
       setInput('projectNotes',  data.projectNotes);
+
+      // ── Siding ──
+      if (data.sidingMaterial) {
+        const setSelectById = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        setSelectById('sidingMaterial',    data.sidingMaterial);
+        setSelectById('sidingProfile',     data.sidingProfile);
+        setInput('sidingColor',            data.sidingColor);
+        setSelectById('trimColorType',     data.trimColorType);
+        setInput('trimColorOther',         data.trimColorOther);
+        if (data.trimColorType === 'Other') handleTrimColorChange();
+        setSelectById('soffitFascia',      data.soffitFascia);
+        setSelectById('windowWraps',       data.windowWraps);
+        setInput('windowWrapsColor',       data.windowWrapsColor);
+        if (data.windowWraps && data.windowWraps !== 'Not Included') handleWindowWrapsChange();
+        const rottenEl = document.getElementById('rottenSheathing');
+        if (rottenEl && data.rottenSheathing) rottenEl.value = data.rottenSheathing;
+        setInput('rottenSheathingSqFt', data.rottenSheathingSqFt != null ? String(data.rottenSheathingSqFt) : null);
+        if (data.rottenSheathing === 'Expected') handleRottenSheathingChange();
+        setCheckById('ackRottenSheathing', data.ackRottenSheathing);
+      }
+
+      // ── Gutters ──
+      if (data.gutterSize || data.gutterColorInput) {
+        const setSelectById = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        setSelectById('gutterSize',         data.gutterSize);
+        setInput('gutterColorInput',        data.gutterColorInput);
+        setSelectById('downspoutColorType', data.downspoutColorType);
+        setInput('downspoutColorOther',     data.downspoutColorOther);
+        if (data.downspoutColorType === 'Other') handleDownspoutColorChange();
+        setSelectById('splashBlocks',       data.splashBlocks);
+        setInput('gutterNotes',             data.gutterNotes);
+      }
 
       // Acks
       setCheckById('ackBadDecking',    data.ackBadDecking);
@@ -2022,6 +2312,40 @@
         if (existingConf) {
           populateExistingData(existingConf);
         }
+
+        // ── Trade detection: show/hide trade-specific sections ──
+        // Fall back to roofing if no selected_trades column on claim.
+        const rawTrades = Array.isArray(claimData.selected_trades) ? claimData.selected_trades : [];
+        state.selectedTrades = rawTrades;
+        state.isInsuranceClaim = claimData.funding_type === 'insurance' || claimData.job_type?.includes('insurance');
+
+        const hasRoofing = rawTrades.length === 0 || rawTrades.some(t => t.toLowerCase() === 'roofing');
+        const hasSiding  = rawTrades.some(t => t.toLowerCase() === 'siding');
+        const hasGutters = rawTrades.some(t => ['gutters','downspouts','gutter'].includes(t.toLowerCase()));
+
+        // Show/hide section blocks
+        document.getElementById('roofingSections').style.display = hasRoofing ? '' : 'none';
+        document.getElementById('sidingSection').style.display   = hasSiding  ? '' : 'none';
+        document.getElementById('guttersSection').style.display  = hasGutters ? '' : 'none';
+
+        // Hide depreciation disclosure for retail claims (no depreciation applies)
+        const depAckItem = document.getElementById('ackDepreciation')?.closest('.ack-item');
+        if (depAckItem && !state.isInsuranceClaim) {
+          depAckItem.style.display = 'none';
+        }
+        // Hide bad decking disclosure for non-roofing claims
+        const badDeckingAckItem = document.getElementById('ackBadDecking')?.closest('.ack-item');
+        if (badDeckingAckItem && !hasRoofing) {
+          badDeckingAckItem.style.display = 'none';
+        }
+        // Hide rotten sheathing ack for non-siding claims
+        const rottenAckItem = document.getElementById('ackRottenSheathing')?.closest('.ack-item');
+        if (rottenAckItem && !hasSiding) {
+          rottenAckItem.style.display = 'none';
+        }
+
+        // Build dynamic ACK_IDS after trade detection
+        ACK_IDS = buildAckIds();
 
         // ── Wire numStructures change ──
         document.getElementById('numStructures').addEventListener('change', function () {
