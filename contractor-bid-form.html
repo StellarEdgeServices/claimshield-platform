@@ -1491,35 +1491,17 @@
         <div class="fee-row">
           <span class="fee-label">
             <span class="fee-check">✓</span>
-            <span>Contract Signing (base)</span>
+            <span>Platform Fee</span>
             <span class="fee-percentage">5.0%</span>
           </span>
           <span class="fee-amount" id="feeContractSigning">$0.00</span>
-        </div>
-
-        <div class="fee-row">
-          <span class="fee-label">
-            <span class="fee-check">✓</span>
-            <span>Color Selection</span>
-            <span class="fee-percentage">3.0%</span>
-          </span>
-          <span class="fee-amount" id="feeColorSelection">$0.00</span>
-        </div>
-
-        <div class="fee-row">
-          <span class="fee-label">
-            <span class="fee-check">✓</span>
-            <span>Deductible Collection</span>
-            <span class="fee-percentage">5.0%</span>
-          </span>
-          <span class="fee-amount" id="feeDeductibleCollection">$0.00</span>
         </div>
       </div>
 
       <div class="fee-row total">
         <span>Total Platform Fee</span>
         <div>
-          <span class="fee-amount" id="totalFeePercent">13.0%</span>
+          <span class="fee-amount" id="totalFeePercent">5.0%</span>
           <span style="margin-left: var(--sp-2); font-weight: 400;">= <span class="fee-amount" id="totalFeeAmount">$0.00</span></span>
         </div>
       </div>
@@ -1530,9 +1512,9 @@
       </div>
 
       <div class="fee-info">
-        <div>ℹ Color selection and scheduling fees based on your service tier settings. Deductible collection is mandatory.</div>
-        <a href="contractor-settings.html" class="fee-info-link">
-          Adjust your service tier → Settings
+        <div>ℹ 5% of the job value, charged when the homeowner signs the contract.</div>
+        <a href="contractor-agreement.html" class="fee-info-link">
+          View Contractor Partner Agreement →
         </a>
       </div>
     </div>
@@ -1617,15 +1599,7 @@
 
     // Fee calculator configuration
     const PLATFORM_FEES = {
-      contractSigning: 0.05,    // 5%
-      colorSelection: 0.03,     // 3%
-      deductibleCollection: 0.05 // 5%
-    };
-
-    // Contractor tier settings (demo)
-    const contractorTiers = {
-      colorSelection: true,
-      deductibleCollection: true
+      contractSigning: 0.05    // 5% flat platform fee
     };
 
     // State
@@ -2506,20 +2480,13 @@
     function updateFeeCalculator() {
       const bidAmount = parseFloat(document.getElementById('totalPrice').value) || 0;
 
-      const contractSigningFee = bidAmount * PLATFORM_FEES.contractSigning;
-      const colorSelectionFee = contractorTiers.colorSelection ? bidAmount * PLATFORM_FEES.colorSelection : 0;
-      const deductibleCollectionFee = contractorTiers.deductibleCollection ? bidAmount * PLATFORM_FEES.deductibleCollection : 0;
-
-      const totalFee = contractSigningFee + colorSelectionFee + deductibleCollectionFee;
-      const totalFeePercent = bidAmount > 0 ? (totalFee / bidAmount * 100).toFixed(1) : 0;
-      const netAmount = bidAmount - totalFee;
+      const platformFee = bidAmount * PLATFORM_FEES.contractSigning;
+      const netAmount = bidAmount - platformFee;
 
       document.getElementById('displayBid').textContent = formatCurrency(bidAmount);
-      document.getElementById('feeContractSigning').textContent = formatCurrency(contractSigningFee);
-      document.getElementById('feeColorSelection').textContent = formatCurrency(colorSelectionFee);
-      document.getElementById('feeDeductibleCollection').textContent = formatCurrency(deductibleCollectionFee);
-      document.getElementById('totalFeePercent').textContent = totalFeePercent + '%';
-      document.getElementById('totalFeeAmount').textContent = formatCurrency(totalFee);
+      document.getElementById('feeContractSigning').textContent = formatCurrency(platformFee);
+      document.getElementById('totalFeePercent').textContent = '5.0%';
+      document.getElementById('totalFeeAmount').textContent = formatCurrency(platformFee);
       document.getElementById('yourNet').textContent = formatCurrency(netAmount);
     }
 
