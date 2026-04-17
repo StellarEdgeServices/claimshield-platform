@@ -640,20 +640,20 @@
 
                 let notes = '';
                 if (o.homeownerNotes) {
-                    const t = o.homeownerNotes.length > 150 ? o.homeownerNotes.substring(0,150)+'...' : o.homeownerNotes;
-                    notes = '<div class="homeowner-notes"><strong>Homeowner Notes</strong>' + t + '</div>';
+                    notes = '<div class="homeowner-notes"><strong>Homeowner Notes</strong>' + escHtml(o.homeownerNotes) + '</div>';
                 }
 
                 let scopeHtml = '';
                 if (o.contractorScopeSummary) {
                     const safeId = String(o.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                    const scopeLabel = (o.fundingType === 'insurance') ? 'Insurance Scope of Work' : 'Scope of Work';
                     scopeHtml = '<div class="scope-toggle-row">'
                         + '<button class="btn-scope" id="scope-btn-' + safeId + '" onclick="toggleScope(\'' + safeId + '\')">'
                         + '&#x1F4CB; View Scope <span id="scope-arrow-' + safeId + '">&#x25BC;</span>'
                         + '</button>'
                         + '</div>'
                         + '<div class="scope-content" id="scope-' + safeId + '" style="display:none;">'
-                        + '<span class="scope-label">Insurance Scope of Work</span>'
+                        + '<span class="scope-label">' + scopeLabel + '</span>'
                         + '<div class="scope-text">' + escHtml(o.contractorScopeSummary) + '</div>'
                         + '</div>';
                 }
