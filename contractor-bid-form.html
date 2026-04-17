@@ -2748,7 +2748,7 @@
           await new Promise(resolve => setTimeout(resolve, 800));
         } else if (sb && currentUser && currentClaim) {
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          const feePercentage = 13.0;
+          const feePercentage = 5.0;
 
           const scopeSummary = JSON.stringify({
             brand: formData.get('brandProduct') || null,
