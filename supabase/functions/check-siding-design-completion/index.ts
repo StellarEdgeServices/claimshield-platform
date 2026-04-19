@@ -50,11 +50,27 @@ const TRIM_INDICATORS = [
   "soffit", "rake", "starter strip", "finish trim", "window trim", "door trim",
 ];
 
+// CORS tightened (Session 254): origin-allowlisted instead of wildcard.
+// NOTE: This endpoint is typically invoked by pg_cron (no CORS needed) or
+// the service role key; the allowlist is defense-in-depth.
+const ALLOWED_ORIGINS = [
+  "https://otterquote.com",
+  "https://jade-alpaca-b82b5e.netlify.app",
+];
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Vary": "Origin",
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type" },
-    });
+    return new Response("ok", { headers: buildCorsHeaders(req) });
   }
 
   const supabaseUrl  = Deno.env.get("SUPABASE_URL")!;

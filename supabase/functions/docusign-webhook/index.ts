@@ -14,10 +14,23 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-docusign-signature-1",
-};
+// CORS tightened (Session 254): origin-allowlisted instead of wildcard.
+// Webhook traffic is server-to-server (no Origin header); browser probes
+// fall back to the first allowed origin.
+const ALLOWED_ORIGINS = [
+  "https://otterquote.com",
+  "https://jade-alpaca-b82b5e.netlify.app",
+];
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-docusign-signature-1",
+    "Vary": "Origin",
+  };
+}
 
 // ========== HMAC VERIFICATION ==========
 async function verifyHmacSignature(
@@ -56,6 +69,7 @@ async function verifyHmacSignature(
 
 // ========== MAIN HANDLER ==========
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

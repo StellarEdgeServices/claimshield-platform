@@ -2060,52 +2060,119 @@
         }
       }
 
-      let html = '<div class="template-slots-grid">';
+      // Session 254: XSS hardening — build DOM instead of templated innerHTML
+      // so that DB-sourced file_url / filename values can never inject markup.
+      gridContainer.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'template-slots-grid';
 
       for (const slot of PC_SETTINGS_SLOTS) {
         const slotKey  = `${slot.trade}/${slot.fundingType}`;
         const inputId  = `pcs_${slot.trade}_${slot.fundingType}_input`;
         const slotData = pcTemplates[slotKey];
 
+        const cell = document.createElement('div');
+        cell.className = 'template-slot';
+
+        const header = document.createElement('div');
+        header.className = 'template-slot-header';
+        header.textContent = slot.label;
+        cell.appendChild(header);
+
         if (slotData && slotData.file_url) {
+          const fileUrl = String(slotData.file_url);
           const uploadDate = slotData.uploaded_at
             ? new Date(slotData.uploaded_at).toLocaleDateString()
             : 'Unknown date';
-          const fileName = slotData.file_url.split('/').pop().split('?')[0] || 'template.pdf';
-          html += `
-            <div class="template-slot">
-              <div class="template-slot-header">${slot.label}</div>
-              <div class="template-file-display">
-                <div class="template-file-name">${fileName}</div>
-                <div class="template-file-date">Uploaded: ${uploadDate}</div>
-              </div>
-              <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
-                <button class="btn-small btn-small-primary" onclick="viewPcTemplateSettings('${slotData.file_url.replace(/'/g, "\\'")}')">View</button>
-                <button class="btn-small btn-small-secondary" onclick="replacePcTemplateSettings('${slotKey}', '${inputId}')">Replace</button>
-              </div>
-              <input type="file" id="${inputId}" accept=".pdf" style="display:none" onchange="uploadPcTemplateFileSettings('${slotKey}', this)">
-            </div>
-          `;
+          const fileName = fileUrl.split('/').pop().split('?')[0] || 'template.pdf';
+
+          const fileDisplay = document.createElement('div');
+          fileDisplay.className = 'template-file-display';
+
+          const nameEl = document.createElement('div');
+          nameEl.className = 'template-file-name';
+          nameEl.textContent = fileName;
+
+          const dateEl = document.createElement('div');
+          dateEl.className = 'template-file-date';
+          dateEl.textContent = 'Uploaded: ' + uploadDate;
+
+          fileDisplay.appendChild(nameEl);
+          fileDisplay.appendChild(dateEl);
+          cell.appendChild(fileDisplay);
+
+          const btnRow = document.createElement('div');
+          btnRow.style.cssText = 'display: flex; gap: var(--sp-3); flex-wrap: wrap;';
+
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'btn-small btn-small-primary';
+          viewBtn.textContent = 'View';
+          viewBtn.addEventListener('click', () => viewPcTemplateSettings(fileUrl));
+
+          const replaceBtn = document.createElement('button');
+          replaceBtn.className = 'btn-small btn-small-secondary';
+          replaceBtn.textContent = 'Replace';
+          replaceBtn.addEventListener('click', () => replacePcTemplateSettings(slotKey, inputId));
+
+          btnRow.appendChild(viewBtn);
+          btnRow.appendChild(replaceBtn);
+          cell.appendChild(btnRow);
+
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.id = inputId;
+          fileInput.accept = '.pdf';
+          fileInput.style.display = 'none';
+          fileInput.addEventListener('change', function () { uploadPcTemplateFileSettings(slotKey, this); });
+          cell.appendChild(fileInput);
         } else {
-          html += `
-            <div class="template-slot">
-              <div class="template-slot-header">${slot.label}</div>
-              <div class="template-slot-subtext">No template uploaded</div>
-              <div class="template-upload-box" onclick="document.getElementById('${inputId}').click()">
-                <label for="${inputId}" class="template-upload-label">
-                  <div class="template-upload-icon">📋</div>
-                  <div class="template-upload-text">Upload Template</div>
-                  <div class="template-upload-hint">PDF format, max 10MB</div>
-                </label>
-                <input type="file" id="${inputId}" accept=".pdf" onchange="uploadPcTemplateFileSettings('${slotKey}', this)">
-              </div>
-            </div>
-          `;
+          const subtext = document.createElement('div');
+          subtext.className = 'template-slot-subtext';
+          subtext.textContent = 'No template uploaded';
+          cell.appendChild(subtext);
+
+          const uploadBox = document.createElement('div');
+          uploadBox.className = 'template-upload-box';
+          uploadBox.addEventListener('click', () => {
+            const inp = document.getElementById(inputId);
+            if (inp) inp.click();
+          });
+
+          const label = document.createElement('label');
+          label.setAttribute('for', inputId);
+          label.className = 'template-upload-label';
+
+          const iconEl = document.createElement('div');
+          iconEl.className = 'template-upload-icon';
+          iconEl.textContent = '📋';
+
+          const textEl = document.createElement('div');
+          textEl.className = 'template-upload-text';
+          textEl.textContent = 'Upload Template';
+
+          const hintEl = document.createElement('div');
+          hintEl.className = 'template-upload-hint';
+          hintEl.textContent = 'PDF format, max 10MB';
+
+          label.appendChild(iconEl);
+          label.appendChild(textEl);
+          label.appendChild(hintEl);
+          uploadBox.appendChild(label);
+
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.id = inputId;
+          fileInput.accept = '.pdf';
+          fileInput.addEventListener('change', function () { uploadPcTemplateFileSettings(slotKey, this); });
+          uploadBox.appendChild(fileInput);
+
+          cell.appendChild(uploadBox);
         }
+
+        grid.appendChild(cell);
       }
 
-      html += '</div>';
-      gridContainer.innerHTML = html;
+      gridContainer.appendChild(grid);
     }
 
     async function viewPcTemplateSettings(fileUrl) {

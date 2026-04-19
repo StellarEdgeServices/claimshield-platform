@@ -33,11 +33,22 @@ const DASHBOARD_URL = "https://otterquote.com/contractor-dashboard.html";
 const OPPORTUNITIES_URL = "https://otterquote.com/contractor-opportunities.html";
 const SETTINGS_URL = "https://otterquote.com/contractor-settings.html";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// CORS tightened (Session 254): origin-allowlisted instead of wildcard.
+const ALLOWED_ORIGINS = [
+  "https://otterquote.com",
+  "https://jade-alpaca-b82b5e.netlify.app",
+];
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 // =============================================================================
 // EMAIL HELPERS
@@ -477,7 +488,8 @@ async function handleContractSigned(
   mailgunApiKey: string,
   mailgunDomain: string,
   supabaseUrl: string,
-  supabaseKey: string
+  supabaseKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id } = body;
 
@@ -611,7 +623,8 @@ async function handleBidUpdateConfirmed(
   body: Record<string, any>,
   supabase: ReturnType<typeof createClient>,
   mailgunApiKey: string,
-  mailgunDomain: string
+  mailgunDomain: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id, contractor_id } = body;
 
@@ -874,7 +887,8 @@ async function handleNewOpportunity(
   mailgunApiKey: string,
   mailgunDomain: string,
   supabaseUrl: string,
-  supabaseKey: string
+  supabaseKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id, claim_zip, claim_city, claim_state, claim_county, trade_types, job_type } = body;
 
@@ -984,7 +998,8 @@ async function handleAgreementRequested(
   mailgunApiKey: string,
   mailgunDomain: string,
   supabaseUrl: string,
-  supabaseKey: string
+  supabaseKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const { claim_id, contractor_id, quote_id } = body;
 
@@ -1128,6 +1143,7 @@ async function handleAgreementRequested(
 // MAIN ENTRY POINT
 // =============================================================================
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -1153,19 +1169,19 @@ serve(async (req) => {
     console.log(`notify-contractors: event_type=${event_type}, claim_id=${body.claim_id}`);
 
     if (event_type === "contract_signed") {
-      return await handleContractSigned(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey);
+      return await handleContractSigned(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey, corsHeaders);
     }
 
     if (event_type === "bid_update_confirmed") {
-      return await handleBidUpdateConfirmed(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN);
+      return await handleBidUpdateConfirmed(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, corsHeaders);
     }
 
     if (event_type === "agreement_requested") {
-      return await handleAgreementRequested(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey);
+      return await handleAgreementRequested(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey, corsHeaders);
     }
 
     // Default: new_opportunity
-    return await handleNewOpportunity(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey);
+    return await handleNewOpportunity(body, supabase, MAILGUN_API_KEY, MAILGUN_DOMAIN, supabaseUrl, supabaseKey, corsHeaders);
 
   } catch (error) {
     console.error("notify-contractors unhandled error:", error);

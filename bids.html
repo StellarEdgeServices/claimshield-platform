@@ -823,18 +823,33 @@
         if (data.job_address && addrEl) addrEl.textContent = data.job_address;
 
         // Rendered images gallery
+        // Session 254: XSS hardening — build DOM instead of string-concatenated innerHTML
+        // so that Hover-supplied URLs can never inject markup or JS handlers.
         if (data.design_images && data.design_images.length > 0 && imagesEl) {
-          let imgHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:0.75rem;">';
+          imagesEl.innerHTML = ''; // clear
+          const grid = document.createElement('div');
+          grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:0.75rem;';
+
           data.design_images.forEach((url, idx) => {
-            imgHtml += '<div style="aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:1px solid rgba(20,184,166,0.3);background:rgba(0,0,0,0.2);">'
-                     + '<img src="' + url + '" alt="Property view ' + (idx+1) + '" '
-                     + 'style="width:100%;height:100%;object-fit:cover;cursor:pointer;" '
-                     + 'onclick="window.open(\'' + url + '\',\'_blank\')" '
-                     + 'onerror="this.closest(\'div\').style.display=\'none\'">'
-                     + '</div>';
+            // Only allow http(s) URLs — reject javascript:, data:, etc.
+            const safeUrl = (typeof url === 'string' && /^https?:\/\//i.test(url)) ? url : '';
+            if (!safeUrl) return;
+
+            const cell = document.createElement('div');
+            cell.style.cssText = 'aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:1px solid rgba(20,184,166,0.3);background:rgba(0,0,0,0.2);';
+
+            const img = document.createElement('img');
+            img.src = safeUrl;
+            img.alt = 'Property view ' + (idx + 1);
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;cursor:pointer;';
+            img.addEventListener('click', () => window.open(safeUrl, '_blank'));
+            img.addEventListener('error', () => { cell.style.display = 'none'; });
+
+            cell.appendChild(img);
+            grid.appendChild(cell);
           });
-          imgHtml += '</div>';
-          imagesEl.innerHTML = imgHtml;
+
+          imagesEl.appendChild(grid);
           imagesEl.style.display = 'block';
         }
 
