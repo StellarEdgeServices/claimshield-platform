@@ -876,6 +876,24 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 8;
   }
 
+  // ── Second-Layer Tear-Off Contingency ────────────────────────────
+  // Only rendered when bid includes secondLayerContingency pricing (retail roofing).
+  const slc = va?.secondLayerContingency;
+  if (hasRoofing && slc) {
+    const slcAmount = (slc.method === "flat_fee" && slc.flatFeeAlternative != null)
+      ? slc.flatFeeAlternative
+      : slc.pricePerSquare;
+    if (slcAmount != null) {
+      const slcPhrase = slc.method === "flat_fee" ? "flat fee" : "per square";
+      const slcDisclaimer =
+        `If the existing roof is found to contain more than one layer of shingles, the contract price will increase by ${fmt$(slcAmount)} ${slcPhrase}. ` +
+        `Customer will be notified before work proceeds and has the right to accept the change order or cancel the Agreement per the Change Order Disclaimer.`;
+      addText(50, y, 11, "F2", "SECOND-LAYER TEAR-OFF CONTINGENCY"); y -= 14;
+      y = addWrappedText(60, y, 10, "F1", slcDisclaimer, 480);
+      y -= 8;
+    }
+  }
+
   // ── Gutters section ──────────────────────────────────────────────
   if (hasGutters) {
     addText(50, y, 11, "F2", "GUTTERS"); y -= 14;
