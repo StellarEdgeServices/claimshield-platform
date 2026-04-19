@@ -77,7 +77,7 @@ serve(async (req) => {
     // ── 1. Find qualifying retail siding claims ─────────────────
     let query = supabase
       .from("claims")
-      .select("id, user_id, trades, property_address, zip_code, city, state, county, measurements_filename, siding_bid_released_at")
+      .select("id, user_id, trades, property_address, measurements_filename, siding_bid_released_at")
       .eq("funding_type", "cash")
       .eq("has_measurements", true)
       .is("siding_bid_released_at", null)
@@ -147,6 +147,37 @@ serve(async (req) => {
     });
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse a US address string like "123 Main St, Springfield, IL 62704"
+ * into claim_zip, claim_city, claim_state fields for notify-contractors.
+ */
+function parseAddress(addr: string): { claim_zip: string; claim_city: string; claim_state: string; claim_county: string } {
+  const parts = addr.split(",").map((p) => p.trim());
+  let claim_zip = "";
+  let claim_city = "";
+  let claim_state = "IN"; // fallback
+
+  if (parts.length >= 3) {
+    // Last part: "IL 62704" or "IN 46032"
+    const stateZip = parts[parts.length - 1].trim();
+    const stateZipParts = stateZip.split(/\s+/);
+    if (stateZipParts.length >= 2) {
+      claim_state = stateZipParts[0];
+      claim_zip   = stateZipParts[stateZipParts.length - 1];
+    } else {
+      claim_state = stateZip;
+    }
+    claim_city = parts[parts.length - 2].trim();
+  } else if (parts.length === 2) {
+    claim_city = parts[0].trim();
+    claim_state = parts[1].trim();
+  }
+
+  return { claim_zip, claim_city, claim_state, claim_county: "" };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -255,10 +286,7 @@ async function evaluateClaim(
         body: JSON.stringify({
           event: "new_opportunity",
           claim_id:    claimId,
-          claim_zip:   claim.zip_code   || "",
-          claim_city:  claim.city        || "",
-          claim_state: claim.state       || "IN",
-          claim_county: claim.county     || "",
+          ...parseAddress(claim.property_address || ""),
           trade_types: ["siding"],  // D-165: scoped to siding contractors only
           job_type:    "retail",
         }),
@@ -271,14 +299,14 @@ async function evaluateClaim(
     console.warn(`[D-164] notify-contractors call failed (non-fatal) for claim ${claimId}:`, notifyErr);
   }
 
-  // ── Notify homeowner ─────────────────────────────────────────
+  // ── Notify homeowner (dashboard notification) ───────────────
   try {
     await supabase.from("notifications").insert({
-      user_id:  claim.user_id,
-      type:     "siding_bids_released",
-      title:    "Your siding bids are live!",
-      message:  "Your siding design is locked in and contractors are now bidding. Check back soon to compare quotes.",
-      claim_id: claimId,
+      user_id:           claim.user_id,
+      claim_id:          claimId,
+      notification_type: "siding_bids_released",
+      channel:           "dashboard",
+      message_preview:   "Your siding design is locked in and contractors are now bidding. Check back soon to compare quotes.",
     });
   } catch (notifErr) {
     console.warn(`[D-164] Homeowner notification insert failed (non-fatal) for claim ${claimId}:`, notifErr);

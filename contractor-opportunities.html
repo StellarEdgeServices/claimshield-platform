@@ -432,6 +432,14 @@
                   // Parse trades from claim
                   const trades = claim.selected_trades || claim.trades || ['roofing'];
 
+                  // D-165: per-trade release timestamps — drives filter + card labels
+                  const releasedTrades = {
+                    roofing: !!claim.roofing_bid_released_at,
+                    gutters: !!claim.gutters_bid_released_at,
+                    siding:  !!claim.siding_bid_released_at,
+                    windows: !!claim.windows_bid_released_at,
+                  };
+
                   return {
                     id: claim.id,
                     propertyAddress: claim.property_address || null,
@@ -461,15 +469,28 @@
                     homeownerNotes: claim.homeowner_notes,
                     contractorScopeSummary: claim.contractor_scope_summary || null,
                     fundingType: claim.funding_type || (claim.job_type?.startsWith('insurance') ? 'insurance' : 'cash'),
+                    releasedTrades: releasedTrades,
                   };
                 });
 
-                // Filter by contractor's trades if we have a contractor profile
+                // D-165: Filter opportunities by contractor trade + release status.
+                // Show an opportunity only if at least one of the contractor's service
+                // trades matches a RELEASED trade on the claim. A trade is "released"
+                // when its *_bid_released_at timestamp is non-null (set by the bidding
+                // transition in dashboard.html or, for retail siding, by the
+                // check-siding-design-completion gate). Unknown trades (outside the
+                // known set) default to "released" as a conservative fallback.
                 if (currentContractor && currentContractor.trades && currentContractor.trades.length > 0) {
                   const contractorTrades = currentContractor.trades.map(t => t.toLowerCase());
+                  const knownTrades = ['roofing', 'gutters', 'siding', 'windows'];
                   allOpportunities = allOpportunities.filter(opp => {
-                    // Show opportunity if ANY of the contractor's trades match ANY of the claim's trades
-                    return opp.trades.some(t => contractorTrades.includes(t.toLowerCase()));
+                    return opp.trades.some(t => {
+                      const tl = t.toLowerCase();
+                      if (!contractorTrades.includes(tl)) return false; // not contractor's trade
+                      if (!knownTrades.includes(tl)) return true;       // unknown trade = conservative include
+                      // Only show if this trade's bid has been released
+                      return !!(opp.releasedTrades && opp.releasedTrades[tl]);
+                    });
                   });
                 }
 
@@ -522,7 +543,8 @@
                 roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-15',
                 distance: 5, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: null, fundingType: 'insurance'
+                homeownerNotes: null, fundingType: 'insurance',
+                releasedTrades: { roofing: true, gutters: false, siding: false, windows: false }
             },
             {
                 id: 'OQ-2026-0047', location: 'Carmel', zip: '46032', jobType: 'insurance_acv',
@@ -531,7 +553,8 @@
                 roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-14',
                 distance: 18, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: 'Two-story home. Ladder access on south side only.', fundingType: 'insurance'
+                homeownerNotes: 'Two-story home. Ladder access on south side only.', fundingType: 'insurance',
+                releasedTrades: { roofing: true, gutters: false, siding: false, windows: false }
             },
             {
                 id: 'OQ-2026-0046', location: 'Fishers', zip: '46037', jobType: 'retail',
@@ -540,7 +563,8 @@
                 roofSquares: 28, repairSquares: null, totalSquares: null, existingShingle: null,
                 estimateAvailable: false, measurementsAvailable: true, claimFiledDate: '2026-03-13',
                 distance: 22, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: null, fundingType: 'cash'
+                homeownerNotes: null, fundingType: 'cash',
+                releasedTrades: { roofing: true, gutters: false, siding: false, windows: false }
             },
             {
                 id: 'OQ-2026-0045', location: 'Noblesville', zip: '46060', jobType: 'repair',
@@ -550,7 +574,8 @@
                 estimateAvailable: true, measurementsAvailable: false, claimFiledDate: '2026-03-12',
                 distance: 25, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
                 homeownerNotes: 'Damage on north-facing slope near chimney. Have leftover shingles in garage — confirmed GAF Timberline HD Charcoal.',
-                fundingType: 'insurance', repairType: 'blown_off'
+                fundingType: 'insurance', repairType: 'blown_off',
+                releasedTrades: { roofing: true, gutters: false, siding: false, windows: false }
             },
             {
                 id: 'OQ-2026-0044', location: 'Greenwood', zip: '46142', jobType: 'insurance_rcv',
@@ -561,17 +586,20 @@
                 distance: 15, urgency: 'asap', urgencyDeadline: '2026-04-15',
                 urgencyReason: 'Real estate closing April 15',
                 homeownerNotes: 'House is under contract. Must have roof complete before closing on April 15. Buyer inspection passed contingent on roof.',
-                fundingType: 'insurance'
+                fundingType: 'insurance',
+                releasedTrades: { roofing: true, gutters: true, siding: false, windows: false }
             },
             {
-                id: 'OQ-2026-0043', location: 'Zionsville', zip: '46077', jobType: 'insurance_rcv',
-                trades: ['roofing', 'siding', 'gutters'], damageType: 'Roof + Siding + Gutters', damageDetail: 'Hail & Wind', insuranceCarrier: 'State Farm',
-                material: 'OC Duration STORM — Class 4', estimatedValue: 38000,
-                roofSquares: null, repairSquares: null, totalSquares: null, existingShingle: null,
-                estimateAvailable: true, measurementsAvailable: true, claimFiledDate: '2026-03-08',
+                // Demo: retail roofing + siding — siding held pending Hover design
+                id: 'OQ-2026-0043', location: 'Zionsville', zip: '46077', jobType: 'retail',
+                trades: ['roofing', 'siding'], damageType: 'Roof + Siding', damageDetail: 'Age / Wear', insuranceCarrier: null,
+                material: 'OC Duration STORM — Class 4', estimatedValue: null,
+                roofSquares: 28, repairSquares: null, totalSquares: null, existingShingle: null,
+                estimateAvailable: false, measurementsAvailable: true, claimFiledDate: '2026-03-08',
                 distance: 8, urgency: 'flexible', urgencyDeadline: null, urgencyReason: null,
-                homeownerNotes: 'Full exterior claim. Siding on north and west sides only. Gutters all around.',
-                fundingType: 'insurance'
+                homeownerNotes: 'Full exterior project. Siding on north and west sides only.',
+                fundingType: 'cash',
+                releasedTrades: { roofing: true, gutters: false, siding: false, windows: false }
             }
         ];
 
@@ -590,6 +618,42 @@
             const icons = { roofing: '🏠', siding: '🧱', gutters: '🌧️', windows: '🪟' };
             const labels = { roofing: 'Roofing', siding: 'Siding', gutters: 'Gutters', windows: 'Windows' };
             return trades.map(t => '<span class="badge" style="background:#E0F2FE;color:#0369A1;">' + (icons[t]||'') + ' ' + (labels[t]||t) + '</span>').join('');
+        }
+
+        /**
+         * D-165: Per-trade release status badges.
+         * Shows a status badge for each trade indicating whether bids are open
+         * or held pending a homeowner action (e.g. retail siding design in Hover).
+         * Only renders when the opportunity has any unreleased trade OR multiple trades.
+         */
+        function getTradeReleaseBadges(opp) {
+            if (!opp.trades || opp.trades.length === 0) return '';
+            const knownTrades = ['roofing', 'gutters', 'siding', 'windows'];
+            const labels = { roofing: 'Roofing', siding: 'Siding', gutters: 'Gutters', windows: 'Windows' };
+            const releasedTrades = opp.releasedTrades || {};
+
+            // Only show per-trade badges when there's something meaningful to communicate:
+            // multi-trade claims, or a single-trade retail claim where the release is pending.
+            const hasAnyUnreleased = opp.trades.some(t => {
+                const tl = t.toLowerCase();
+                return knownTrades.includes(tl) && !releasedTrades[tl];
+            });
+            if (!hasAnyUnreleased && opp.trades.length < 2) return '';
+
+            return '<div class="badge-group" style="margin-top:4px;flex-wrap:wrap;gap:4px;">'
+                + opp.trades.map(t => {
+                    const tl = t.toLowerCase();
+                    const label = labels[tl] || t;
+                    const released = !knownTrades.includes(tl) ? true : !!releasedTrades[tl];
+                    if (released) {
+                        return '<span class="badge badge-available" style="font-size:0.72rem;">'
+                            + label + ': Available &#x2713;</span>';
+                    } else {
+                        return '<span class="badge" style="background:#FEF3C7;color:#92400E;font-size:0.72rem;">'
+                            + '&#x23F3; ' + label + ': Waiting on homeowner design</span>';
+                    }
+                }).join('')
+                + '</div>';
         }
 
         function getMultiTradeBadge(trades) {
@@ -670,7 +734,9 @@
                     + '<h2 class="opportunity-id">Project in ' + o.location + (o.zip ? ', IN ' + o.zip : '') + '</h2>'
                     + '<p class="opportunity-location">' + o.location + ', ' + o.zip + (o.distance !== null ? ' &mdash; ~' + o.distance + ' mi away' : '') + '</p>'
                     + '</div><div class="header-badges">' + getJobTypeBadge(o.jobType) + getMultiTradeBadge(o.trades) + getUrgentBadge(o) + '</div></div>'
-                    + '<div class="badge-group" style="margin-bottom:var(--sp-4)">' + getTradeBadges(o.trades) + '</div>'
+                    + '<div class="badge-group" style="margin-bottom:4px">' + getTradeBadges(o.trades) + '</div>'
+                    + getTradeReleaseBadges(o)
+                    + '<div style="margin-bottom:var(--sp-4)"></div>'
                     + '<div class="opportunity-main-info">'
                     + '<div class="info-block"><span class="info-label">Damage Type</span><span class="info-value">' + o.damageType + ' &mdash; ' + o.damageDetail + '</span></div>'
                     + sourceBlock + matBlock

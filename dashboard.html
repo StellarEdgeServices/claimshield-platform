@@ -1698,43 +1698,50 @@
           if (textEl) textEl.textContent = 'Contractors are reviewing your details. You\'ll be notified of incoming bids.';
         }
 
-        // ── D-164: Per-trade status pills ─────────────────────────────────
-        // Show a trade-by-trade breakdown when the claim has multiple trades
-        // (or a single siding trade) and is in bidding/submitted status.
+        // ── D-165: Per-trade status pills ─────────────────────────────────
+        // Show a trade-by-trade breakdown for:
+        //   • any multi-trade claim (≥2 trades), OR
+        //   • any retail single-trade claim where the release is pending.
+        // Each pill is driven by the corresponding *_bid_released_at column
+        // added by D-165 (v45 migration).
         const bannerTrades = Array.isArray(currentClaim?.trades) ? currentClaim.trades : [];
-        const hasSidingTrade = bannerTrades.some(t => (t || '').toLowerCase().includes('siding'));
-        const isRetailClaim  = currentClaim?.funding_type === 'cash';
+        const isRetailClaim = currentClaim?.funding_type === 'cash';
 
-        if (isRetailClaim && bannerTrades.length > 0 && hasSidingTrade) {
-          const sidingReleased = !!currentClaim?.siding_bid_released_at;
+        // Build a release map for all four trades
+        const releaseMap = {
+          roofing: !!currentClaim?.roofing_bid_released_at,
+          gutters: !!currentClaim?.gutters_bid_released_at,
+          siding:  !!currentClaim?.siding_bid_released_at,
+          windows: !!currentClaim?.windows_bid_released_at,
+        };
 
-          // Build per-trade status pills
-          const tradeLabels: Record<string, string> = {
-            roofing: 'Roofing',
-            siding:  'Siding',
-            gutters: 'Gutters',
-            windows: 'Windows',
-          };
+        // For insurance claims, all trades are implicitly released (backfilled by v45
+        // or set at transition). For retail, a trade is pending if its timestamp is null.
+        const hasAnyUnreleased = isRetailClaim && bannerTrades.some(t => {
+          const k = (t || '').toLowerCase();
+          return Object.prototype.hasOwnProperty.call(releaseMap, k) && !releaseMap[k];
+        });
+        const showPills = bannerTrades.length >= 2 || hasAnyUnreleased;
 
-          const pills = bannerTrades.map((t: string) => {
+        if (showPills && bannerTrades.length > 0) {
+          const tradeLabels = { roofing: 'Roofing', siding: 'Siding', gutters: 'Gutters', windows: 'Windows' };
+
+          const pills = bannerTrades.map(t => {
             const key   = (t || '').toLowerCase();
             const label = tradeLabels[key] || t;
-            const isSiding = key.includes('siding');
+            // Insurance claims: all trades are released. Retail: check release timestamp.
+            const released = !isRetailClaim
+              ? true
+              : (Object.prototype.hasOwnProperty.call(releaseMap, key) ? releaseMap[key] : true);
 
-            if (isSiding && !sidingReleased) {
-              // Held: amber pill with lock icon
-              return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);color:#F59E0B;font-size:0.75rem;font-weight:600;padding:2px 10px;border-radius:9999px;">
-                🔒 ${label}: Waiting on design
-              </span>`;
+            if (!released) {
+              return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);color:#F59E0B;font-size:0.75rem;font-weight:600;padding:2px 10px;border-radius:9999px;">🔒 ${label}: Waiting on design</span>`;
             } else {
-              // Live: teal pill
-              return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.4);color:#5eead4;font-size:0.75rem;font-weight:600;padding:2px 10px;border-radius:9999px;">
-                ✓ ${label}: Collecting bids
-              </span>`;
+              return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(20,184,166,0.12);border:1px solid rgba(20,184,166,0.4);color:#5eead4;font-size:0.75rem;font-weight:600;padding:2px 10px;border-radius:9999px;">✓ ${label}: Collecting bids</span>`;
             }
           }).join('');
 
-          // Inject below the status text, but only once
+          // Inject below the status text, but only once per page load
           if (!document.getElementById('trade-status-pills')) {
             const pillsContainer = document.createElement('div');
             pillsContainer.id = 'trade-status-pills';
@@ -2321,20 +2328,42 @@
         btn.classList.add('btn-loading');
 
         try {
+          const now = new Date().toISOString();
+          const isRetail = currentClaim.funding_type === 'cash';
+          const allTrades = currentClaim.selected_trades || currentClaim.trades || ['roofing'];
+
           if (CONFIG.DEMO_MODE) {
             // Demo mode: update local object only
             currentClaim.ready_for_bids = true;
-            currentClaim.bids_submitted_at = new Date().toISOString();
+            currentClaim.bids_submitted_at = now;
             currentClaim.status = 'active';
           } else if (sb) {
-            // Live mode: update database
+            // ── D-165: Build per-trade release timestamp update ──────────────
+            // For each trade: if retail AND trade is siding, leave null (D-164
+            // Hover-design gate controls siding release for retail claims).
+            // For all other trades, set {trade}_bid_released_at = NOW().
+            const dbUpdate = {
+              ready_for_bids: true,
+              bids_submitted_at: now,
+              status: 'active',
+            };
+            const tradesToRelease = [];
+            for (const trade of allTrades) {
+              const t = (trade || '').toLowerCase();
+              if (isRetail && t === 'siding') {
+                // Held: D-164 gate — check-siding-design-completion sets this
+                console.log('submitForBids: siding held (retail — D-164 gate)');
+                continue;
+              }
+              if (['roofing', 'gutters', 'siding', 'windows'].includes(t)) {
+                dbUpdate[`${t}_bid_released_at`] = now;
+              }
+              tradesToRelease.push(t);
+            }
+
             const { data, error } = await sb
               .from('claims')
-              .update({
-                ready_for_bids: true,
-                bids_submitted_at: new Date().toISOString(),
-                status: 'active',
-              })
+              .update(dbUpdate)
               .eq('id', currentClaim.id)
               .select()
               .single();
@@ -2354,37 +2383,49 @@
             has_measurements: currentClaim.has_measurements,
           });
 
-          // ── Notify matching contractors via Edge Function ──
+          // ── D-165: Notify contractors per-trade ──────────────────────────
+          // One notify-contractors call per released trade so each contractor
+          // receives a trade-specific email (e.g. "Roofing Opportunity" vs
+          // "Gutters Opportunity"). Siding on retail claims is skipped here —
+          // check-siding-design-completion fires the notification when the
+          // Hover design is complete.
           if (!CONFIG.DEMO_MODE) {
             try {
               const addressParts = (currentClaim.property_address || '').split(',');
-              const city = currentClaim.address_city || addressParts[0]?.trim() || 'Unknown';
+              const city  = currentClaim.address_city  || addressParts[0]?.trim() || 'Unknown';
               const state = currentClaim.address_state || 'IN';
-              const zip = currentClaim.address_zip || currentClaim.property_address?.match(/\d{5}/)?.[0] || '';
+              const zip   = currentClaim.address_zip   || currentClaim.property_address?.match(/\d{5}/)?.[0] || '';
 
-              const notifyPayload = {
-                claim_id: currentClaim.id,
-                claim_city: city,
-                claim_state: state,
-                claim_zip: zip,
-                trade_types: currentClaim.selected_trades || currentClaim.trades || ['roofing'],
-                job_type: currentClaim.job_type || 'insurance_rcv',
-                urgency: currentClaim.urgency || 'flexible',
-              };
+              const tradesForNotify = allTrades.filter(trade => {
+                const t = (trade || '').toLowerCase();
+                if (isRetail && t === 'siding') return false; // D-164 gate holds siding
+                return true;
+              });
 
-              // Fire-and-forget: don't block the success UI on notification delivery
-              fetch(`${CONFIG.SUPABASE_URL}/functions/v1/notify-contractors`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${CONFIG.SUPABASE_ANON}`,
-                },
-                body: JSON.stringify(notifyPayload),
-              }).then(resp => resp.json())
-                .then(result => console.log('Contractor notification result:', result))
-                .catch(notifyErr => console.error('Contractor notification error (non-blocking):', notifyErr));
+              // Fire-and-forget per trade — don't block success UI
+              for (const trade of tradesForNotify) {
+                const notifyPayload = {
+                  claim_id: currentClaim.id,
+                  claim_city: city,
+                  claim_state: state,
+                  claim_zip: zip,
+                  trade_types: [trade],
+                  job_type: currentClaim.job_type || 'insurance_rcv',
+                  urgency: currentClaim.urgency || 'flexible',
+                };
+                fetch(`${CONFIG.SUPABASE_URL}/functions/v1/notify-contractors`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON}`,
+                  },
+                  body: JSON.stringify(notifyPayload),
+                }).then(resp => resp.json())
+                  .then(result => console.log(`Contractor notification result [${trade}]:`, result))
+                  .catch(notifyErr => console.error(`Contractor notification error [${trade}] (non-blocking):`, notifyErr));
+              }
             } catch (notifyErr) {
-              console.error('Error preparing contractor notification:', notifyErr);
+              console.error('Error preparing contractor notifications:', notifyErr);
             }
           }
         } catch (err) {

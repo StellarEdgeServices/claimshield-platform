@@ -149,12 +149,11 @@ serve(async (req) => {
 
             if (claim?.user_id) {
               await supabase.from("notifications").insert({
-                user_id: claim.user_id,
-                type: "hover_complete",
-                title: "Measurements Ready",
-                message:
-                  "Your property measurements from Hover are now available. You can proceed with submitting for contractor bids.",
-                claim_id: order.claim_id,
+                user_id:           claim.user_id,
+                claim_id:          order.claim_id,
+                notification_type: "hover_complete",
+                channel:           "dashboard",
+                message_preview:   "Your property measurements from Hover are now available. You can proceed with submitting for contractor bids.",
               });
             }
 
