@@ -64,7 +64,7 @@ SET roofing_bid_released_at = COALESCE(
 )
 WHERE ready_for_bids = true
   AND status IN ('active', 'bidding', 'submitted', 'collecting_bids', 'contract_signed')
-  AND 'roofing' = ANY(COALESCE(selected_trades, trades, ARRAY[]::text[]));
+  AND trades IS NOT NULL AND 'roofing' = ANY(trades);
 
 -- ── 4. Backfill gutters_bid_released_at ─────────────────────────────────────
 
@@ -76,7 +76,7 @@ SET gutters_bid_released_at = COALESCE(
 )
 WHERE ready_for_bids = true
   AND status IN ('active', 'bidding', 'submitted', 'collecting_bids', 'contract_signed')
-  AND 'gutters' = ANY(COALESCE(selected_trades, trades, ARRAY[]::text[]));
+  AND trades IS NOT NULL AND 'gutters' = ANY(trades);
 
 -- ── 5. Backfill windows_bid_released_at ─────────────────────────────────────
 
@@ -88,7 +88,7 @@ SET windows_bid_released_at = COALESCE(
 )
 WHERE ready_for_bids = true
   AND status IN ('active', 'bidding', 'submitted', 'collecting_bids', 'contract_signed')
-  AND 'windows' = ANY(COALESCE(selected_trades, trades, ARRAY[]::text[]));
+  AND trades IS NOT NULL AND 'windows' = ANY(trades);
 
 -- ── 6. Backfill siding_bid_released_at for INSURANCE claims only ─────────────
 -- Retail siding is gated by D-164 (check-siding-design-completion sets it
@@ -104,4 +104,4 @@ SET siding_bid_released_at = COALESCE(
 WHERE ready_for_bids = true
   AND funding_type != 'cash'   -- insurance only; retail stays under D-164 gate
   AND status IN ('active', 'bidding', 'submitted', 'collecting_bids', 'contract_signed')
-  AND 'siding' = ANY(COALESCE(selected_trades, trades, ARRAY[]::text[]));
+  AND trades IS NOT NULL AND 'siding' = ANY(trades);
