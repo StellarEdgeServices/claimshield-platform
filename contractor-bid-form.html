@@ -3742,8 +3742,10 @@
             // Store the new quote ID for contract signing
             window._newQuoteId = insertedQuote?.id || null;
 
-            gtag('event', 'bid_submitted', {
-              claim_id: currentClaim.id,
+            // GA4 conversion event — bid funnel
+            gtag('event', 'bid_submit', {
+              trade_types: Array.isArray(currentClaim.trades) ? currentClaim.trades : [],
+              job_type: isRetailJob ? 'retail' : 'insurance',
               bid_amount: quoteData.total_price,
             });
           }

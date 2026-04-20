@@ -550,6 +550,12 @@
         referral_source: referralSource || 'web',
       });
 
+      // GA4 conversion event — homeowner funnel
+      gtag('event', 'homeowner_signup', {
+        job_type: new URLSearchParams(location.search).get('job_type') || null,
+        source: new URLSearchParams(location.search).get('utm_source') || referralSource || 'direct',
+      });
+
     } catch (err) {
       console.error('Signup error:', err);
       errorEl.textContent = 'Something went wrong. Please try again or email us at ' + CONFIG.SUPPORT_EMAIL;

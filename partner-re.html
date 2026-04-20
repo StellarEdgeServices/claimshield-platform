@@ -1337,10 +1337,10 @@
       referralCode.textContent = finalLink;
       successMsg.classList.add('active');
 
-      // GA4 event
-      gtag('event', 'sign_up', {
-        method: 'magic_link',
-        user_type: 're_agent',
+      // GA4 conversion event — partner funnel
+      gtag('event', 'partner_signup', {
+        partner_type: 're_agent',
+        source: new URLSearchParams(location.search).get('utm_source') || 'direct',
       });
 
     } catch (err) {

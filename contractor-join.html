@@ -608,8 +608,11 @@
                 document.getElementById('contractorForm').style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // GA4
-                gtag('event', 'contractor_signup', { email: email });
+                // GA4 conversion event — contractor funnel
+                gtag('event', 'contractor_signup', {
+                    trade_types: [],  // trade selection happens post-signup in profile setup
+                    source: new URLSearchParams(location.search).get('utm_source') || 'direct',
+                });
 
             } catch (error) {
                 console.error('Error sending magic link:', error);

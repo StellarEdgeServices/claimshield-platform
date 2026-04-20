@@ -1235,9 +1235,10 @@
                     document.getElementById('insuranceAgentForm').style.display = 'none';
                     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                    gtag('event', 'insurance_agent_signup', {
-                        agency: data.agencyName,
-                        service_area: data.serviceArea,
+                    // GA4 conversion event — partner funnel
+                    gtag('event', 'partner_signup', {
+                        partner_type: 'insurance_agent',
+                        source: new URLSearchParams(location.search).get('utm_source') || 'direct',
                     });
                     return;
                 }
