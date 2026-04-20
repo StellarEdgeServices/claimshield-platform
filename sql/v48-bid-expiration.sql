@@ -195,10 +195,11 @@ CREATE TRIGGER trg_enforce_bid_window_expiry
 -- process-bid-expirations runs hourly = 24 invocations/day in steady state.
 -- Daily limit of 48 gives a 2× buffer (manual triggers, retry bursts).
 INSERT INTO rate_limit_config
-  (function_name, daily_limit, monthly_limit, enabled, notes)
+  (function_name, max_per_hour, max_per_day, max_per_month, enabled, notes)
 VALUES
   (
     'process-bid-expirations',
+    2,
     48,
     1500,
     true,

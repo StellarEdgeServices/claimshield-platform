@@ -434,7 +434,8 @@ async function expireBids(
       auto_renew,
       renewed_from_quote_id,
       expires_at,
-      trade_types,
+      trade_type,
+      bundled_trades,
       payment_status,
       bid_status,
       claims!inner (
@@ -519,7 +520,11 @@ async function expireBids(
     const canAutoRenew = shouldAutoRenew && renewalDepth < MAX_AUTO_RENEWALS;
 
     const address = claim.property_address || "your project address";
-    const trade = tradeLabel(quote.trade_types);
+    // trade_type is a string (single trade); bundled_trades is an array for multi-trade bids
+    const trades: string[] = quote.bundled_trades?.length
+      ? quote.bundled_trades
+      : (quote.trade_type ? [quote.trade_type] : []);
+    const trade = tradeLabel(trades);
     const contractorEmail = contractor.email;
     const contractorName = contractor.contact_name || "Contractor";
 
@@ -713,21 +718,10 @@ async function notifyBidWindowExpirations(
   const fromAddress = `OtterQuote <notifications@${mailgunDomain}>`;
 
   // Find claims whose bid window has expired and haven't been notified yet.
-  // bid_window_notified_at column is added to claims by this migration.
+  // No FK from claims.user_id → profiles.id, so profiles are fetched separately below.
   let query = supabase
     .from("claims")
-    .select(`
-      id,
-      status,
-      property_address,
-      user_id,
-      bid_window_expires_at,
-      bid_window_notified_at,
-      profiles!inner (
-        full_name,
-        email
-      )
-    `)
+    .select("id, status, property_address, user_id, bid_window_expires_at, bid_window_notified_at")
     .lte("bid_window_expires_at", now)
     .is("bid_window_notified_at", null)
     .in("status", ["bidding", "submitted"]);
@@ -752,14 +746,19 @@ async function notifyBidWindowExpirations(
   console.log(`[process-bid-expirations] Phase 2: ${expiredWindows.length} window(s) to notify`);
 
   for (const claim of expiredWindows) {
-    const profile = Array.isArray(claim.profiles) ? claim.profiles[0] : claim.profiles as any;
+    // Fetch homeowner profile separately (no FK registered in schema cache)
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", claim.user_id)
+      .single();
 
-    if (!profile || !profile.email) {
+    if (!profileData || !profileData.email) {
       errors.push(`Claim ${claim.id}: no homeowner profile/email — skipped`);
       continue;
     }
 
-    const homeownerName = profile.full_name || "there";
+    const homeownerName = profileData.full_name || "there";
     const propertyAddress = claim.property_address || "your property";
     const bidsUrl = `https://otterquote.com/bids.html?claim=${claim.id}`;
 
@@ -798,7 +797,7 @@ async function notifyBidWindowExpirations(
 
     const sent = await sendMailgunEmail(
       mailgunApiKey, mailgunDomain,
-      profile.email, fromAddress,
+      profileData.email, fromAddress,
       windowEmail.subject, windowEmail.text, windowEmail.html
     );
 
