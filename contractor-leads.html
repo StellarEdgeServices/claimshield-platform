@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-    <title>Available Leads — OtterQuote Contractor</title>
+    <title>Available Projects — OtterQuote Contractor</title>
 
     <!-- GA4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
@@ -350,8 +350,8 @@
 
     <main>
         <div class="page-header">
-            <h1>Available Leads</h1>
-            <p>Pre-qualified homeowner leads in your service area</p>
+            <h1>Available Projects</h1>
+            <p>Pre-qualified homeowner projects in your service area</p>
         </div>
 
         <!-- Filter Section -->
@@ -395,7 +395,7 @@
             </div>
         </div>
 
-        <div class="results-count" id="resultsCount">5 leads available</div>
+        <div class="results-count" id="resultsCount">5 projects available</div>
 
         <!-- Leads Container -->
         <div id="leadsContainer">
@@ -513,8 +513,8 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <span class="empty-state-icon">📭</span>
-                        <h2 class="empty-state-title">No leads found</h2>
-                        <p class="empty-state-text">Try adjusting your filters to see more available leads.</p>
+                        <h2 class="empty-state-title">No projects found</h2>
+                        <p class="empty-state-text">Try adjusting your filters to see more available projects.</p>
                     </div>
                 `;
                 return;
@@ -620,7 +620,7 @@
             // 'newest' is default order
 
             // Update results count
-            document.getElementById('resultsCount').textContent = `${filtered.length} lead${filtered.length !== 1 ? 's' : ''} available`;
+            document.getElementById('resultsCount').textContent = `${filtered.length} project${filtered.length !== 1 ? 's' : ''} available`;
 
             // Render
             renderLeads(filtered);
@@ -638,6 +638,4 @@
                 document.getElementById('sortFilter').addEventListener('change', filterAndSortLeads);
             }
         });
-    </script>
-</body>
-</html>
+    </scr
