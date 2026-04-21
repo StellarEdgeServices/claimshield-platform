@@ -439,6 +439,7 @@
 
         await loadClaimData();
         await loadBids();
+        await resolveContractorPhotos();
         await loadBidUpdatedNotifications();
         render();
 
@@ -494,6 +495,7 @@
       const prevCount = bids.length;
       await loadBids();
       if (bids.length > prevCount) {
+        await resolveContractorPhotos();
         render();
         // Could trigger notification sound / badge here
       }
@@ -967,6 +969,33 @@
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // ── Owner photo signed URL helpers ────────────────────────────────────
+    // owner_photo_url stores a bare storage path (contractor-documents bucket).
+    // Legacy records may store a full public URL — regex extracts the path in that case.
+    async function getSignedOwnerPhotoUrl(filePath) {
+      if (!filePath || !sb) return null;
+      try {
+        const pathMatch = filePath.match(/contractor-documents\/(.+?)(\?|$)/);
+        const storagePath = pathMatch ? decodeURIComponent(pathMatch[1]) : filePath;
+        const { data, error } = await sb.storage
+          .from('contractor-documents')
+          .createSignedUrl(storagePath, 3600);
+        return (!error && data?.signedUrl) ? data.signedUrl : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Pre-resolve signed URLs for all loaded contractors into c._resolvedPhotoUrl.
+    // Called before render() so the synchronous map can use the resolved value.
+    async function resolveContractorPhotos() {
+      await Promise.all(Object.values(contractors).map(async (c) => {
+        if (c.owner_photo_url) {
+          c._resolvedPhotoUrl = await getSignedOwnerPhotoUrl(c.owner_photo_url);
+        }
+      }));
+    }
+
     function renderBids() {
       const grid = document.getElementById('bidsGrid');
 
@@ -986,8 +1015,8 @@
         const isExpired = bid.bid_status === 'expired';
         const isLowest = !isExpired && bid.total_price === lowestPrice && activeBids.length > 1;
         const initials = (c.company_name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-        const avatarHTML = c.owner_photo_url
-          ? `<img src="${c.owner_photo_url}" alt="${c.company_name}">`
+        const avatarHTML = c._resolvedPhotoUrl
+          ? `<img src="${c._resolvedPhotoUrl}" alt="${c.company_name}">`
           : initials;
 
         // Determine job type badge color and label
@@ -1108,8 +1137,8 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       const initials = (c.company_name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-      const avatarHTML = c.owner_photo_url
-        ? `<img src="${c.owner_photo_url}" alt="${c.company_name}">`
+      const avatarHTML = c._resolvedPhotoUrl
+        ? `<img src="${c._resolvedPhotoUrl}" alt="${c.company_name}">`
         : initials;
 
       // Hero
@@ -1505,39 +1534,4 @@
         });
 
         // 5. Proceed to contract signing — contract distributed to both parties after selection
-        window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}&quote_id=${encodeURIComponent(bidId)}`;
-
-      } catch (err) {
-        console.error('Selection error:', err);
-
-        let errorTitle = 'Something Went Wrong';
-        let errorMessage = 'There was a problem awarding this project. Please try again.';
-
-        if (err.message && err.message.includes('Payment')) {
-          errorTitle = 'Unable to Process Payment';
-          errorMessage = 'Unable to process the contractor\'s payment method. Please select another contractor or contact support.';
-        }
-
-        document.getElementById('modalTitle').textContent = errorTitle;
-        document.getElementById('modalBody').textContent = errorMessage;
-        document.getElementById('modalSpinner').style.display = 'none';
-        document.getElementById('modalActions').style.display = 'flex';
-        document.getElementById('modalConfirmBtn').disabled = false;
-      }
-    };
-
-    // ── View Toggle ──
-    window.setView = function(view) {
-      currentView = view;
-      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
-      event.currentTarget.classList.add('active');
-      // Future: implement list view layout
-      renderBids();
-    };
-
-    // ── Helpers ──
-    function esc(str) {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.in
+        window.location.href = `contract-signing.html?claim_id=${encodeURIComponent(currentClaim.id)}&contractor_id=${encodeURIComponent(bid.contractor_id)}

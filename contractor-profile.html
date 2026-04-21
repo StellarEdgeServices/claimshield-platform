@@ -1541,16 +1541,13 @@
 
                         if (uploadError) throw uploadError;
 
-                        // Get public URL and save to contractor record
-                        const { data: urlData } = sb.storage
-                            .from('contractor-documents')
-                            .getPublicUrl(filePath);
-
+                        // Store bare filePath — bucket is private; public URLs return 404.
+                        // Signed URLs are generated on read (same pattern as contract templates — Session 266).
                         await sb.from('contractors')
-                            .update({ owner_photo_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+                            .update({ owner_photo_url: filePath, updated_at: new Date().toISOString() })
                             .eq('id', contractorRecord.id);
 
-                        contractorRecord.owner_photo_url = urlData.publicUrl;
+                        contractorRecord.owner_photo_url = filePath;
                     } catch (err) {
                         console.error('Error uploading owner photo:', err);
                         alert('Failed to upload photo. Please try again.');
@@ -2452,3 +2449,4 @@
     </script>
 </body>
 </html>
+                                                      
