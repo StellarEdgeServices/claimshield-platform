@@ -940,6 +940,61 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 8;
   }
 
+  // ── Measurement Summary (Fix 86e105v02) ─────────────────────────
+  // Trade-specific Hover measurement quantities, sourced from hover_orders.measurements_json.
+  // Positioned after scope details so contractors see scope first, then confirm measurements.
+  hLine(y + 4); y -= 12;
+  addText(50, y, 12, "F2", "MEASUREMENT SUMMARY"); y -= 16;
+
+  const hasMeasurementData = measurements && (
+    (hasRoofing && (measurements.roofSqFt || measurements.pitch)) ||
+    (hasGutters && measurements.perimeterFt) ||
+    (hasSiding && measurements.wallSqFt)
+  );
+
+  if (hasMeasurementData) {
+    if (hasRoofing) {
+      if (measurements!.roofSqFt) {
+        const squares = (measurements!.roofSqFt / 100).toFixed(1);
+        addText(60, y, 10, "F2", "Roofing:");
+        addText(160, y, 10, "F1", `${squares} squares (${measurements!.roofSqFt.toLocaleString()} sq ft)`);
+        y -= 14;
+      }
+      if (measurements!.pitch) {
+        addText(60, y, 10, "F2", "Primary Pitch:");
+        addText(160, y, 10, "F1", esc(measurements!.pitch));
+        y -= 14;
+      }
+    }
+    if (hasGutters && measurements!.perimeterFt) {
+      addText(60, y, 10, "F2", "Gutters:");
+      addText(160, y, 10, "F1", `${measurements!.perimeterFt.toLocaleString()} linear ft`);
+      y -= 14;
+    }
+    if (hasSiding && measurements!.wallSqFt) {
+      addText(60, y, 10, "F2", "Siding:");
+      addText(160, y, 10, "F1", `${measurements!.wallSqFt.toLocaleString()} sq ft wall area`);
+      y -= 14;
+    }
+  } else {
+    addText(60, y, 10, "F1", "Measurements pending -- will be confirmed prior to material order."); y -= 14;
+  }
+  y -= 6;
+
+  // ── Measurement Disclaimer & Change Order Terms (Fix 86e105v0q) ──
+  // (a) Hover aerial accuracy disclaimer: +/-5% variance, contractor to verify before ordering.
+  // (b) 10% change order written authorization requirement + cancellation restocking clause.
+  hLine(y + 4); y -= 12;
+  addText(50, y, 11, "F2", "MEASUREMENT DISCLAIMER & CHANGE ORDER TERMS"); y -= 14;
+  y = addWrappedText(60, y, 9, "F1",
+    "All measurements are based on Hover aerial technology and may vary +/-5% from field measurements. Contractor shall verify prior to ordering materials.",
+    480);
+  y -= 6;
+  y = addWrappedText(60, y, 9, "F1",
+    "Change orders exceeding 10% of the original contract price require written authorization from the homeowner. Cancellation after material order requires [X]% restocking fee per contractor's terms.",
+    480);
+  y -= 10;
+
   // ── Warranties ───────────────────────────────────────────────────
   if (Array.isArray(va.warranties) && va.warranties.length > 0) {
     hLine(y + 4); y -= 12;
@@ -1365,36 +1420,21 @@ async function handleContractorSign(
     fundingType = "retail";
   }
 
-  // Look up template from contractor's contract_templates JSONB
-  const templates = contractorData?.contract_templates || [];
-  let matchingTemplate = templates.find((t: any) =>
-    t.trade && t.trade.toLowerCase() === trade &&
-    t.funding_type && t.funding_type.toLowerCase() === fundingType
+  // D-161: Look up PC template from contractor's color_confirmation_template JSONB (8-slot grid).
+  // selectPcTemplateSlot() picks trade x funding_type with roofing/insurance fallback.
+  // getPcTemplateFromStorage() handles both bare paths (post-migration) and full URLs (pre-migration).
+  const pcTemplateSlot = selectPcTemplateSlot(
+    contractorData?.color_confirmation_template,
+    trade,
+    fundingType
   );
-  if (!matchingTemplate) {
-    matchingTemplate = templates.find((t: any) => t.trade && t.trade.toLowerCase() === trade);
-  }
-  if (!matchingTemplate && contractorData?.contract_pdf_url) {
-    matchingTemplate = { file_url: contractorData.contract_pdf_url };
-  }
 
   let templateBase64: string;
-  if (matchingTemplate?.file_url && matchingTemplate.file_url.includes("contractor-templates")) {
-    // Extract storage path from URL and download
-    const pathMatch = matchingTemplate.file_url.match(/contractor-templates\/(.+)$/);
-    if (pathMatch) {
-      const storagePath = decodeURIComponent(pathMatch[1]);
-      const { data: blob, error } = await supabase.storage.from("contractor-templates").download(storagePath);
-      if (error) throw new Error(`Template download error: ${error.message}`);
-      const ab = await blob.arrayBuffer();
-      templateBase64 = base64EncodeBinary(new Uint8Array(ab));
-    } else {
-      templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
-    }
-  } else if (matchingTemplate?.file_url) {
-    templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
+  if (pcTemplateSlot?.file_url) {
+    templateBase64 = await getPcTemplateFromStorage(supabase, pcTemplateSlot.file_url);
   } else {
-    // Fallback: try standard path convention
+    // No slot found in color_confirmation_template — last-resort fallback to legacy path convention.
+    console.warn(`No color_confirmation_template slot found for contractor ${contractor_id} (${trade}/${fundingType}). Falling back to legacy storage path.`);
     templateBase64 = await getTemplateFromStorage(supabase, contractor_id, "contract");
   }
 
