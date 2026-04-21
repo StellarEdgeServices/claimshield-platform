@@ -810,6 +810,16 @@
           <a href="/dashboard.html" class="button button-primary">Back to Dashboard</a>
         </div>
 
+        <!-- Expired Bid State (hidden initially) -->
+        <div id="bidExpiredState" style="display: none;" class="error-state">
+          <div style="font-size: 2.5rem; margin-bottom: var(--sp-4);">&#x23F0;</div>
+          <p style="color: var(--amber); font-weight: 700; font-size: 1.25rem; margin-bottom: var(--sp-2);">This bid has expired</p>
+          <p style="color: var(--slate); font-size: 0.9rem; margin-bottom: var(--sp-6);">The contractor's bid is no longer valid. You can request an updated bid and they'll have the opportunity to resubmit.</p>
+          <button id="renewalBtnSigning" class="button button-primary" style="background: var(--amber); border-color: var(--amber); margin-bottom: var(--sp-4);">Request an Updated Bid</button>
+          <br>
+          <a id="backToBidsExpired" href="/bids.html" style="color: var(--slate); font-size: 0.9rem; text-decoration: none; display: inline-block; margin-top: var(--sp-3);">&#x2190; Back to your bids</a>
+        </div>
+
         <!-- Main Content (hidden until loaded) -->
         <div id="pageContent" style="display: none;">
 
@@ -1218,6 +1228,25 @@
         // Store quote_id for use in signing flow
         state.quoteId = quoteIdParam || state.bid?.id || null;
 
+        // ── Bid Expiration Guard (D-150) ──
+        // If the selected bid is expired, show a clear error state instead of
+        // the signing UI. The homeowner can request an updated bid from here.
+        if (state.bid?.bid_status === 'expired') {
+          document.getElementById('pageLoading').style.display = 'none';
+          // Wire the renewal button to this specific bid
+          const renewalBtn = document.getElementById('renewalBtnSigning');
+          if (renewalBtn) {
+            renewalBtn.onclick = () => window.requestBidRenewal(state.bid.id);
+          }
+          // Wire the back link to their bids page for this claim
+          const backLink = document.getElementById('backToBidsExpired');
+          if (backLink && state.claimId) {
+            backLink.href = `/bids.html?claim_id=${state.claimId}`;
+          }
+          document.getElementById('bidExpiredState').style.display = 'block';
+          return; // Stop — do not render the signing UI
+        }
+
         // Check if contractor has already signed (IC 24-5-11 flow)
         if (state.bid?.contractor_signed_at) {
           state.contractorAlreadySigned = true;
@@ -1225,7 +1254,7 @@
         }
 
         // ── Render the page ──
-        renderContractorCard();
+        await renderContractorCard();
         await loadContractTemplate();
         setupEventListeners();
 
@@ -1258,16 +1287,34 @@
     });
 
     // ── Render Contractor Card ──
-    function renderContractorCard() {
+    async function renderContractorCard() {
       const c = state.contractor;
       const b = state.bid;
       const cl = state.claim;
       if (!c) return;
 
-      // Avatar
+      // Avatar — owner_photo_url is a bare storage path; generate a signed URL.
+      // Legacy records may contain a full public URL — regex extracts path in that case.
       const avatarEl = document.getElementById('contractorAvatar');
       if (c.owner_photo_url) {
-        avatarEl.innerHTML = `<img src="${esc(c.owner_photo_url)}" alt="${esc(c.company_name || c.name)}">`;
+        try {
+          const pathMatch = c.owner_photo_url.match(/contractor-documents\/(.+?)(\?|$)/);
+          const storagePath = pathMatch ? decodeURIComponent(pathMatch[1]) : c.owner_photo_url;
+          const { data: signedData, error: signErr } = await sb.storage
+            .from('contractor-documents')
+            .createSignedUrl(storagePath, 3600);
+          if (!signErr && signedData?.signedUrl) {
+            avatarEl.innerHTML = `<img src="${signedData.signedUrl}" alt="${esc(c.company_name || c.name)}">`;
+          } else {
+            throw new Error('signed URL failed');
+          }
+        } catch (_) {
+          const initials = (c.company_name || c.name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+          avatarEl.textContent = initials;
+          avatarEl.style.fontSize = '1.5rem';
+          avatarEl.style.fontWeight = '700';
+          avatarEl.style.color = 'var(--amber)';
+        }
       } else {
         const initials = (c.company_name || c.name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
         avatarEl.textContent = initials;
@@ -1656,70 +1703,4 @@
       const day = now.getDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
       const hour = now.getHours();
       const isWeekend = day === 0 || day === 6 || (day === 5 && hour >= 17);
-      const text = isWeekend ? 'by Monday' : 'within 48 hours';
-      const el1 = document.getElementById('contactDeadlineText');
-      const el2 = document.getElementById('contactDeadlineText2');
-      if (el1) el1.textContent = text;
-      if (el2) el2.textContent = text;
-    }
-
-    // ── Send nudge to contractor + Dustin when homeowner hasn't heard back ──
-    async function sendContractorNudge() {
-      const btn = document.getElementById('noContactBtn');
-      const statusEl = document.getElementById('nudgeStatus');
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-
-      const c = state.contractor;
-      const cl = state.claim;
-      const contractorName = c?.company_name || c?.name || 'your contractor';
-      const homeownerName = cl?.homeowner_name || 'your homeowner';
-      const address = cl?.property_address || 'their property';
-      const signedDate = cl?.contract_signed_at
-        ? new Date(cl.contract_signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'recently';
-
-      // Collect all contractor phone numbers
-      const phones = [];
-      if (Array.isArray(c?.notification_phones) && c.notification_phones.length) {
-        phones.push(...c.notification_phones.filter(Boolean));
-      }
-      if (c?.phone && !phones.includes(c.phone)) {
-        phones.push(c.phone);
-      }
-
-      const contractorMsg = `OtterQuote: Hi ${contractorName} — your homeowner ${homeownerName} (${address}) signed their contract on ${signedDate} and hasn't heard from you yet. Please reach out as soon as possible. Questions? Call (844) 875-3412.`;
-      const dustinMsg = `OtterQuote Alert: ${homeownerName} (claim ${state.claimId || 'unknown'}) says they haven't heard from ${contractorName} since signing on ${signedDate}. Heads up.`;
-
-      const sends = phones.map(phone =>
-        sb.functions.invoke('send-sms', { body: { to: phone, message: contractorMsg } })
-      );
-      // Always notify Dustin
-      sends.push(sb.functions.invoke('send-sms', { body: { to: '+13175019215', message: dustinMsg } }));
-
-      try {
-        await Promise.all(sends);
-        btn.textContent = '✓ Message sent';
-        statusEl.textContent = `We've notified ${contractorName} and our team. You should hear back soon.`;
-        statusEl.style.color = 'var(--emerald, #10b981)';
-        statusEl.style.display = 'block';
-      } catch (err) {
-        console.error('Nudge error:', err);
-        btn.disabled = false;
-        btn.textContent = "Haven't heard from your contractor? Click here.";
-        statusEl.textContent = 'Message failed to send. Please call us directly at (844) 875-3412.';
-        statusEl.style.color = 'var(--red, #ef4444)';
-        statusEl.style.display = 'block';
-      }
-    }
-
-    // ── Escape HTML ──
-    function esc(str) {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = String(str);
-      return div.innerHTML;
-    }
-  </script>
-</body>
-</html>
+      const text = is
