@@ -193,6 +193,53 @@
       .info-grid { grid-template-columns: 1fr; }
       .view-tabs { overflow-x: auto; }
     }
+
+    /* ════════════════════════════════════════ */
+    /* EXPIRED BID TREATMENT                   */
+    /* ════════════════════════════════════════ */
+    .bid-card.expired {
+      opacity: 0.6;
+      filter: grayscale(0.55);
+      border-color: rgba(255,255,255,0.04);
+    }
+    .bid-card.expired:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(255,255,255,0.05);
+    }
+    .bid-expiry-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      background: var(--amber-light);
+      color: #92400E;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .bid-expiry-notice {
+      font-size: 0.85rem;
+      color: #D97706;
+      margin-bottom: var(--sp-4);
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--amber-glow);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--amber);
+    }
+    /* All-expired banner */
+    .all-expired-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-4);
+      background: rgba(245,158,11,0.07);
+      border: 1px solid rgba(245,158,11,0.35);
+      border-radius: var(--radius-md);
+      padding: var(--sp-5) var(--sp-6);
+      margin-bottom: var(--sp-6);
+    }
+    .all-expired-banner .aeb-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+    .all-expired-banner .aeb-body { font-size: 0.9rem; color: var(--white); line-height: 1.6; }
+    .all-expired-banner .aeb-body strong { color: var(--amber); }
   </style>
 </head>
 <body>
@@ -270,6 +317,14 @@
 
             <!-- Loading / empty state -->
             <div id="hoverPropStatus" style="font-size:0.875rem;color:#64748B;">Loading your property data from Hover…</div>
+          </div>
+
+          <!-- All-Expired Banner (shown when every bid on this claim has expired) -->
+          <div id="allExpiredBanner" class="all-expired-banner" style="display:none;">
+            <div class="aeb-icon">⏰</div>
+            <div class="aeb-body">
+              <strong>All bids on this project have expired.</strong> Contractor bids are valid for 14 days. Request updated bids from the contractors listed below — they'll be notified right away.
+            </div>
           </div>
 
           <!-- Waiting Indicator -->
@@ -418,7 +473,7 @@
         .select(`
           *,
           contractors (
-            id, company_name, contact_name, owner_photo_url, about_us, years_in_business,
+            id, user_id, company_name, contact_name, owner_photo_url, about_us, years_in_business,
             service_area_description, service_counties, license_number, verified,
             google_reviews_url, rating, review_count, bbb_url, angi_url, yelp_url,
             specialties, why_choose_us, num_employees, trades, website_url
@@ -766,12 +821,17 @@
       const statusDot = document.getElementById('statusDot');
       const claimStatus = currentClaim ? currentClaim.status : null;
 
+      const allExpired = bids.length > 0 && bids.every(b => b.bid_status === 'expired');
+
       if (claimStatus === 'contract_signed') {
         statusDot.className = 'bids-status-dot closed';
         statusText.textContent = 'Contract signed — your project is underway';
       } else if (claimStatus === 'awarded') {
         statusDot.className = 'bids-status-dot closed';
         statusText.textContent = 'Contractor selected — awaiting contract signature';
+      } else if (allExpired) {
+        statusDot.className = 'bids-status-dot closed';
+        statusText.textContent = `${bidCount} bid${bidCount > 1 ? 's' : ''} received — all bids have expired`;
       } else if (bidCount > 0) {
         statusText.textContent = `${bidCount} bid${bidCount > 1 ? 's' : ''} received — bidding open`;
       } else {
@@ -909,11 +969,22 @@
 
     function renderBids() {
       const grid = document.getElementById('bidsGrid');
-      const lowestPrice = Math.min(...bids.map(b => b.total_price || Infinity));
+
+      // Only non-expired bids compete for "Best Price" badge
+      const activeBids = bids.filter(b => b.bid_status !== 'expired');
+      const lowestPrice = activeBids.length > 1
+        ? Math.min(...activeBids.map(b => b.total_price || Infinity))
+        : Infinity;
+
+      // All-expired banner visibility
+      const allExpired = bids.length > 0 && bids.every(b => b.bid_status === 'expired');
+      const aeb = document.getElementById('allExpiredBanner');
+      if (aeb) aeb.style.display = allExpired ? 'flex' : 'none';
 
       grid.innerHTML = bids.map((bid, idx) => {
         const c = contractors[bid.contractor_id] || {};
-        const isLowest = bid.total_price === lowestPrice && bids.length > 1;
+        const isExpired = bid.bid_status === 'expired';
+        const isLowest = !isExpired && bid.total_price === lowestPrice && activeBids.length > 1;
         const initials = (c.company_name || 'C').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
         const avatarHTML = c.owner_photo_url
           ? `<img src="${c.owner_photo_url}" alt="${c.company_name}">`
@@ -930,11 +1001,35 @@
                             currentClaim.job_type === 'retail' ? 'Retail' :
                             currentClaim.job_type === 'repair' ? 'Repair' : 'Project';
 
+        // Expired date notice
+        const expiryNotice = isExpired
+          ? `<div class="bid-expiry-notice">⏰ This bid expired on ${bid.expires_at ? formatDate(bid.expires_at) : 'an earlier date'}.</div>`
+          : '';
+
+        // Action button(s) — expired bids get Request Updated Bid instead of Select
+        const actionBtn = (function() {
+          const cs = currentClaim ? currentClaim.status : null;
+          if (cs === 'contract_signed') {
+            return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-ghost" style="border:1px solid var(--green);color:var(--green);">✓ Contract Signed</a>`;
+          }
+          if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) {
+            return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">View Contract Status →</a>`;
+          }
+          if (cs === 'awarded') {
+            return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
+          }
+          if (isExpired) {
+            return `<button id="renewalBtn-${bid.id}" class="btn btn-sm btn-primary" style="background:var(--amber);" onclick="requestBidRenewal('${bid.id}')">Request Updated Bid</button>`;
+          }
+          // Active bid — standard select button
+          return `<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
+        })();
+
         return `
-          <div class="bid-card ${isLowest ? 'lowest-price' : ''}" style="animation-delay:${idx * 0.1}s">
+          <div class="bid-card ${isLowest ? 'lowest-price' : ''} ${isExpired ? 'expired' : ''}" style="animation-delay:${idx * 0.1}s">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
               <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: ${jobTypeColor}; color: white; padding: 4px 10px; border-radius: var(--radius-full);">${jobTypeLabel}</span>
-              ${isLowest ? '' : '<span></span>'}
+              ${isExpired ? '<span class="bid-expiry-badge">Expired</span>' : '<span></span>'}
             </div>
 
             <div class="bid-card-header">
@@ -947,6 +1042,8 @@
                 </div>
               </div>
             </div>
+
+            ${expiryNotice}
 
             <div class="bid-metrics">
               <div class="bid-metric">
@@ -992,16 +1089,7 @@
 
             <div class="bid-card-actions">
               <a href="contractor-about.html?contractor_id=${bid.contractor_id}&claim_id=${currentClaim ? currentClaim.id : ''}" class="btn btn-sm btn-secondary">View Full Profile</a>
-              ${(function() {
-                const cs = currentClaim ? currentClaim.status : null;
-                if (cs === 'contract_signed') return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-ghost" style="border:1px solid var(--green);color:var(--green);">✓ Contract Signed</a>`;
-                if (cs === 'awarded' && currentClaim.selected_contractor_id === bid.contractor_id) {
-                  return `<a href="contract-signing.html?claim_id=${currentClaim.id}&contractor_id=${bid.contractor_id}&quote_id=${bid.id}" class="btn btn-sm btn-primary">View Contract Status →</a>`;
-                }
-                if (cs === 'awarded') return `<button class="btn btn-sm btn-ghost" disabled style="opacity:0.4;cursor:not-allowed;">Not Selected</button>`;
-                // All contractors with bids are selectable — contract is distributed to both parties after selection
-                return `<button class="btn btn-sm btn-primary" onclick="selectContractor('${bid.id}')">Select This Contractor</button>`;
-              })()}
+              ${actionBtn}
             </div>
           </div>
         `;
@@ -1219,6 +1307,91 @@
       pendingBidId = null;
     };
 
+    // ── Request Updated Bid (expired bids) ──
+    // Notifies the contractor via dashboard notification and sends admin a support email.
+    // Non-blocking: errors are caught and surfaced via button text only.
+    window.requestBidRenewal = async function(bidId) {
+      const bid = bids.find(b => b.id === bidId);
+      if (!bid) return;
+      const c = contractors[bid.contractor_id] || {};
+
+      const btn = document.getElementById('renewalBtn-' + bidId);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Sending request…';
+      }
+
+      let notifOk = false;
+      let emailOk = false;
+
+      try {
+        // 1. Insert dashboard notification for the contractor (they'll see it on next login)
+        if (c.user_id) {
+          const { error: notifErr } = await sb.from('notifications').insert({
+            user_id: c.user_id,
+            notification_type: 'bid_renewal_requested',
+            channel: 'dashboard',
+            title: 'Homeowner requesting updated bid',
+            message: `A homeowner is requesting an updated bid on ${currentClaim ? (currentClaim.property_address || 'their project') : 'their project'}.`,
+            message_preview: `A homeowner is requesting an updated bid on ${currentClaim ? (currentClaim.property_address || 'their project') : 'their project'}.`,
+            metadata: JSON.stringify({ quote_id: bidId, claim_id: currentClaim ? currentClaim.id : null }),
+          });
+          if (!notifErr) notifOk = true;
+          else console.warn('requestBidRenewal — notification insert error:', notifErr);
+        }
+      } catch (err) {
+        console.warn('requestBidRenewal — notification step error:', err);
+      }
+
+      try {
+        // 2. Send support email so admin has visibility and can follow up if contractor is unresponsive
+        const resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-support-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CONFIG.SUPABASE_ANON,
+          },
+          body: JSON.stringify({
+            subject: '[Bid Renewal Requested] ' + (c.company_name || 'Contractor') + ' — ' + (currentClaim ? (currentClaim.property_address || currentClaim.id) : 'Unknown Claim'),
+            message: [
+              'A homeowner has requested an updated bid from a contractor whose bid has expired.',
+              '',
+              'Contractor: ' + (c.company_name || 'Unknown'),
+              'Property: ' + (currentClaim ? (currentClaim.property_address || 'N/A') : 'N/A'),
+              'Claim ID: ' + (currentClaim ? currentClaim.id : 'N/A'),
+              'Quote ID: ' + bidId,
+              '',
+              'The contractor has been notified via their dashboard' + (notifOk ? '.' : ' (notification may have failed — check manually).'),
+            ].join('\n'),
+          }),
+        });
+        if (resp.ok) emailOk = true;
+      } catch (err) {
+        console.warn('requestBidRenewal — email step error:', err);
+      }
+
+      // Update button to reflect outcome
+      if (btn) {
+        if (notifOk || emailOk) {
+          btn.textContent = '✓ Request Sent';
+          btn.style.background = '#059669'; // green — success
+          btn.style.cursor = 'default';
+        } else {
+          // Both steps failed — let homeowner try again
+          btn.disabled = false;
+          btn.textContent = 'Request Updated Bid';
+          btn.style.background = '';
+          console.warn('requestBidRenewal — both notification and email failed for bid', bidId);
+        }
+      }
+
+      gtag('event', 'bid_renewal_requested', {
+        bid_id: bidId,
+        contractor_id: bid.contractor_id,
+        success: notifOk || emailOk,
+      });
+    };
+
     // requestAgreement (D-134) — REMOVED: no longer needed. Signing happens after
     // homeowner selection, not before. All contractors are selectable regardless of
     // signing status.
@@ -1367,151 +1540,4 @@
       if (!str) return '';
       const div = document.createElement('div');
       div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function formatDate(dateStr) {
-      try {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      } catch { return dateStr; }
-    }
-
-    function formatWarranty(bid) {
-      const parts = [];
-      if (bid.workmanship_warranty_years) parts.push(`${bid.workmanship_warranty_years}yr workmanship`);
-      if (bid.manufacturer_warranty_years) parts.push(`${bid.manufacturer_warranty_years}yr manufacturer`);
-      return parts.length > 0 ? parts.join(' + ') : (bid.warranty_summary || 'TBD');
-    }
-
-    function parseCerts(certs) {
-      if (!certs) return [];
-      if (Array.isArray(certs)) return certs;
-      try { return JSON.parse(certs); } catch { return certs.split(',').map(s => s.trim()); }
-    }
-
-    function parseJSON(val) {
-      if (!val) return null;
-      if (Array.isArray(val)) return val;
-      try { return JSON.parse(val); } catch { return null; }
-    }
-
-    // Render value_adds (contractor distinguishing features) as a clean bulleted section
-    function renderValueAdds(bid) {
-      const va = typeof bid.value_adds === 'string' ? parseJSON(bid.value_adds) : bid.value_adds;
-      if (!va) return '';
-
-      const items = [];
-
-      // Gutters
-      if (va.gutters && va.gutters.option && va.gutters.option !== 'none') {
-        const opt = va.gutters.option;
-        if (opt === '5inch_included') items.push('✓ 5" gutters included at no out-of-pocket cost');
-        else if (opt === '6inch_included') items.push('✓ 6" gutters included at no out-of-pocket cost');
-        else if (opt === '5inch_additional') items.push(`5" gutters available for +$${(va.gutters.additional_cost_5inch || 0).toLocaleString()}`);
-        else if (opt === '6inch_additional') items.push(`6" gutters available for +$${(va.gutters.additional_cost_6inch || 0).toLocaleString()}`);
-        else if (opt === 'other' && va.gutters.other_text) items.push('Gutters: ' + esc(va.gutters.other_text));
-      }
-
-      // Chimney Flashing
-      if (va.chimney_flashing && va.chimney_flashing !== 'na') {
-        if (va.chimney_flashing === 'replace') items.push('✓ Chimney flashing replaced (included)');
-        else if (va.chimney_flashing === 'reuse') items.push('Chimney flashing reused if in good condition');
-      }
-
-      // Gutter Guards
-      if (va.gutter_guards && va.gutter_guards.option === 'available') {
-        const type = va.gutter_guards.type === 'other' ? (va.gutter_guards.type_other || 'custom type') : (va.gutter_guards.type || 'mesh');
-        const price = va.gutter_guards.oop_price ? `+$${va.gutter_guards.oop_price.toLocaleString()} OOP` : 'price on request';
-        items.push(`Gutter guards available (${esc(type)}) — ${price}`);
-      }
-
-      // Skylights
-      if (va.skylights && va.skylights !== 'na') {
-        if (va.skylights === 'reflash') items.push('✓ Skylights reflashed (included)');
-        else if (va.skylights === 'replace') items.push('Skylights can be replaced');
-      }
-
-      // Chimney Reflash
-      if (va.chimney_reflash && va.chimney_reflash.option && va.chimney_reflash.option !== 'na') {
-        if (va.chimney_reflash.option === 'included') items.push('✓ Chimney reflash included at no additional cost');
-        else if (va.chimney_reflash.option === 'oop') items.push(`Chimney reflash available for +$${(va.chimney_reflash.oop_price || 0).toLocaleString()} OOP`);
-      }
-
-      // Other offers
-      if (va.other_offers && va.other_offers.trim()) {
-        items.push(esc(va.other_offers.trim()));
-      }
-
-      // Other Shingles Available — new array format or legacy object format
-      let shingleItems = [];
-      if (va.other_shingles) {
-        if (Array.isArray(va.other_shingles) && va.other_shingles.length > 0) {
-          // New format: ["GAF|Timberline HDZ", "Owens Corning|Duration", ...]
-          // Group by brand for display
-          const byBrand = {};
-          va.other_shingles.forEach(v => {
-            const parts = v.split('|');
-            const brand = parts[0] || 'Other';
-            const product = parts[1] || v;
-            if (!byBrand[brand]) byBrand[brand] = [];
-            byBrand[brand].push(product);
-          });
-          Object.keys(byBrand).forEach(brand => {
-            shingleItems.push(`<strong>${esc(brand)}:</strong> ${byBrand[brand].map(p => esc(p)).join(', ')}`);
-          });
-        } else if (typeof va.other_shingles === 'object' && !Array.isArray(va.other_shingles)) {
-          // Legacy format: {impact: true, designer: true, metal: false, ...}
-          const labels = { impact: 'Impact Resistant (Class 4)', designer: 'Designer / Luxury', metal: 'Metal Roofing', premium_arch: 'Premium Architectural' };
-          Object.keys(labels).forEach(key => {
-            if (va.other_shingles[key]) shingleItems.push(esc(labels[key]));
-          });
-          if (va.other_shingles.other_text) shingleItems.push(esc(va.other_shingles.other_text));
-        }
-      }
-
-      if (items.length === 0 && shingleItems.length === 0) return '';
-
-      let html = '';
-
-      if (items.length > 0) {
-        html += `
-          <div style="margin: var(--sp-4) 0; padding: var(--sp-4); background: #F0FDF4; border: 1px solid #86EFAC; border-radius: var(--radius-md);">
-            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; margin-bottom: var(--sp-2);">What's Included / Available</div>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-1);">
-              ${items.map(item => `<li style="font-size: 0.875rem; color: #14532D;">${item}</li>`).join('')}
-            </ul>
-          </div>
-        `;
-      }
-
-      if (shingleItems.length > 0) {
-        const notesHtml = (va.other_shingles_notes || (va.other_shingles && typeof va.other_shingles === 'object' && !Array.isArray(va.other_shingles) && va.other_shingles.notes))
-          ? `<div style="margin-top:var(--sp-2);font-size:0.8rem;color:#374151;font-style:italic;">${esc(va.other_shingles_notes || va.other_shingles.notes)}</div>`
-          : '';
-        html += `
-          <div style="margin: var(--sp-4) 0; padding: var(--sp-4); background: #EFF6FF; border: 1px solid #93C5FD; border-radius: var(--radius-md);">
-            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #1E3A5F; margin-bottom: var(--sp-2);">Also Available at Insurance Price</div>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-1);">
-              ${shingleItems.map(item => `<li style="font-size: 0.875rem; color: #1E3A5F;">${item}</li>`).join('')}
-            </ul>
-            ${notesHtml}
-            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingles other than the contractor's preferred product. Ask the contractor about specific warranty coverage before making your selection.</div>
-          </div>
-        `;
-      }
-
-      return html;
-    }
-
-    // ── Init ──
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  })();
-  </script>
-
-</body>
-</html>
+      return div.in
