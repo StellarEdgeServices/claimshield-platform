@@ -1247,10 +1247,14 @@
           return; // Stop — do not render the signing UI
         }
 
-        // Check if contractor has already signed (IC 24-5-11 flow)
+        // Check if contractor has already signed (IC 24-5-11 flow).
+        // Read existingEnvelopeId directly from the quote record — do NOT gate it on
+        // contractor_signed_at. The webhook writes contractor_signed_at asynchronously;
+        // the envelope_id is available as soon as contractor_sign runs, which is earlier.
+        // Decoupling these allows homeowner_sign to work even before the webhook fires.
+        state.existingEnvelopeId = state.bid?.docusign_envelope_id || null;
         if (state.bid?.contractor_signed_at) {
           state.contractorAlreadySigned = true;
-          state.existingEnvelopeId = state.bid.docusign_envelope_id || null;
         }
 
         // ── Render the page ──
@@ -1538,12 +1542,14 @@
           || state.currentUser.user_metadata?.full_name
           || state.currentUser.email;
 
-        // New signing flow: after homeowner selects contractor, contract is distributed to both parties.
-        // Use 'homeowner_sign' if contractor already signed (retrieves existing envelope).
-        // Use 'contract' to create a new envelope — contractor signs first (IC 24-5-11), then homeowner.
-        const docType = state.contractorAlreadySigned && state.existingEnvelopeId
-          ? 'homeowner_sign'
-          : 'contract';
+        // Always use homeowner_sign. contract-signing.html is exclusively the homeowner signing page.
+        // The contractor_sign envelope is created earlier (at contractor selection time) and its
+        // envelope_id is stored on the quote. handleHomeownerSign() looks it up from the quote record.
+        // If no envelope exists yet, the Edge Function returns a clear actionable error.
+        // 'contract' (the deprecated legacy handler) is intentionally never used here: it pointed at
+        // an old storage path (contractorId/contract.pdf) that doesn't exist for D-161 contractors,
+        // and its signing order (homeowner first) violated IC 24-5-11 D-152 sequential flow.
+        const docType = 'homeowner_sign';
 
         console.log(`DocuSign flow: ${docType}, contractor_signed: ${state.contractorAlreadySigned}, envelope: ${state.existingEnvelopeId}`);
 
@@ -1703,4 +1709,143 @@
       const day = now.getDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
       const hour = now.getHours();
       const isWeekend = day === 0 || day === 6 || (day === 5 && hour >= 17);
-      const text = is
+      const text = isWeekend ? 'by Monday' : 'within 48 hours';
+      const el1 = document.getElementById('contactDeadlineText');
+      const el2 = document.getElementById('contactDeadlineText2');
+      if (el1) el1.textContent = text;
+      if (el2) el2.textContent = text;
+    }
+
+    // ── Send nudge to contractor + Dustin when homeowner hasn't heard back ──
+    async function sendContractorNudge() {
+      const btn = document.getElementById('noContactBtn');
+      const statusEl = document.getElementById('nudgeStatus');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      const c = state.contractor;
+      const cl = state.claim;
+      const contractorName = c?.company_name || c?.name || 'your contractor';
+      const homeownerName = cl?.homeowner_name || 'your homeowner';
+      const address = cl?.property_address || 'their property';
+      const signedDate = cl?.contract_signed_at
+        ? new Date(cl.contract_signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'recently';
+
+      // Collect all contractor phone numbers
+      const phones = [];
+      if (Array.isArray(c?.notification_phones) && c.notification_phones.length) {
+        phones.push(...c.notification_phones.filter(Boolean));
+      }
+      if (c?.phone && !phones.includes(c.phone)) {
+        phones.push(c.phone);
+      }
+
+      const contractorMsg = `OtterQuote: Hi ${contractorName} — your homeowner ${homeownerName} (${address}) signed their contract on ${signedDate} and hasn't heard from you yet. Please reach out as soon as possible. Questions? Call (844) 875-3412.`;
+      const dustinMsg = `OtterQuote Alert: ${homeownerName} (claim ${state.claimId || 'unknown'}) says they haven't heard from ${contractorName} since signing on ${signedDate}. Heads up.`;
+
+      const sends = phones.map(phone =>
+        sb.functions.invoke('send-sms', { body: { to: phone, message: contractorMsg } })
+      );
+      // Always notify Dustin
+      sends.push(sb.functions.invoke('send-sms', { body: { to: '+13175019215', message: dustinMsg } }));
+
+      try {
+        await Promise.all(sends);
+        btn.textContent = '✓ Message sent';
+        statusEl.textContent = `We've notified ${contractorName} and our team. You should hear back soon.`;
+        statusEl.style.color = 'var(--emerald, #10b981)';
+        statusEl.style.display = 'block';
+      } catch (err) {
+        console.error('Nudge error:', err);
+        btn.disabled = false;
+        btn.textContent = "Haven't heard from your contractor? Click here.";
+        statusEl.textContent = 'Message failed to send. Please call us directly at (844) 875-3412.';
+        statusEl.style.color = 'var(--red, #ef4444)';
+        statusEl.style.display = 'block';
+      }
+    }
+
+    // ── Request Bid Renewal — used by expired bid guard (D-150) ──
+    // Same logic as bids.html requestBidRenewal: notifies contractor via dashboard
+    // notification and sends admin a support email. Non-blocking; errors are caught.
+    window.requestBidRenewal = async function(bidId) {
+      const btn = document.getElementById('renewalBtnSigning');
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending request\u2026'; }
+
+      let notifOk = false, emailOk = false;
+
+      // 1. Insert dashboard notification for the contractor
+      try {
+        if (state.contractor?.user_id) {
+          const { error: notifErr } = await sb.from('notifications').insert({
+            user_id: state.contractor.user_id,
+            notification_type: 'bid_renewal_requested',
+            channel: 'dashboard',
+            title: 'Homeowner requesting updated bid',
+            message: `A homeowner is requesting an updated bid on ${state.claim?.property_address || 'their project'}.`,
+            message_preview: `A homeowner is requesting an updated bid on ${state.claim?.property_address || 'their project'}.`,
+            metadata: JSON.stringify({ quote_id: bidId, claim_id: state.claimId }),
+          });
+          if (!notifErr) notifOk = true;
+          else console.warn('requestBidRenewal — notification insert error:', notifErr);
+        }
+      } catch (err) {
+        console.warn('requestBidRenewal — notification step error:', err);
+      }
+
+      // 2. Send support email so admin has visibility
+      try {
+        const resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/send-support-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON },
+          body: JSON.stringify({
+            subject: 'Bid Renewal Requested \u2014 ' + (state.contractor?.company_name || 'Unknown Contractor'),
+            body: [
+              'A homeowner has requested an updated bid (via contract-signing.html expired guard).',
+              'Contractor: ' + (state.contractor?.company_name || 'N/A'),
+              'Property: ' + (state.claim?.property_address || 'N/A'),
+              'Claim ID: ' + (state.claimId || 'N/A'),
+              'Quote ID: ' + bidId,
+              '',
+              'The contractor has been notified via their dashboard' +
+                (notifOk ? '.' : ' (notification may have failed \u2014 check manually).'),
+            ].join('\n'),
+          }),
+        });
+        if (resp.ok) emailOk = true;
+      } catch (err) {
+        console.warn('requestBidRenewal — email step error:', err);
+      }
+
+      // Update button to reflect outcome
+      if (btn) {
+        if (notifOk || emailOk) {
+          btn.textContent = '\u2713 Request Sent';
+          btn.style.background = '#059669';
+          btn.style.cursor = 'default';
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Request an Updated Bid';
+          console.warn('requestBidRenewal — both notification and email failed for bid', bidId);
+        }
+      }
+
+      gtag('event', 'bid_renewal_requested', {
+        bid_id: bidId,
+        contractor_id: state.contractor?.id,
+        success: notifOk || emailOk,
+        source: 'contract-signing',
+      });
+    };
+
+    // ── Escape HTML ──
+    function esc(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

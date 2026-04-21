@@ -187,6 +187,44 @@ serve(async (req) => {
 
     console.log(`Matched claim ${claim.id} (${isContract ? "contract" : "color_confirmation"})`);
 
+    // ========== CONTRACTOR SIGNING TRACKING ==========
+    // On every contract envelope event, scan the signers array. If the contractor
+    // signer (clientUserId: "contractor_1") has completed, write contractor_signed_at
+    // to the matching quote. Covers both intermediate events (contractor signed,
+    // homeowner pending) and the final completed event (all signed — signedDateTime
+    // is still present per signer in the payload). Idempotent via IS NULL guard.
+    if (isContract) {
+      const allSigners: any[] = (
+        payload.data?.envelopeSummary?.recipients?.signers ||
+        payload.recipients?.signers ||
+        []
+      );
+      const contractorSigner = allSigners.find(
+        (s: any) => s.clientUserId === "contractor_1" && s.status === "completed"
+      );
+      if (contractorSigner) {
+        const { data: contractorQuote } = await supabase
+          .from("quotes")
+          .select("id, contractor_signed_at")
+          .eq("docusign_envelope_id", envelopeId)
+          .is("contractor_signed_at", null)
+          .maybeSingle();
+        if (contractorQuote) {
+          const { error: csErr } = await supabase
+            .from("quotes")
+            .update({
+              contractor_signed_at: contractorSigner.signedDateTime || new Date().toISOString(),
+            })
+            .eq("id", contractorQuote.id);
+          if (csErr) {
+            console.error(`Failed to write contractor_signed_at for quote ${contractorQuote.id}:`, csErr);
+          } else {
+            console.log(`contractor_signed_at written for quote ${contractorQuote.id} (claim ${claim.id})`);
+          }
+        }
+      }
+    }
+
     // ========== UPDATE CLAIM BASED ON STATUS ==========
     const updateData: Record<string, any> = {};
     let shouldNotifyContractor = false;
