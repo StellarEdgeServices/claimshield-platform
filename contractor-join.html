@@ -493,15 +493,15 @@
                         <h3><span></span>Contractor Attestation &amp; Indemnity</h3>
 
                         <div class="info-box" style="font-size: 0.95rem; line-height: 1.7; color: var(--navy);">
-                            <p style="margin-bottom: var(--sp-4);">Otter Quotes is a contract-ready project matching and payments platform. We do not perform your work, supervise your crews, or warrant the materials you install. Every contractor on the platform represents themselves — directly — as licensed, insured, and compliant with Indiana law.</p>
+                            <p style="margin-bottom: var(--sp-4);">Otter Quotes is a contract-ready project matching and payments platform. We do not perform your work, supervise your crews, or warrant the materials you install. Every contractor on the platform represents themselves — directly — as licensed, insured, and compliant with all applicable federal and state law in each jurisdiction where they work.</p>
                             <p style="margin-bottom: var(--sp-4);">By checking the box below, you personally and on behalf of the business attest that:</p>
                             <ul style="margin: 0 0 var(--sp-4) var(--sp-5); padding: 0;">
                                 <li style="margin-bottom: var(--sp-2);">You hold all licenses, registrations, and permits required to perform the work you bid on in every jurisdiction where the home is located.</li>
                                 <li style="margin-bottom: var(--sp-2);">You carry and will maintain Commercial General Liability insurance of at least <strong>$1,000,000 per occurrence / $2,000,000 aggregate</strong>, including products-completed operations and contractual liability coverage, with Stellar Edge Services, LLC named as additional insured on a primary and non-contributory basis.</li>
-                                <li style="margin-bottom: var(--sp-2);">You will comply with Indiana Code 24-5-11 (Home Improvement Contracts Act) on every project booked through the platform, including the statutory written-contract, disclosure, and cancellation-right requirements.</li>
+                                <li style="margin-bottom: var(--sp-2);">You will comply with Indiana Code 24-5-11 (Home Improvement Contracts Act) on every Indiana project booked through the platform, and with all equivalent home improvement contract requirements — including statutory written-contract, disclosure, and cancellation-right requirements — for projects located in other states.</li>
                                 <li style="margin-bottom: var(--sp-2);">You will indemnify, defend, and hold harmless Stellar Edge Services, LLC, Otter Quotes, and their officers, employees, and agents from and against any and all claims, damages, losses, liabilities, fines, penalties, and reasonable attorneys' fees arising out of or relating to your work, your employees or subcontractors, your failure to maintain required insurance or licensing, or any violation of IC 24-5-11 or other applicable law. This indemnity is <strong>joint and several</strong> with any co-contractor, subcontractor, or affiliate you engage on the project, and survives termination of your participation on the platform.</li>
                             </ul>
-                            <p style="font-weight: 600; color: var(--navy);">Electronic acceptance below, together with the name and title entered above and the timestamp and IP address captured at acceptance, constitutes your signature under the federal E-SIGN Act and the Indiana Uniform Electronic Transactions Act.</p>
+                            <p style="font-weight: 600; color: var(--navy);">Electronic acceptance below, together with the name and title entered above and the timestamp and IP address captured at acceptance, constitutes your signature under the federal E-SIGN Act and the Uniform Electronic Transactions Act as adopted in your state.</p>
                         </div>
 
                         <div class="checkbox-item" style="margin-top: var(--sp-4); margin-bottom: var(--sp-6);">
@@ -649,8 +649,4 @@
 
                 // GA4 conversion event — contractor funnel
                 gtag('event', 'contractor_signup', {
-                    trade_types: [],  // trade selection happens post-signup in profile setup
-                    source: new URLSearchParams(location.search).get('utm_source') || 'direct',
-                });
-
-            } catch (e
+                    trade_types: [],  // t

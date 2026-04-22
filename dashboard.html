@@ -676,11 +676,131 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* ── D-178: State Gate Card ── */
+    .state-gate-overlay {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+      padding: var(--sp-8) var(--sp-4);
+    }
+    .state-gate-card {
+      background: var(--navy-2, #1E3A5F);
+      border: 1px solid rgba(250,199,117,0.25);
+      border-radius: 16px;
+      padding: var(--sp-10, 2.5rem) var(--sp-8, 2rem);
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+    }
+    .state-gate-card .gate-logo {
+      width: 72px;
+      height: auto;
+      margin-bottom: var(--sp-6, 1.5rem);
+    }
+    .state-gate-card h2 {
+      color: #FAC775;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--sp-4, 1rem);
+      line-height: 1.3;
+    }
+    .state-gate-card .gate-body {
+      color: rgba(255,255,255,0.82);
+      font-size: 1rem;
+      line-height: 1.65;
+      margin-bottom: var(--sp-6, 1.5rem);
+    }
+    .state-gate-optin {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-3, 0.75rem);
+      text-align: left;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(250,199,117,0.18);
+      border-radius: 10px;
+      padding: var(--sp-4, 1rem);
+      margin-bottom: var(--sp-5, 1.25rem);
+    }
+    .state-gate-optin input[type="checkbox"] {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: #FAC775;
+      cursor: pointer;
+    }
+    .state-gate-optin label {
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      cursor: pointer;
+    }
+    .state-gate-optin .gate-email-note {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 4px;
+    }
+    .state-gate-btn {
+      display: block;
+      width: 100%;
+      padding: var(--sp-4, 1rem) var(--sp-6, 1.5rem);
+      background: #FAC775;
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: var(--sp-5, 1.25rem);
+      transition: background 0.15s;
+    }
+    .state-gate-btn:hover { background: #E8B660; }
+    .state-gate-btn:disabled { opacity: 0.6; cursor: default; }
+    .state-gate-confirm {
+      color: #4ade80;
+      font-size: 0.92rem;
+      margin-bottom: var(--sp-4, 1rem);
+      display: none;
+    }
+    .state-gate-error {
+      color: #fca5a5;
+      font-size: 0.9rem;
+      margin-bottom: var(--sp-4, 1rem);
+      display: none;
+    }
+    .state-gate-fine {
+      color: rgba(255,255,255,0.38);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
   <header id="site-header" data-active=""></header>
+
+  <!-- D-178: State gate overlay (hidden by default; shown for non-IN homeowners) -->
+  <div id="state-gate-overlay" class="state-gate-overlay" style="display:none;">
+    <div class="state-gate-card">
+      <img src="/img/brand-assets/logo-navy-amber.svg" alt="Otter Quotes" class="gate-logo">
+      <h2 id="gate-heading">Otter Quotes isn't available in your state yet — but it will be.</h2>
+      <p class="gate-body" id="gate-body">We're growing fast and your state is on the roadmap. In the meantime, your project information is saved.</p>
+      <div class="state-gate-optin">
+        <input type="checkbox" id="gate-optin-checkbox" checked>
+        <div>
+          <label for="gate-optin-checkbox">Notify me when Otter Quotes arrives in my state</label>
+          <div class="gate-email-note" id="gate-email-note"></div>
+        </div>
+      </div>
+      <div class="state-gate-confirm" id="gate-confirm">✓ You're on the list. We'll reach out when we arrive in your area.</div>
+      <div class="state-gate-error" id="gate-error">Something went wrong saving your spot. Please try again or email support@otterquote.com.</div>
+      <button class="state-gate-btn" id="gate-save-btn" onclick="saveWaitlistSpot()">Save My Spot</button>
+      <p class="state-gate-fine">Your information is kept private and used only to notify you of availability in your area. You may request account deletion at any time by emailing <a href="mailto:support@otterquote.com" style="color:rgba(255,255,255,0.55);">support@otterquote.com</a>.</p>
+    </div>
+  </div>
 
   <div class="dashboard-layout">
     <div class="dashboard-main">
@@ -1046,6 +1166,12 @@
             await loadClaimData();
           }
 
+          // D-178: State gate — block non-IN homeowners before any UI renders
+          if (currentClaim?.property_state && currentClaim.property_state !== 'IN') {
+            showStateGateCard(currentClaim.property_state);
+            return;
+          }
+
           // 2. Render UI
           renderWelcome();
           renderClaimInfo();
@@ -1166,12 +1292,24 @@
           if (!currentClaim) {
             // Create new claim if doesn't exist
             console.log('[Dashboard] No claim found, creating new draft...');
+
+            // D-178: parse state from stored address for state gating
+            const signupRaw = localStorage.getItem('cs_signup') || sessionStorage.getItem('cs_signup') || '{}';
+            let parsedState = null;
+            try {
+              const signupData = JSON.parse(signupRaw);
+              parsedState = parseStateFromAddress(signupData.address)
+                || currentProfile?.address_state
+                || null;
+            } catch (e) { /* ignore parse errors */ }
+
             const { data: newClaim, error: createError } = await sb
               .from('claims')
               .insert({
                 user_id: currentUser.id,
                 status: 'draft',
                 damage_type: 'roof',
+                property_state: parsedState,
               })
               .select()
               .single();
@@ -1217,6 +1355,109 @@
             ready_for_bids: false,
           };
         }
+      }
+
+      // ── D-178: State Gating Helpers ──
+
+      /** Parse 2-letter state abbreviation from a US address string.
+       *  Handles: "123 Main St, Indianapolis, IN 46077" → "IN"
+       */
+      function parseStateFromAddress(address) {
+        if (!address) return null;
+        const match = address.match(/[,\s]+([A-Za-z]{2})[,\s]+\d{5}(?:-\d{4})?/);
+        if (match) return match[1].toUpperCase();
+        return null;
+      }
+
+      /** Show the D-178 state gate card and hide dashboard content. */
+      function showStateGateCard(state) {
+        // Hide all dashboard content
+        const layout = document.querySelector('.dashboard-layout');
+        if (layout) layout.style.display = 'none';
+
+        // Populate gate card copy
+        const stateName = getStateName(state) || state;
+        const heading   = document.getElementById('gate-heading');
+        const body      = document.getElementById('gate-body');
+        const emailNote = document.getElementById('gate-email-note');
+        if (heading) heading.textContent = `Otter Quotes isn't available in ${stateName} yet — but it will be.`;
+        if (body)    body.textContent    = `We're growing fast and ${stateName} is on the roadmap. In the meantime, your project information is saved.`;
+
+        // Pre-fill email from auth session
+        if (currentUser?.email && emailNote) {
+          emailNote.textContent = `We'll notify ${currentUser.email}`;
+        }
+
+        // Show the overlay
+        const overlay = document.getElementById('state-gate-overlay');
+        if (overlay) overlay.style.display = 'flex';
+
+        // Mark claim as waitlisted (best-effort — non-blocking)
+        if (sb && currentClaim?.id) {
+          sb.from('claims')
+            .update({ status: 'waitlisted' })
+            .eq('id', currentClaim.id)
+            .then(({ error }) => {
+              if (error) console.warn('[StateGate] Could not update claim status to waitlisted:', error.message);
+            });
+        }
+      }
+
+      /** Save or update the homeowner's expansion_waitlist row. Called by the gate card button. */
+      async function saveWaitlistSpot() {
+        const btn      = document.getElementById('gate-save-btn');
+        const optedIn  = document.getElementById('gate-optin-checkbox')?.checked ?? true;
+        const confirm  = document.getElementById('gate-confirm');
+        const errorEl  = document.getElementById('gate-error');
+        const state    = currentClaim?.property_state;
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+        if (confirm) confirm.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'none';
+
+        try {
+          if (!sb || !currentUser?.id || !state) throw new Error('Missing session data');
+
+          const payload = {
+            user_id:     currentUser.id,
+            claim_id:    currentClaim?.id || null,
+            state:       state,
+            opted_in:    optedIn,
+            opted_in_at: optedIn ? new Date().toISOString() : null,
+          };
+
+          // Upsert: one row per user (ignore conflict on user_id+state if that index existed; otherwise insert)
+          const { error } = await sb
+            .from('expansion_waitlist')
+            .upsert(payload, { onConflict: 'user_id,state', ignoreDuplicates: false });
+
+          if (error) throw error;
+
+          if (confirm) confirm.style.display = 'block';
+          if (btn) { btn.textContent = 'Saved ✓'; }
+        } catch (err) {
+          console.warn('[StateGate] saveWaitlistSpot error:', err?.message || err);
+          if (errorEl) errorEl.style.display = 'block';
+          if (btn) { btn.disabled = false; btn.textContent = 'Save My Spot'; }
+        }
+      }
+
+      /** Return a human-readable state name for a 2-letter code. */
+      function getStateName(code) {
+        const map = {
+          AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
+          CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
+          HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',
+          KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',
+          MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',
+          MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+          NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',
+          OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+          SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',
+          VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',
+          DC:'Washington, D.C.',
+        };
+        return map[code?.toUpperCase()] || null;
       }
 
       // ── UI Rendering ──
@@ -2353,234 +2594,4 @@
               if (isRetail && t === 'siding') {
                 // Held: D-164 gate — check-siding-design-completion sets this
                 console.log('submitForBids: siding held (retail — D-164 gate)');
-                continue;
-              }
-              if (['roofing', 'gutters', 'siding', 'windows'].includes(t)) {
-                dbUpdate[`${t}_bid_released_at`] = now;
-              }
-              tradesToRelease.push(t);
-            }
-
-            const { data, error } = await sb
-              .from('claims')
-              .update(dbUpdate)
-              .eq('id', currentClaim.id)
-              .select()
-              .single();
-
-            if (error) throw error;
-            currentClaim = data;
-          }
-
-          // Show success state
-          document.getElementById('submit-ready-section').style.display = 'none';
-          document.getElementById('checklist-section').style.display = 'none';
-          document.getElementById('submit-success').classList.add('active');
-          document.getElementById('status-banner').classList.add('active');
-
-          gtag('event', 'claim_submitted', {
-            claim_id: currentClaim.id,
-            has_measurements: currentClaim.has_measurements,
-          });
-
-          // ── D-165: Notify contractors per-trade ──────────────────────────
-          // One notify-contractors call per released trade so each contractor
-          // receives a trade-specific email (e.g. "Roofing Opportunity" vs
-          // "Gutters Opportunity"). Siding on retail claims is skipped here —
-          // check-siding-design-completion fires the notification when the
-          // Hover design is complete.
-          if (!CONFIG.DEMO_MODE) {
-            try {
-              const addressParts = (currentClaim.property_address || '').split(',');
-              const city  = currentClaim.address_city  || addressParts[0]?.trim() || 'Unknown';
-              const state = currentClaim.address_state || 'IN';
-              const zip   = currentClaim.address_zip   || currentClaim.property_address?.match(/\d{5}/)?.[0] || '';
-
-              const tradesForNotify = allTrades.filter(trade => {
-                const t = (trade || '').toLowerCase();
-                if (isRetail && t === 'siding') return false; // D-164 gate holds siding
-                return true;
-              });
-
-              // Fire-and-forget per trade — don't block success UI
-              for (const trade of tradesForNotify) {
-                const notifyPayload = {
-                  claim_id: currentClaim.id,
-                  claim_city: city,
-                  claim_state: state,
-                  claim_zip: zip,
-                  trade_types: [trade],
-                  job_type: currentClaim.job_type || 'insurance_rcv',
-                  urgency: currentClaim.urgency || 'flexible',
-                };
-                fetch(`${CONFIG.SUPABASE_URL}/functions/v1/notify-contractors`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON}`,
-                  },
-                  body: JSON.stringify(notifyPayload),
-                }).then(resp => resp.json())
-                  .then(result => console.log(`Contractor notification result [${trade}]:`, result))
-                  .catch(notifyErr => console.error(`Contractor notification error [${trade}] (non-blocking):`, notifyErr));
-              }
-            } catch (notifyErr) {
-              console.error('Error preparing contractor notifications:', notifyErr);
-            }
-          }
-        } catch (err) {
-          console.error('Submit error:', err);
-          showError('Failed to submit claim. Please try again.');
-          btn.disabled = false;
-          btn.classList.remove('btn-loading');
-        }
-      }
-
-      // ── Utility Functions ──
-      function showError(message) {
-        const el = document.getElementById('error-message');
-        document.getElementById('error-text').textContent = message;
-        el.classList.add('active');
-        setTimeout(() => {
-          el.classList.remove('active');
-        }, 5000);
-      }
-
-      function showSuccess(message) {
-        const el = document.getElementById('success-message');
-        document.getElementById('success-text').textContent = message;
-        el.classList.add('active');
-        setTimeout(() => {
-          el.classList.remove('active');
-        }, 4000);
-      }
-
-      // ── Switch Contractor ──
-      window.openSwitchContractorModal = function() {
-        document.getElementById('switch-contractor-modal').classList.add('active');
-      };
-
-      window.closeSwitchModal = function() {
-        document.getElementById('switch-contractor-modal').classList.remove('active');
-        // Reset confirm button in case it was in loading state
-        const btn = document.getElementById('confirm-switch-btn');
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'Yes, Switch Contractors';
-        }
-      };
-
-      window.confirmSwitchContractor = async function() {
-        if (!currentClaim?.id || CONFIG.DEMO_MODE) {
-          // Demo mode: show success without calling backend
-          closeSwitchModal();
-          showSuccess('Demo mode: Contractor switch simulated. Your project would return to open bidding.');
-          return;
-        }
-
-        const btn = document.getElementById('confirm-switch-btn');
-        btn.disabled = true;
-        btn.textContent = 'Processing...';
-
-        try {
-          const session = await sb.auth.getSession();
-          const jwt = session?.data?.session?.access_token;
-          if (!jwt) {
-            showError('Session expired. Please refresh the page and try again.');
-            closeSwitchModal();
-            return;
-          }
-
-          const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/switch-contractor`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwt}`,
-            },
-            body: JSON.stringify({ claim_id: currentClaim.id }),
-          });
-
-          const result = await res.json();
-
-          if (!res.ok || !result.success) {
-            closeSwitchModal();
-            const errMsg = result?.error || 'Failed to switch contractor. Please try again or contact support.';
-            showError(errMsg);
-            return;
-          }
-
-          // Success — update local state and re-render
-          closeSwitchModal();
-          currentClaim.status = 'bidding';
-          currentClaim.selected_contractor_id = null;
-
-          // Update the status banner to reflect the project is back in bidding
-          const banner = document.getElementById('status-banner');
-          const iconEl = document.getElementById('status-banner-icon');
-          const titleEl = document.getElementById('status-banner-title');
-          const textEl = document.getElementById('status-banner-text');
-          const actionsEl = document.getElementById('status-banner-actions');
-
-          if (iconEl) iconEl.textContent = '✓';
-          if (titleEl) titleEl.textContent = 'Your project is back in open bidding!';
-          if (textEl) textEl.textContent = 'Your original contractor has been notified and released. New bids from qualified contractors in your area will arrive shortly.';
-          // Remove the Switch Contractor trigger
-          const trigger = document.getElementById('switch-contractor-trigger');
-          if (trigger) trigger.remove();
-
-          gtag('event', 'contractor_switched', { claim_id: currentClaim.id });
-          showSuccess('Contractor switch confirmed. Your project is back in open bidding.');
-
-        } catch (err) {
-          console.error('[Dashboard] confirmSwitchContractor error:', err);
-          closeSwitchModal();
-          showError('An unexpected error occurred. Please try again or contact support@otterquote.com.');
-        }
-      };
-
-      // ── Init ──
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-      } else {
-        init();
-      }
-    })();
-  </script>
-
-  <!--
-    ============================================================================
-    FUTURE ANALYTICS: Referral Source Dashboard
-    ============================================================================
-    As of v26 (2026-04-10, ClickUp 86e0v8cce), claims now capture:
-      - referral_source TEXT  — channel from ?ref= URL param (e.g. 'inspector',
-                                're-agent', 'direct', 'facebook', 'nextdoor')
-      - referral_agent_id UUID — FK to referral_agents (from ?partner_id= param)
-
-    When building an admin analytics view, surface the following metrics:
-
-    1. Claims by Referral Source (bar chart or table)
-       SELECT referral_source, COUNT(*) AS total_claims,
-              COUNT(*) FILTER (WHERE status = 'contract_signed') AS contracts_signed
-       FROM claims
-       GROUP BY referral_source ORDER BY total_claims DESC;
-
-    2. Per-Agent Referral Performance
-       SELECT ra.first_name, ra.last_name, ra.agent_type, ra.email,
-              COUNT(c.id) AS total_claims,
-              COUNT(c.id) FILTER (WHERE c.status = 'contract_signed') AS contracts_signed,
-              ra.total_commission_earned
-       FROM referral_agents ra
-       LEFT JOIN claims c ON c.referral_agent_id = ra.id
-       GROUP BY ra.id ORDER BY contracts_signed DESC;
-
-    3. Conversion Rate by Channel
-       Divide contracts_signed / total_claims per referral_source to identify
-       highest-ROI acquisition channels.
-
-    Suggested admin page: admin-dashboard.html (does not yet exist as of v26).
-    Alternatively, add a "Referral ROI" tab to the existing admin/partner views.
-    ============================================================================
-  -->
-
-</body>
-</html>
+   
