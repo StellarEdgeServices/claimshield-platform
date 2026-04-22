@@ -1598,6 +1598,9 @@
   <script src="js/nav.js"></script>
 
   <script>
+    // CPA version — must match contractor-dashboard.html. Bump both when the CPA changes.
+    const CURRENT_CPA_VERSION = 'v1-2026-04';
+
     // ── State ──
     let currentUser = null;
     let contractorRecord = null;
@@ -2390,6 +2393,15 @@
           if (error) { console.error('Error loading contractor:', error); return; }
           contractorRecord = data;
 
+          // CPA version guard — redirect to dashboard to show re-acceptance modal
+          if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION) {
+            if (!localStorage.getItem('oq_cpa_redirect_guard')) {
+              localStorage.setItem('oq_cpa_redirect_guard', '1');
+              window.location.href = '/contractor-dashboard.html';
+              return;
+            }
+          }
+
           // Populate auto-bid toggle
           if (data.auto_bid_enabled !== undefined && data.auto_bid_enabled !== null) {
             autoBidToggle.checked = data.auto_bid_enabled;
@@ -3109,20 +3121,4 @@
         }, 2000);
       } catch (err) {
         console.error('Feature request error:', err);
-        status.textContent = 'Error submitting request. Please try again.';
-        status.style.color = '#EF4444';
-        status.style.display = 'block';
-        btn.textContent = 'Error — Try Again';
-        btn.style.backgroundColor = '#EF4444';
-        btn.style.color = '#FFFFFF';
-        btn.disabled = false;
-        setTimeout(() => {
-          btn.textContent = 'Send Feature Request';
-          btn.style.backgroundColor = '';
-          btn.style.color = '';
-        }, 3000);
-      }
-    };
-
-    // ── Initialize ──
-    document.addEventListener('DOMContentLoade
+        status.textContent = 'Error submi

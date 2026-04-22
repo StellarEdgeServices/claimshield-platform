@@ -261,6 +261,9 @@
     <script src="js/nav.js"></script>
 
     <script>
+        // CPA version — must match contractor-dashboard.html. Bump both when the CPA changes.
+        const CURRENT_CPA_VERSION = 'v1-2026-04';
+
         // State
         let currentUser = null;
         let allOpportunities = [];
@@ -451,6 +454,15 @@
               if (currentContractor && currentContractor.status !== 'active') {
                 window.location.href = '/contractor-dashboard.html?msg=pending_approval';
                 return;
+              }
+
+              // CPA version guard — redirect to dashboard to show re-acceptance modal
+              if (currentContractor && currentContractor.cpa_version !== CURRENT_CPA_VERSION) {
+                if (!localStorage.getItem('oq_cpa_redirect_guard')) {
+                  localStorage.setItem('oq_cpa_redirect_guard', '1');
+                  window.location.href = '/contractor-dashboard.html';
+                  return;
+                }
               }
             } catch (err) {
               console.error('Error loading contractor:', err);
@@ -957,13 +969,4 @@
                 flexible: 'Flexible',
                 '30_days': 'Within 30 Days',
                 '2_weeks': 'Within 2 Weeks',
-                asap: 'ASAP'
-            };
-
-            document.getElementById('detailModalTitle').textContent = 'Project Details';
-            document.getElementById('detailModalLocation').textContent =
-                o.location + (o.zip ? ', IN ' + o.zip : '') + (o.distance ? ' — ' + o.distance + ' mi away' : '');
-
-            const tradeDisplay = (o.trades || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'Not specified';
-            const urgencyDisplay = urgencyLabels[o.urgency] || o.urgency || 'Flexible';
-            const urgencyNote = o.urgency === 'asap' && o.urgencyD
+    

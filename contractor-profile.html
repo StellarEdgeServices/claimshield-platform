@@ -1161,6 +1161,9 @@
     <script src="js/nav.js"></script>
 
     <script>
+        // CPA version — must match contractor-dashboard.html. Bump both when the CPA changes.
+        const CURRENT_CPA_VERSION = 'v1-2026-04';
+
         // State
         let currentUser = null;
         let contractorRecord = null;
@@ -1186,6 +1189,16 @@
                     }
 
                     contractorRecord = data;
+
+                    // CPA version guard — redirect to dashboard to show re-acceptance modal
+                    if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION) {
+                        if (!localStorage.getItem('oq_cpa_redirect_guard')) {
+                            localStorage.setItem('oq_cpa_redirect_guard', '1');
+                            window.location.href = '/contractor-dashboard.html';
+                            return;
+                        }
+                    }
+
                     populateViewFromData(contractorRecord);
                     populateEditFromData(contractorRecord);
 
@@ -2412,18 +2425,4 @@
 
             const statusEl = document.getElementById('fieldMappingSaveStatus');
             statusEl.style.display = 'block';
-            statusEl.style.color = 'var(--text-muted)';
-            statusEl.textContent = 'Saving…';
-
-            try {
-                const { error } = await sb.from('contractors')
-                    .update({ contract_templates: updatedTemplates, updated_at: new Date().toISOString() })
-                    .eq('id', contractorRecord.id);
-
-                if (error) throw error;
-
-                contractorRecord.contract_templates = updatedTemplates;
-                statusEl.style.color = 'var(--green)';
-                statusEl.textContent = '✓ Mapping saved';
-                setTimeout(() => closeFieldMappingModal(), 800);
-            } catch (e
+            st

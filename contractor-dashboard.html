@@ -956,17 +956,24 @@
 
                     try {
                         const today = new Date().toISOString().split('T')[0];
+                        const now = new Date().toISOString();
                         const { error } = await sb
                             .from('contractors')
                             .update({
-                                agreement_accepted_at: new Date().toISOString(),
-                                agreement_version: today
+                                agreement_accepted_at: now,
+                                agreement_version: today,
+                                // Stamp cpa_version on first acceptance so new contractors
+                                // never see the re-acceptance modal for the current version.
+                                cpa_version:     CURRENT_CPA_VERSION,
+                                cpa_accepted_at: now,
                             })
                             .eq('id', currentContractor.id);
 
                         if (!error) {
-                            currentContractor.agreement_accepted_at = new Date().toISOString();
+                            currentContractor.agreement_accepted_at = now;
                             currentContractor.agreement_version = today;
+                            currentContractor.cpa_version     = CURRENT_CPA_VERSION;
+                            currentContractor.cpa_accepted_at = now;
                             document.getElementById('agreementModalOverlay').classList.remove('show');
                             location.reload();
                         } else {
@@ -1466,12 +1473,4 @@
                     activeDunningRecord = failures[0];
                     const banner = document.getElementById('dunningAlertBanner');
                     const msgEl = document.getElementById('dunningAlertMessage');
-                    const feeStr = '$' + (activeDunningRecord.amount_cents / 100).toFixed(2);
-                    const projectDesc = activeDunningRecord.claims?.property_address
-                        ? 'project at ' + activeDunningRecord.claims.property_address
-                        : 'your selected project';
-
-                    msgEl.innerHTML =
-                        'Your payment of <strong>' + feeStr + '</strong> for ' + projectDesc +
-                        ' was declined. Please update your card or retry the payment to keep this project. ' +
-      
+                    const feeStr = '$' + (activeDunningRecord.amount_cents / 100).

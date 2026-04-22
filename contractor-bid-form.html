@@ -2099,6 +2099,9 @@
       contractSigning: 0.05     // 5%
     };
 
+    // CPA version — must match contractor-dashboard.html. Bump both when the CPA changes.
+    const CURRENT_CPA_VERSION = 'v1-2026-04';
+
     // State
     let currentUser = null;
     let currentClaim = null;
@@ -3045,6 +3048,15 @@
             if (!coiOk) {
               window.location.href = '/contractor-settings.html?reason=coi_required#coiCard';
               return;
+            }
+
+            // CPA version guard — redirect to dashboard to show re-acceptance modal
+            if (data.cpa_version !== CURRENT_CPA_VERSION) {
+              if (!localStorage.getItem('oq_cpa_redirect_guard')) {
+                localStorage.setItem('oq_cpa_redirect_guard', '1');
+                window.location.href = '/contractor-dashboard.html';
+                return;
+              }
             }
 
             // Profile completeness gate
@@ -4599,17 +4611,4 @@
       if (window._newQuoteId || (currentClaim && currentContractor)) {
         try {
           const updateFilter = window._newQuoteId
-            ? sb.from('quotes').update({ contractor_signed_at: new Date().toISOString() }).eq('id', window._newQuoteId)
-            : sb.from('quotes').update({ contractor_signed_at: new Date().toISOString() })
-                .eq('claim_id', currentClaim.id)
-                .eq('contractor_id', currentContractor.id);
-          const { error } = await updateFilter;
-          if (error) console.error('Error updating contractor_signed_at:', error);
-        } catch (err) {
-          console.error('Error updating quote:', err);
-        }
-      }
-
-      gtag('event', 'contractor_contract_signed', {
-        claim_id: currentClaim?.id,
-  
+            ? sb.from('quotes').update({ contractor_signed_at: new Date().toISOString() }).e
