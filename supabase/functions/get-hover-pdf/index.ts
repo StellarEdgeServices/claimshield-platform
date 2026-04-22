@@ -83,17 +83,33 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      // Verify ownership
+      // Verify ownership OR active contractor status
+      // Homeowners who own the claim may always access.
+      // Active contractors may also access (they need Hover PDFs to bid). (86e10t26y)
       const { data: claim, error: claimErr } = await supabase
         .from("claims")
         .select("id, user_id")
         .eq("id", claim_id)
         .single();
-      if (claimErr || !claim || claim.user_id !== user.id) {
+      if (claimErr || !claim) {
         return new Response(
           JSON.stringify({ error: "Claim not found or access denied" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+      if (claim.user_id !== user.id) {
+        // Caller is not the homeowner — allow only if they are an active contractor
+        const { data: contractor } = await supabase
+          .from("contractors")
+          .select("id, status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!contractor || contractor.status !== "active") {
+          return new Response(
+            JSON.stringify({ error: "Access denied — active contractor account required" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 
@@ -278,33 +294,4 @@ async function getValidAccessToken(supabase: any): Promise<string | null> {
 
   const refreshResponse = await fetch(`${HOVER_API_BASE}/oauth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "refresh_token",
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: token.refresh_token,
-    }),
-  });
-
-  if (!refreshResponse.ok) {
-    console.error("Hover token refresh failed:", refreshResponse.status);
-    return null;
-  }
-
-  const newTokenData = await refreshResponse.json();
-  const newExpiresAt = new Date(
-    Date.now() + (newTokenData.expires_in || 7200) * 1000
-  ).toISOString();
-
-  await supabase
-    .from("hover_tokens")
-    .update({
-      access_token: newTokenData.access_token,
-      refresh_token: newTokenData.refresh_token || token.refresh_token,
-      expires_at: newExpiresAt,
-    })
-    .eq("id", token.id);
-
-  return newTokenData.access_token;
-}
+    headers: { "Content-Type": "application/jso

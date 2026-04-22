@@ -997,6 +997,78 @@
     }
     #wizardStep3Card { display: none; }
 
+    /* ── Contract Template Card (86e10t277) ── */
+    .contract-template-card {
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+      margin-bottom: var(--sp-8);
+    }
+    .contract-template-card-title {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 600;
+      color: #92400E;
+      margin-bottom: var(--sp-3);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+    .contract-template-slot-label {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--navy);
+      margin-right: var(--sp-3);
+    }
+    .contract-template-no-upload {
+      font-size: 0.9rem;
+      color: #92400E;
+      margin: 0;
+    }
+    .contract-template-note {
+      font-size: 0.82rem;
+      color: var(--slate);
+      margin-top: var(--sp-2);
+    }
+
+    /* ── Document Links for Bid Form (86e10t26y) ── */
+    .bid-form-doc-links {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      flex-wrap: wrap;
+      margin-top: var(--sp-4);
+      padding-top: var(--sp-4);
+      border-top: 1px solid #E2E8F0;
+    }
+    .bid-form-docs-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: var(--sp-1);
+    }
+    .doc-link-btn-form {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-4);
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--navy);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .doc-link-btn-form:hover { border-color: var(--amber); background: #FFFBEB; }
+    .doc-link-btn-form:disabled { opacity: 0.6; cursor: not-allowed; }
+
     /* ── Wizard trade summary row ── */
     .wizard-summary-row {
       display: flex;
@@ -1068,7 +1140,12 @@
         </div>
       </div>
       <div class="summary-highlight" id="summaryHighlight" style="display:none;"></div>
+      <!-- Document Links (86e10t26y) — rendered by renderBidFormDocLinks() after claim loads -->
+      <div id="bidFormDocLinks"></div>
     </div>
+
+    <!-- Contract Template Card (86e10t277) — rendered by renderContractTemplateCard() after claim+contractor load -->
+    <div id="contractTemplateCard" style="display:none;"></div>
 
     <!-- Insurance Line Items Panel (shown when parsed_line_items exists) -->
     <div id="insuranceLineItemsPanel" style="display:none;"></div>
@@ -2914,6 +2991,8 @@
 
             // Update project summary and RCV display
             updateClaimSummary();
+            // Render document links in project summary (86e10t26y)
+            renderBidFormDocLinks();
             if (claimRcv != null) {
               document.getElementById('rcvDisplayValue').textContent = formatCurrency(claimRcv);
               document.getElementById('rcvDisplay').style.display = 'block';
@@ -2984,6 +3063,9 @@
             if (warrantyTemplates && warrantyTemplates.length > 0) {
               populateWarrantyTemplateDropdown(warrantyTemplates);
             }
+
+            // Render contract template card now that both claim + contractor are loaded (86e10t277)
+            renderContractTemplateCard();
 
             // Re-render line items with contractor trades
             renderInsuranceLineItems();
@@ -3347,6 +3429,156 @@
       if (lower.includes('tower hill')) return 'Tower Hill';
       // Fallback: trim common legal suffixes
       return raw.replace(/\s+(insurance\s+company|insurance|casualty|property|fire|mutual|group|co\.?)$/i, '').trim() || raw;
+    }
+
+    // ── HTML escape helper for bid form ──
+    function escHtmlBid(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ── Contract Template Card (86e10t277) ────────────────────────────────────
+    // Called after both currentClaim and currentContractor are loaded.
+    function renderContractTemplateCard() {
+      if (!currentClaim || !currentContractor) return;
+      const cardEl = document.getElementById('contractTemplateCard');
+      if (!cardEl) return;
+
+      // Determine slot key: {primaryTrade}/{fundingType}
+      const claimTrades  = currentClaim.selected_trades || currentClaim.trades || [];
+      const primaryTrade = (Array.isArray(claimTrades) ? (claimTrades[0] || 'roofing') : 'roofing').toLowerCase();
+      const fundingRaw   = currentClaim.funding_type ||
+                           (currentClaim.job_type?.startsWith('insurance') ? 'insurance' : 'retail');
+      const fundingKey   = fundingRaw === 'insurance' ? 'insurance' : 'retail';
+      const slotKey      = primaryTrade + '/' + fundingKey;
+
+      // Friendly display label for this slot
+      const tradeLabel   = primaryTrade.charAt(0).toUpperCase() + primaryTrade.slice(1);
+      const fundingLabel = fundingKey === 'insurance' ? 'Insurance' : 'Retail';
+      const slotLabel    = tradeLabel + ' / ' + fundingLabel;
+
+      const template = currentContractor.color_confirmation_template?.[slotKey];
+
+      let bodyHtml = '';
+      if (template && template.file_url) {
+        bodyHtml = `
+          <div style="display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-2);">
+            <span class="contract-template-slot-label">&#x1F4CB; ${escHtmlBid(slotLabel)} Template</span>
+            <button class="doc-link-btn-form" id="previewTemplateBtnBid" onclick="previewContractTemplateBid()">
+              &#x1F517; Preview Template
+            </button>
+          </div>
+          <p class="contract-template-note">This template will be sent to you and the homeowner after selection for e-signature via DocuSign.</p>
+        `;
+      } else {
+        bodyHtml = `
+          <p class="contract-template-no-upload">
+            &#x26A0;&#xFE0F; You haven't uploaded a template for <strong>${escHtmlBid(slotLabel)}</strong>.
+            OtterQuote's standard Contractor Partner Agreement will be used.
+          </p>
+          <p class="contract-template-note">
+            You can upload a custom template in <a href="contractor-profile.html" style="color:var(--amber);">Profile &rarr; Project Confirmation Templates</a>.
+          </p>
+        `;
+      }
+
+      cardEl.innerHTML = `
+        <div class="contract-template-card">
+          <div class="contract-template-card-title">&#x1F4CB; Contract Template</div>
+          ${bodyHtml}
+        </div>
+      `;
+      cardEl.style.display = 'block';
+
+      // Store file_url for the preview handler
+      if (template?.file_url) {
+        cardEl.dataset.templatePath = template.file_url;
+      } else {
+        delete cardEl.dataset.templatePath;
+      }
+    }
+
+    async function previewContractTemplateBid() {
+      if (!sb) return;
+      const cardEl = document.getElementById('contractTemplateCard');
+      const filePath = cardEl?.dataset.templatePath;
+      if (!filePath) return;
+      const btn = document.getElementById('previewTemplateBtnBid');
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading\u2026'; }
+      try {
+        const { data, error } = await sb.storage
+          .from('contractor-templates')
+          .createSignedUrl(filePath, 3600);
+        if (error || !data?.signedUrl) throw error || new Error('No URL');
+        window.open(data.signedUrl, '_blank');
+      } catch (err) {
+        console.error('Failed to preview template:', err);
+        alert('Unable to open template preview. Please try again.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '&#x1F517; Preview Template'; }
+      }
+    }
+
+    // ── Bid Form Document Links (86e10t26y) ───────────────────────────────────
+    // Called after currentClaim is loaded. Renders loss sheet + Hover PDF buttons.
+    function renderBidFormDocLinks() {
+      if (!currentClaim) return;
+      const el = document.getElementById('bidFormDocLinks');
+      if (!el) return;
+
+      const parts = [];
+      if (currentClaim.estimate_filename) {
+        parts.push('<button class="doc-link-btn-form" onclick="openBidFormEstimatePdf()">&#x1F4C4; View Loss Sheet</button>');
+      }
+      // Always offer Hover PDF — function handles gracefully if no Hover job exists
+      if (currentClaim.id && !CONFIG.DEMO_MODE) {
+        parts.push('<button class="doc-link-btn-form" id="bidFormHoverBtn" onclick="openBidFormHoverPdf()">&#x1F4CF; View Hover PDF</button>');
+      }
+
+      if (!parts.length) return;
+
+      el.innerHTML = `
+        <div class="bid-form-doc-links">
+          <span class="bid-form-docs-label">Project Documents</span>
+          ${parts.join('')}
+        </div>
+      `;
+    }
+
+    async function openBidFormEstimatePdf() {
+      if (!sb || !currentClaim?.estimate_filename) return;
+      try {
+        const { data, error } = await sb.storage
+          .from('claim-documents')
+          .createSignedUrl(currentClaim.estimate_filename, 3600);
+        if (error || !data?.signedUrl) throw error || new Error('No URL');
+        window.open(data.signedUrl, '_blank');
+      } catch (err) {
+        console.error('Failed to open loss sheet:', err);
+        alert('Unable to open the loss sheet. Please try again.');
+      }
+    }
+
+    async function openBidFormHoverPdf() {
+      if (!sb || !currentClaim?.id) return;
+      const btn = document.getElementById('bidFormHoverBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading\u2026'; }
+      try {
+        const { data, error } = await sb.functions.invoke('get-hover-pdf', {
+          body: { claim_id: currentClaim.id, format: 'url' }
+        });
+        if (error) throw error;
+        if (!data?.url) throw new Error('No PDF URL');
+        window.open(data.url, '_blank');
+      } catch (err) {
+        console.error('Failed to open Hover PDF:', err);
+        alert('Hover measurement PDF is not available for this project yet. The measurement may still be in progress.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '&#x1F4CF; View Hover PDF'; }
+      }
     }
 
     // ── Insurance Line Items Panel ──
@@ -3793,173 +4025,4 @@
           const otherDesc = document.getElementById('otherBidDescription')?.value?.trim();
           if (!otherDesc) {
             alert('Please describe your pricing approach in the "Other" description field.');
-            return;
-          }
-        }
-      }
-
-      if (!bidForm.checkValidity()) {
-        alert('Please fill in all required fields');
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting…';
-
-      try {
-        const formData = new FormData(bidForm);
-
-        if (CONFIG.DEMO_MODE) {
-          await new Promise(resolve => setTimeout(resolve, 800));
-        } else if (sb && currentUser && currentClaim) {
-          const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          const feePercentage = 5.0;
-
-          // Insurance jobs: fee is based on RCV from loss sheet, not bid amount
-          let feeBase = totalPrice;
-          if (currentClaim.job_type === 'insurance_rcv' && currentClaim.parsed_line_items) {
-            const pli = typeof currentClaim.parsed_line_items === 'string'
-              ? JSON.parse(currentClaim.parsed_line_items)
-              : currentClaim.parsed_line_items;
-            if (pli && pli.summary && pli.summary.rcv) {
-              feeBase = pli.summary.rcv;
-            }
-          }
-
-          const scopeSummary = JSON.stringify({
-            brand: formData.get('brandProduct') || null,
-            estimated_start_date: formData.get('startDate') || null,
-            estimated_completion_time: formData.get('completionTime') || null,
-          });
-
-          if (!currentContractor) {
-            throw new Error('Your contractor profile could not be loaded. Please refresh and try again.');
-          }
-
-          // ── Build value_adds JSON ──
-          const gutterOption = formData.get('gutterOption') || 'none';
-          const chimneyFlashingOption = formData.get('chimneyFlashing') || 'na';
-
-          const valueAdds = {
-            bid_type_option: bidTypeOption,
-            other_bid_description: bidTypeOption === 'other' ? (formData.get('otherBidDescription') || null) : null,
-
-            gutters: {
-              option: gutterOption,
-              additional_cost_5inch: gutterOption === '5inch_additional' ? (parseFloat(formData.get('gutter5AdditionalCost')) || null) : null,
-              additional_cost_6inch: gutterOption === '6inch_additional' ? (parseFloat(formData.get('gutter6AdditionalCost')) || null) : null,
-              other_text: gutterOption === 'other' ? (formData.get('gutterOtherText') || null) : null,
-            },
-
-            gutter_guards: {
-              pricing_on_request: formData.get('gutterGuardPricingOnRequest') === 'on',
-              mesh_oop: parseFloat(formData.get('gutterGuardMeshOop')) || null,
-              screw_in_oop: parseFloat(formData.get('gutterGuardScrewInOop')) || null,
-              notes: formData.get('gutterGuardNotes') || null,
-            },
-
-            // Chimney Flashing / Reflash — merged (86e10t28v); chimney_flashing / chimney_reflash preserved as null for backward compat
-            chimney: {
-              type:      formData.get('chimneyType') || 'na',
-              option:    formData.get('chimneyType') !== 'na' ? (formData.get('chimneyOption') || 'included') : null,
-              oop_price: formData.get('chimneyOption') === 'oop' ? (parseFloat(formData.get('chimneyOopPrice')) || null) : null,
-            },
-            chimney_flashing: null, // deprecated — replaced by chimney (86e10t28v)
-            chimney_reflash:  null, // deprecated — replaced by chimney (86e10t28v)
-
-            skylights: formData.get('skylights') || 'na',
-
-            other_shingles: Array.from(document.querySelectorAll('input[name="bidOtherShingles"]:checked')).map(cb => cb.value),
-            other_shingles_notes: formData.get('shingleOtherNotes') || null,
-
-            underlayment: {
-              type:  formData.get('underlaymentType') || null,
-              notes: formData.get('underlaymentNotes') || null,
-            },
-
-            // Ice & Water Shield (86e10t28b)
-            ice_water_shield: {
-              coverage: formData.get('iceWaterShield') || 'not_applicable',
-            },
-
-            ventilation: {
-              ridge_vent_included: formData.get('ridgeVentIncluded') === 'on',
-              ridge_vent_oop:      parseFloat(formData.get('ridgeVentOopPrice')) || null,
-              notes:               formData.get('ventilationNotes') || null,
-            },
-
-            starter_strip: formData.get('starterStrip') || null,
-
-            // Drip Edge (86e10t28h)
-            drip_edge: {
-              option:    formData.get('dripEdgeOption') || 'na',
-              oop_price: formData.get('dripEdgeOption') === 'oop' ? (parseFloat(formData.get('dripEdgeOopPrice')) || null) : null,
-            },
-
-            warranties: collectAllWarrantyData(),
-
-            other_trades_covered: {
-              siding_full:     formData.get('tradeCoveredSidingFull') || null,
-              siding_repair:   formData.get('tradeCoveredSidingRepair') || null,
-              gutters_full:    formData.get('tradeCoveredGuttersFull') || null,
-              gutters_repair:  formData.get('tradeCoveredGuttersRepair') || null,
-              interior:        formData.get('tradeCoveredInterior') || null,
-              paint:           formData.get('tradeCoveredPaint') || null,
-              windows:         formData.get('tradeCoveredWindows') || null,
-              other:           formData.get('tradeCoveredOther') || null,
-              additional_notes: formData.get('tradesCoveredAdditionalNotes') || null,
-            },
-
-            other_offers: formData.get('valueAddsOtherOffers') || null,
-          };
-
-          // Append gutter trade fields if this is a gutter bid
-          if (gutterTradeActive) {
-            valueAdds.gutters = valueAdds.gutters || {};
-            valueAdds.gutters.linearFootage = parseFloat(document.getElementById('gutterLinearFootage')?.value) || null;
-            valueAdds.gutter_5inch_price = parseFloat(document.getElementById('gutter5InchPrice')?.value) || null;
-            valueAdds.gutter_6inch_price = parseFloat(document.getElementById('gutter6InchPrice')?.value) || null;
-            valueAdds.gutter_guards_retail = collectGutterGuards();
-            valueAdds.rotten_wood_pricing = document.getElementById('rottenWoodPricing')?.value?.trim() || null;
-            valueAdds.gutter_additional_notes = document.getElementById('gutterAdditionalNotes')?.value?.trim() || null;
-            valueAdds.gutter_warranty = document.getElementById('gutterWarrantyInfo')?.value?.trim() || null;
-          }
-
-          // Append siding trade fields if this is a siding retail bid
-          if (sidingTradeActive) {
-            const productSupplyEl = document.querySelector('[name="sidingProductSupply"]:checked');
-            valueAdds.siding_product_supply = productSupplyEl?.value || null;
-            valueAdds.siding_equivalent_product = document.getElementById('sidingEquivalentProduct')?.value?.trim() || null;
-            valueAdds.siding_rotten_sheathing_pricing = document.getElementById('sidingRottenSheathingPricing')?.value?.trim() || null;
-            valueAdds.siding_additional_notes = document.getElementById('sidingAdditionalNotes')?.value?.trim() || null;
-            valueAdds.siding_warranty = document.getElementById('sidingWarrantyInfo')?.value?.trim() || null;
-            // Pricing fields (siding-only jobs)
-            const trades = Array.isArray(currentClaim?.trades) ? currentClaim.trades : [];
-            if (!trades.includes('roofing')) {
-              valueAdds.siding_install_per_square = parseFloat(document.getElementById('sidingInstallPerSquare')?.value) || null;
-              valueAdds.siding_trim_price         = parseFloat(document.getElementById('sidingTrimPrice')?.value) || null;
-              valueAdds.siding_window_wrap_price  = parseFloat(document.getElementById('sidingWindowWrapPrice')?.value) || null;
-              valueAdds.siding_teardown_price     = parseFloat(document.getElementById('sidingTeardownPrice')?.value) || null;
-            }
-          }
-
-          // ── Second-Layer Tear-Off Contingency (retail roofing) ──
-          const slcPerSq  = parseFloat(document.getElementById('slcPricePerSquare')?.value)     || null;
-          const slcFlat   = parseFloat(document.getElementById('slcFlatFeeAlternative')?.value) || null;
-          const slcMethod = document.querySelector('input[name="slcMethod"]:checked')?.value    || null;
-          if (slcPerSq != null || slcFlat != null) {
-            valueAdds.secondLayerContingency = {
-              pricePerSquare:     slcPerSq,
-              flatFeeAlternative: slcFlat,
-              method:             slcMethod || 'per_square',
-            };
-          }
-
-          // ── Wizard Step 3 fields ──
-          if (wizardMode) {
-            const bundleNote = document.getElementById('wizardBundleNote')?.value?.trim() || null;
-            const rationale  = document.getElementById('wizardRationale')?.value?.trim()  || null;
-            if (bundleNote) valueAdds.wizard_bundle_note = bundleNote;
-            if (rationale)  valueAdds.wizard_rationale   = rationale;
-            // Record which trades were bid in this wizard session
-            valueAdds.wizard_trade_queue = wizardTradeQueue.length > 0 ? wizard
+          
