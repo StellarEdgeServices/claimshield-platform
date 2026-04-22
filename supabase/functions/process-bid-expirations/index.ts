@@ -879,4 +879,18 @@ serve(async (req) => {
 
   console.log("[process-bid-expirations] Run complete:", JSON.stringify(result));
 
-  // ── Write cron health record (non-fatal) ─�
+  // Write cron health record (non-fatal)
+  try {
+    const cronStatus = allErrors.length > 0 ? "error" : "success";
+    const cronError  = allErrors.length > 0 ? allErrors.slice(0, 5).join("; ") : null;
+    await supabase.rpc("record_cron_health", {
+      p_job_name: "process-bid-expirations",
+      p_status:   cronStatus,
+      p_error:    cronError,
+    });
+  } catch (cronHealthErr) {
+    console.warn("[process-bid-expirations] cron_health write failed (non-fatal):", cronHealthErr);
+  }
+
+  return jsonResponse(result, 200, corsHeaders);
+});
