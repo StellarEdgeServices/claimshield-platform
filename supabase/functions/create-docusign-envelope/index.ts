@@ -367,7 +367,7 @@ function base64EncodeBinary(bytes: Uint8Array): string {
  * Uses a minimal PDF generator (no external libraries) to produce a valid PDF
  * with the required legal text.
  */
-function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string): string {
+function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string, includesExhibitA: boolean = false): string {
   // Minimal PDF generator — builds a valid PDF 1.4 document with text content
   const lines: string[] = [];
   const objects: { offset: number }[] = [];
@@ -502,6 +502,14 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   // Section 3: Otter Quotes Disclaimer (D-123)
   addText(50, y, 12, "F2", "PLATFORM DISCLOSURE");
   y -= 20;
+
+  // D-180: Incorporate Exhibit A cross-reference when Bid Summary is attached
+  if (includesExhibitA) {
+    y = addWrappedText(50, y, 10, "F2",
+      "The Bid Summary attached as Exhibit A to this Agreement is incorporated herein by reference.",
+      512);
+    y -= 10;
+  }
 
   y = addWrappedText(50, y, 10, "F1",
     `Otter Quotes is a technology platform that facilitates connections between homeowners and contractors. Otter Quotes is NOT a party to this contract and assumes no liability for work performed under this agreement. This contract is between the homeowner and the contractor named above.`,
@@ -746,6 +754,7 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
   wallSqFt: number | null;
   perimeterFt: number | null;
   pitch: string | null;
+  sidingDesign: { manufacturer: string | null; profile: string | null; color: string | null; trim: string | null } | null;
 } | null> {
   try {
     const { data: order } = await supabase
@@ -794,11 +803,42 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
 
     if (!roofSqFtRaw && !wallSqFtRaw && !perimeterFtRaw) return null;
 
+    // ── Siding design attributes from cached material_list ─────────
+    // Populated when get-hover-siding-data fallback writes material_list into
+    // hover_orders.measurements_json. Gracefully null for jobs without the cache.
+    let sidingDesign: { manufacturer: string | null; profile: string | null; color: string | null; trim: string | null } | null = null;
+    if (Array.isArray((mj as any)?.material_list) && (mj as any).material_list.length > 0) {
+      const SIDING_MFRS   = ["james hardie", "lp smartside", "lp smart side", "certainteed", "alside", "gentek", "mastic", "royal", "kaycan", "ply gem", "mitten"];
+      const SIDING_PROFS  = ["lap siding", "plank", "shake", "shingle", "panel", "board & batten", "board and batten", "dutch lap"];
+      const TRIM_INDS     = ["trim", "fascia", "corner", "j-trim", "j trim", "frieze", "soffit", "rake", "starter strip", "window trim", "door trim"];
+      const rawList: any[] = (mj as any).material_list;
+      const sidingItems = rawList.filter((item: any) => {
+        const tt = (item.tradeType || item.trade_type || "").toUpperCase();
+        return tt.includes("SIDING") || tt.includes("WALL") ||
+               (!tt && /siding|hardie|smartside|vinyl|panel/i.test(item.name || item.product_name || ""));
+      });
+      if (sidingItems.length > 0) {
+        let sdMfr: string | null = null, sdProfile: string | null = null, sdColor: string | null = null, sdTrim: string | null = null;
+        for (const item of sidingItems) {
+          const productName = (item.name || item.product_name || item.description || "").toLowerCase();
+          const groupName   = (item.listItemGroupName || item.list_item_group_name || "").toLowerCase();
+          const combined    = `${productName} ${groupName}`;
+          const itemColor   = (item.color || "").trim();
+          if (!sdMfr)     { for (const mfr  of SIDING_MFRS)  { if (combined.includes(mfr))  { sdMfr     = item.listItemGroupName || item.list_item_group_name || item.name || item.product_name || mfr;  break; } } }
+          if (!sdProfile) { for (const prof of SIDING_PROFS) { if (combined.includes(prof)) { sdProfile  = item.name || item.product_name || item.description || prof; break; } } }
+          if (!sdColor && itemColor.length > 0) sdColor = itemColor;
+          if (!sdTrim)    { for (const ind  of TRIM_INDS)    { if (combined.includes(ind))  { sdTrim     = item.name || item.product_name || item.description || item.listItemGroupName || ind; break; } } }
+        }
+        if (sdMfr || sdProfile || sdColor) sidingDesign = { manufacturer: sdMfr, profile: sdProfile, color: sdColor, trim: sdTrim };
+      }
+    }
+
     return {
       roofSqFt: roofSqFtRaw ? Math.round(Number(roofSqFtRaw)) : null,
       wallSqFt: wallSqFtRaw ? Math.round(Number(wallSqFtRaw)) : null,
       perimeterFt: perimeterFtRaw ? Math.round(Number(perimeterFtRaw)) : null,
       pitch: pitchRaw ? String(pitchRaw) : null,
+      sidingDesign,
     };
   } catch (err) {
     console.warn("fetchHoverMeasurements: non-fatal error:", err);
@@ -839,7 +879,7 @@ function generateRetailScopeOfWorkPdf(params: {
   messageToHomeowner: string | null;
   homeownerNotes: string | null;
   projectConfirmation: any;
-  measurements: { roofSqFt: number | null; wallSqFt: number | null; perimeterFt: number | null; pitch: string | null } | null;
+  measurements: { roofSqFt: number | null; wallSqFt: number | null; perimeterFt: number | null; pitch: string | null; sidingDesign?: { manufacturer: string | null; profile: string | null; color: string | null; trim: string | null } | null } | null;
   contractDate: string;
 }): string {
   const {
@@ -1049,7 +1089,24 @@ function generateRetailScopeOfWorkPdf(params: {
   if (hasGutters) {
     addText(50, y, 11, "F2", "GUTTERS"); y -= 14;
 
-    if (va.gutters?.option) {
+    // Linear footage — retail path (Session 317 gutterLinearFootage field) or Hover perimeter fallback
+    if (va.gutters?.linearFootage != null) {
+      addText(60, y, 10, "F2", "Linear Footage:");
+      addText(160, y, 10, "F1", `${Number(va.gutters.linearFootage).toLocaleString()} LF`);
+      y -= 14;
+    } else if (measurements?.perimeterFt) {
+      addText(60, y, 10, "F2", "Est. Linear Footage:");
+      addText(160, y, 10, "F1", `${measurements.perimeterFt.toLocaleString()} LF (Hover perimeter)`);
+      y -= 14;
+    }
+
+    // Gutter size + pricing — retail path shows per-size pricing; insurance path shows option string
+    if (va.gutter_5inch_price != null || va.gutter_6inch_price != null) {
+      const sizeParts: string[] = [];
+      if (va.gutter_5inch_price != null) sizeParts.push(`5" — ${fmt$(va.gutter_5inch_price)}`);
+      if (va.gutter_6inch_price != null) sizeParts.push(`6" — ${fmt$(va.gutter_6inch_price)}`);
+      addText(60, y, 10, "F2", "Gutter Options:"); addText(160, y, 10, "F1", sizeParts.join("   |   ")); y -= 14;
+    } else if (va.gutters?.option) {
       const go = va.gutters.option;
       let gutterDesc = esc(go);
       if (go === "5inch_included" || go === "5inch") gutterDesc = '5" Gutters — Included';
@@ -1060,7 +1117,16 @@ function generateRetailScopeOfWorkPdf(params: {
       addText(60, y, 10, "F2", "Gutters:"); addText(160, y, 10, "F1", gutterDesc); y -= 14;
     }
 
-    if (va.gutter_guards) {
+    // Gutter guards — retail path (array of {type, price} entries)
+    if (Array.isArray(va.gutter_guards_retail) && va.gutter_guards_retail.length > 0) {
+      addText(60, y, 10, "F2", "Gutter Guards:"); y -= 12;
+      for (const gg of va.gutter_guards_retail) {
+        if (!gg?.type) continue;
+        const ggLine = gg.price != null ? `${gg.type} — ${fmt$(gg.price)}` : gg.type;
+        y = addWrappedText(70, y, 9, "F1", esc(String(ggLine)), 470);
+      }
+    } else if (va.gutter_guards) {
+      // Legacy insurance path
       const gg = va.gutter_guards;
       if (gg.pricing_on_request) {
         addText(60, y, 10, "F2", "Gutter Guards:"); addText(160, y, 10, "F1", "Available — pricing on request"); y -= 14;
@@ -1071,16 +1137,96 @@ function generateRetailScopeOfWorkPdf(params: {
         addText(60, y, 10, "F2", "Gutter Guards:"); addText(160, y, 10, "F1", parts.join("; ")); y -= 14;
       }
     }
+
+    // Rotten wood contingency
+    if (va.rotten_wood_pricing) {
+      addText(60, y, 10, "F2", "Rotten Wood:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.rotten_wood_pricing), 470);
+    }
+
+    // Warranty
+    if (va.gutter_warranty) {
+      addText(60, y, 10, "F2", "Warranty:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.gutter_warranty), 470);
+    }
+
+    // Additional notes
+    if (va.gutter_additional_notes) {
+      addText(60, y, 10, "F2", "Notes:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.gutter_additional_notes), 470);
+    }
+
     y -= 8;
   }
 
   // ── Siding section ───────────────────────────────────────────────
   if (hasSiding) {
     addText(50, y, 11, "F2", "SIDING"); y -= 14;
-    addText(60, y, 10, "F1", "Scope per contractor bid and Hover design specifications."); y -= 14;
+
+    // Wall area from Hover measurements
     if (measurements?.wallSqFt) {
-      addText(60, y, 10, "F2", "Wall Area:"); addText(160, y, 10, "F1", `${(measurements.wallSqFt / 100).toFixed(1)} squares`); y -= 14;
+      addText(60, y, 10, "F2", "Wall Area:");
+      addText(160, y, 10, "F1", `${measurements.wallSqFt.toLocaleString()} sq ft (${(measurements.wallSqFt / 100).toFixed(1)} squares)`);
+      y -= 14;
     }
+
+    // Siding design from Hover — available when measurements_json.material_list is cached
+    const sd = (measurements as any)?.sidingDesign ?? null;
+    if (sd?.manufacturer) { addText(60, y, 10, "F2", "Manufacturer:");    addText(160, y, 10, "F1", esc(sd.manufacturer)); y -= 14; }
+    if (sd?.profile)      { addText(60, y, 10, "F2", "Product/Profile:"); addText(160, y, 10, "F1", esc(sd.profile));      y -= 14; }
+    if (sd?.color)        { addText(60, y, 10, "F2", "Color:");           addText(160, y, 10, "F1", esc(sd.color));         y -= 14; }
+    if (sd?.trim)         { addText(60, y, 10, "F2", "Trim:");            addText(160, y, 10, "F1", esc(sd.trim));          y -= 14; }
+
+    // Product supply type (exact / equivalent / labor-only)
+    if (va.siding_product_supply) {
+      let supplyLabel: string;
+      if (va.siding_product_supply === "yes_exact") {
+        supplyLabel = "Exact product per Hover design";
+      } else if (va.siding_product_supply === "equivalent") {
+        supplyLabel = va.siding_equivalent_product
+          ? `Equivalent: ${va.siding_equivalent_product}`
+          : "Equivalent product (see bid details)";
+      } else if (va.siding_product_supply === "labor_only") {
+        supplyLabel = "Labor only — homeowner supplying materials";
+      } else {
+        supplyLabel = va.siding_product_supply;
+      }
+      addText(60, y, 10, "F2", "Product Supply:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(supplyLabel), 470);
+    }
+
+    // Window wrap
+    if (va.siding_window_wrap_price != null) {
+      addText(60, y, 10, "F2", "Window Wrap:");
+      addText(160, y, 10, "F1", va.siding_window_wrap_price > 0 ? `OOP ${fmt$(va.siding_window_wrap_price)}` : "Included");
+      y -= 14;
+    }
+
+    // Trim pricing
+    if (va.siding_trim_price != null) {
+      addText(60, y, 10, "F2", "Trim:");
+      addText(160, y, 10, "F1", va.siding_trim_price > 0 ? `OOP ${fmt$(va.siding_trim_price)}` : "Included");
+      y -= 14;
+    }
+
+    // Rotten sheathing contingency
+    if (va.siding_rotten_sheathing_pricing) {
+      addText(60, y, 10, "F2", "Rotten Sheathing:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.siding_rotten_sheathing_pricing), 470);
+    }
+
+    // Warranty
+    if (va.siding_warranty) {
+      addText(60, y, 10, "F2", "Warranty:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.siding_warranty), 470);
+    }
+
+    // Additional notes
+    if (va.siding_additional_notes) {
+      addText(60, y, 10, "F2", "Notes:"); y -= 12;
+      y = addWrappedText(70, y, 9, "F1", esc(va.siding_additional_notes), 470);
+    }
+
     y -= 8;
   }
 
@@ -1240,6 +1386,322 @@ function generateRetailScopeOfWorkPdf(params: {
   pdfWrite("startxref");
   pdfWrite(String(xrefOffset));
   pdfWrite("%%EOF");
+
+  return base64EncodeBinary(new TextEncoder().encode(pdfLines.join("\n")));
+}
+
+
+// ========== D-180 EXHIBIT A — BID SUMMARY PDF ==========
+/**
+ * Generates a Bid Summary PDF (Exhibit A) for insurance roofing full replacement jobs.
+ * Per D-180: attached as document 3 in the DocuSign envelope for in-scope insurance jobs.
+ * FAIL-LOUD: throws on any error — no silent envelope creation without Exhibit A.
+ *
+ * In-scope:     insurance RCV/ACV roofing full replacement
+ * Out-of-scope: retail siding-only, insurance repair jobs
+ *
+ * Content per D-180:
+ *   - Header "Otter Quotes — Bid Summary (Exhibit A)" with address and homeowner name
+ *   - Job type (Insurance RCV/ACV) and trade(s)
+ *   - Total bid amount and net-to-contractor
+ *   - Shingle manufacturer, product, type, impact class
+ *   - All value-add line items (drip edge, ice & water shield, starter strip,
+ *     underlayment, ventilation, chimney, skylights, gutter guards, valley type)
+ *   - Contingency items — labeled "Subject to field verification — price may adjust"
+ *   - Workmanship warranty and manufacturer warranty
+ *   - Contractor notes (if any)
+ *   - Bid submitted date and bid ID
+ */
+function generateExhibitAPdf(params: {
+  homeownerName: string;
+  contractorName: string;
+  propertyAddress: string;
+  claimId: string;
+  bidId: string | null;
+  bidCreatedAt: string | null;
+  trades: string[];
+  fundingType: string;
+  bidAmount: number | null;
+  valueAdds: any;
+  deckingPricePerSheet: number | null;
+  fullRedeckPrice: number | null;
+  contractorNotes: string | null;
+  claimData: any;
+  contractDate: string;
+}): string {
+  const {
+    homeownerName, contractorName, propertyAddress, claimId,
+    bidId, bidCreatedAt, trades, fundingType, bidAmount,
+    valueAdds, deckingPricePerSheet, fullRedeckPrice,
+    contractorNotes, claimData, contractDate,
+  } = params;
+
+  const va = valueAdds || {};
+  const pc = claimData?.project_confirmation || null;
+
+  // ── PDF builder state ──────────────────────────────────────────────
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) { pdfLines.push(s); byteOffset += s.length + 1; }
+  function pdfStartObj(n: number) { pdfObjects[n] = byteOffset; pdfWrite(`${n} 0 obj`); }
+
+  const contentLines: string[] = [];
+
+  function esc(text: string): string {
+    return String(text ?? "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  }
+
+  function addText(x: number, y: number, fontSize: number, font: string, text: string) {
+    contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${esc(text)}) Tj ET`);
+  }
+
+  function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
+    const charWidth = fontSize * 0.5;
+    const maxChars = Math.floor(maxWidth / charWidth);
+    const words = String(text ?? "").split(" ");
+    let line = "";
+    let y = startY;
+    const ls = fontSize * 1.4;
+    for (const word of words) {
+      if (line.length + word.length + 1 > maxChars) {
+        addText(x, y, fontSize, font, line.trim());
+        y -= ls;
+        line = word + " ";
+      } else {
+        line += word + " ";
+      }
+    }
+    if (line.trim()) { addText(x, y, fontSize, font, line.trim()); y -= ls; }
+    return y;
+  }
+
+  function hLine(y: number) { contentLines.push(`50 ${y} m 562 ${y} l S`); }
+
+  function fmt$(val: number | null | undefined): string {
+    if (val == null) return "TBD";
+    return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ── Page content ──────────────────────────────────────────────────
+  let y = 750;
+
+  // Header
+  addText(50, y, 16, "F2", "OTTER QUOTES \u2014 BID SUMMARY (EXHIBIT A)");
+  y -= 20;
+  addText(50, y, 9,  "F1", esc(propertyAddress));
+  y -= 13;
+  addText(50, y, 9,  "F1", `Homeowner: ${esc(homeownerName)}   Contractor: ${esc(contractorName)}`);
+  y -= 8;
+  hLine(y); y -= 14;
+
+  // Bid identification
+  addText(50, y, 9, "F2", "BID REFERENCE"); y -= 12;
+  const bidDate = bidCreatedAt
+    ? new Date(bidCreatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : contractDate;
+  addText(60, y, 9, "F1", `Bid ID:            ${bidId ? bidId.slice(0, 8).toUpperCase() : claimId.slice(0, 8).toUpperCase()}`); y -= 12;
+  addText(60, y, 9, "F1", `Submitted:         ${bidDate}`); y -= 12;
+  addText(60, y, 9, "F1", `Date of Agreement: ${contractDate}`); y -= 8;
+  hLine(y); y -= 14;
+
+  // Job summary
+  addText(50, y, 11, "F2", "JOB SUMMARY"); y -= 14;
+  const fundingLabel = fundingType === "insurance" ? "Insurance (RCV / ACV)" : "Retail / Homeowner-Financed";
+  const tradeLabel = (trades || []).map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(", ") || "Roofing";
+  addText(60, y, 9, "F2", "Job Type:"); addText(170, y, 9, "F1", esc(fundingLabel)); y -= 12;
+  addText(60, y, 9, "F2", "Trade(s):"); addText(170, y, 9, "F1", esc(tradeLabel)); y -= 12;
+
+  const netToContractor = bidAmount != null ? bidAmount * 0.95 : null;
+  addText(60, y, 9, "F2", "Total Bid Amount:"); addText(200, y, 9, "F1", esc(fmt$(bidAmount))); y -= 12;
+  addText(60, y, 9, "F2", "Platform Fee (5%):"); addText(200, y, 9, "F1", bidAmount != null ? esc(fmt$(bidAmount * 0.05)) : "TBD"); y -= 12;
+  addText(60, y, 9, "F2", "Net-to-Contractor:"); addText(200, y, 9, "F2", esc(fmt$(netToContractor))); y -= 8;
+  hLine(y); y -= 14;
+
+  // Shingle selection (from claim — populated during homeowner material selection)
+  const shingleType = claimData?.shingle_type || null;
+  const impactClass = claimData?.impact_class || null;
+  const designerProduct = claimData?.designer_product || null;
+  const designerMfr = claimData?.designer_manufacturer || null;
+  const materialCategory = claimData?.material_category || null;
+
+  if (shingleType || designerProduct || materialCategory) {
+    addText(50, y, 11, "F2", "SHINGLE SELECTION"); y -= 14;
+
+    if (designerProduct) {
+      addText(60, y, 9, "F2", "Product:"); addText(170, y, 9, "F1", esc(designerProduct)); y -= 12;
+      if (designerMfr) { addText(60, y, 9, "F2", "Manufacturer:"); addText(170, y, 9, "F1", esc(designerMfr)); y -= 12; }
+    } else if (shingleType) {
+      addText(60, y, 9, "F2", "Type:"); addText(170, y, 9, "F1", esc(shingleType.charAt(0).toUpperCase() + shingleType.slice(1))); y -= 12;
+      if (impactClass) {
+        const impactNum = impactClass.replace(/^class[-_]?/i, "");
+        addText(60, y, 9, "F2", "Impact Class:"); addText(170, y, 9, "F1", `Class ${impactNum} Impact Resistant`); y -= 12;
+      }
+    } else if (materialCategory) {
+      addText(60, y, 9, "F2", "Category:"); addText(170, y, 9, "F1", esc(materialCategory)); y -= 12;
+    }
+
+    // Other shingles available at insurance price
+    if (Array.isArray(va.other_shingles) && va.other_shingles.length > 0) {
+      addText(60, y, 9, "F2", "Also Available at Insurance Price:"); y -= 11;
+      for (const s of va.other_shingles) {
+        if (s) { addText(70, y, 9, "F1", esc(String(s))); y -= 11; }
+      }
+    }
+    hLine(y); y -= 14;
+  }
+
+  // Value-add line items
+  addText(50, y, 11, "F2", "VALUE-ADD LINE ITEMS"); y -= 14;
+
+  // Drip edge (Session 317 / 86e10t28h)
+  if (va.drip_edge?.option && va.drip_edge.option !== "na") {
+    const deMap: Record<string, string> = {
+      included_black: "Included \u2014 Black",
+      included_white: "Included \u2014 White",
+      included_custom: "Included \u2014 Custom color",
+      oop: va.drip_edge.oop_price != null ? `Out-of-Pocket ${fmt$(va.drip_edge.oop_price)}` : "Out-of-Pocket",
+    };
+    addText(60, y, 9, "F2", "Drip Edge:"); addText(190, y, 9, "F1", esc(deMap[va.drip_edge.option] || va.drip_edge.option)); y -= 12;
+  }
+
+  // Ice & Water Shield (Session 317 / 86e10t28b)
+  if (va.ice_water_shield?.coverage && va.ice_water_shield.coverage !== "not_applicable") {
+    const iwsMap: Record<string, string> = {
+      standard: "Standard Coverage \u2014 Included",
+      enhanced: "Enhanced Coverage \u2014 Included",
+    };
+    addText(60, y, 9, "F2", "Ice & Water Shield:"); addText(190, y, 9, "F1", esc(iwsMap[va.ice_water_shield.coverage] || va.ice_water_shield.coverage)); y -= 12;
+  }
+
+  // Starter strip
+  if (va.starter_strip && va.starter_strip !== "neither") {
+    const ssMap: Record<string, string> = { rakes: "Rakes only", eaves: "Eaves only", rakes_and_eaves: "Rakes and Eaves" };
+    addText(60, y, 9, "F2", "Starter Strip:"); addText(190, y, 9, "F1", esc(ssMap[va.starter_strip] || va.starter_strip)); y -= 12;
+  }
+
+  // Underlayment
+  if (va.underlayment?.type) {
+    const ultLabel = va.underlayment.type === "synthetic" ? "Synthetic" : va.underlayment.type === "felt" ? "Felt" : esc(va.underlayment.type);
+    addText(60, y, 9, "F2", "Underlayment:"); addText(190, y, 9, "F1", ultLabel); y -= 12;
+  }
+
+  // Ventilation
+  if (va.ventilation) {
+    let ventLine: string | null = null;
+    if (va.ventilation.ridge_vent_included) {
+      ventLine = "Ridge Vent \u2014 Included";
+    } else if (va.ventilation.ridge_vent_oop != null) {
+      ventLine = `Ridge Vent \u2014 Out-of-Pocket ${fmt$(va.ventilation.ridge_vent_oop)}`;
+    }
+    if (ventLine) { addText(60, y, 9, "F2", "Ventilation:"); addText(190, y, 9, "F1", esc(ventLine)); y -= 12; }
+  }
+
+  // Chimney — new merged struct (Session 317 / 86e10t28v) with legacy fallback
+  const chimneyType = va.chimney?.type || null;
+  const chimneyOption = va.chimney?.option || va.chimney_flashing?.option || null;
+  const chimneyOop = va.chimney?.oop_price || va.chimney_flashing?.oop_price || null;
+  if (chimneyType && chimneyType !== "na") {
+    const ctMap: Record<string, string> = { new_flashing: "New Flashing", reflash: "Reflash", both: "New Flashing + Reflash" };
+    const coMap: Record<string, string> = {
+      included: "Included",
+      reuse: "Reuse existing",
+      oop: chimneyOop != null ? `Out-of-Pocket ${fmt$(chimneyOop)}` : "Out-of-Pocket",
+    };
+    const chimneyDesc = `${ctMap[chimneyType] || chimneyType}${chimneyOption ? " \u2014 " + (coMap[chimneyOption] || chimneyOption) : ""}`;
+    addText(60, y, 9, "F2", "Chimney:"); addText(190, y, 9, "F1", esc(chimneyDesc)); y -= 12;
+  }
+
+  // Skylights
+  if (va.skylights && va.skylights !== "na") {
+    const skyMap: Record<string, string> = { reflash: "Reflash existing", replace: "Replace" };
+    addText(60, y, 9, "F2", "Skylights:"); addText(190, y, 9, "F1", esc(skyMap[va.skylights] || va.skylights)); y -= 12;
+  }
+
+  // Gutter guards
+  const gg = va.gutter_guards;
+  if (gg) {
+    let ggLine: string | null = null;
+    if (gg.pricing_on_request) { ggLine = "Available \u2014 pricing on request"; }
+    else if (gg.mesh_oop || gg.screw_in_oop) {
+      const parts: string[] = [];
+      if (gg.mesh_oop) parts.push(`Mesh ${fmt$(gg.mesh_oop)}`);
+      if (gg.screw_in_oop) parts.push(`Screw-in ${fmt$(gg.screw_in_oop)}`);
+      ggLine = parts.join(" | ");
+    }
+    if (ggLine) { addText(60, y, 9, "F2", "Gutter Guards:"); addText(190, y, 9, "F1", esc(ggLine)); y -= 12; }
+  }
+
+  // Valley type (from project confirmation)
+  if (pc?.valleyType) {
+    const valleyLabel = pc.valleyType === "closed" ? "Closed Cut" : pc.valleyType === "open" ? "Open / Metal" : esc(pc.valleyType);
+    addText(60, y, 9, "F2", "Valley Type:"); addText(190, y, 9, "F1", valleyLabel); y -= 12;
+  }
+
+  y -= 4;
+  hLine(y); y -= 14;
+
+  // Contingency items (labeled per D-180)
+  const hasContingency = (deckingPricePerSheet != null) || (fullRedeckPrice != null);
+  if (hasContingency) {
+    addText(50, y, 11, "F2", "CONTINGENCY ITEMS"); y -= 12;
+    addText(60, y, 8,  "F1", "* Subject to field verification \u2014 price may adjust"); y -= 13;
+    if (deckingPricePerSheet != null) {
+      addText(60, y, 9, "F2", "Bad Decking:"); addText(190, y, 9, "F1", `${fmt$(deckingPricePerSheet)}/sheet if needed *`); y -= 12;
+    }
+    if (fullRedeckPrice != null) {
+      addText(60, y, 9, "F2", "Full Redeck:"); addText(190, y, 9, "F1", `${fmt$(fullRedeckPrice)} total *`); y -= 12;
+    }
+    hLine(y); y -= 14;
+  }
+
+  // Warranties
+  if (Array.isArray(va.warranties) && va.warranties.length > 0) {
+    addText(50, y, 11, "F2", "WARRANTIES"); y -= 14;
+    for (const w of va.warranties) {
+      if (!w?.name) continue;
+      addText(60, y, 9, "F2", esc(w.name)); y -= 11;
+      const parts: string[] = [];
+      if (w.material_defects?.years) parts.push(`Materials: ${w.material_defects.years} yrs`);
+      if (w.labor?.years)            parts.push(`Labor: ${w.labor.years} yrs`);
+      if (w.wind_damage?.years)      parts.push(`Wind: ${w.wind_damage.years} yrs`);
+      if (w.hail_damage?.years)      parts.push(`Hail: ${w.hail_damage.years} yrs`);
+      if (parts.length > 0) { addText(70, y, 9, "F1", esc(parts.join("  |  "))); y -= 11; }
+      y -= 4;
+    }
+    hLine(y); y -= 14;
+  }
+
+  // Contractor notes
+  if (contractorNotes) {
+    addText(50, y, 11, "F2", "CONTRACTOR NOTES"); y -= 14;
+    y = addWrappedText(60, y, 9, "F1", esc(contractorNotes), 490);
+    y -= 6;
+    hLine(y); y -= 14;
+  }
+
+  // Footer
+  addText(50, y, 8, "F2", "This Bid Summary is Exhibit A to the Contractor Agreement and is incorporated herein by reference.");
+  y -= 11;
+  addText(50, y, 8, "F1", `Bid ID: ${bidId ? bidId.slice(0, 8).toUpperCase() : claimId.slice(0, 8).toUpperCase()}   |   Generated by Otter Quotes on ${esc(contractDate)}`);
+
+  // ── Assemble PDF ──────────────────────────────────────────────────
+  const contentStream = contentLines.join("\n");
+
+  pdfWrite("%PDF-1.4");
+  pdfStartObj(1); pdfWrite("<< /Type /Catalog /Pages 2 0 R >>"); pdfWrite("endobj");
+  pdfStartObj(2); pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); pdfWrite("endobj");
+  pdfStartObj(3); pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>"); pdfWrite("endobj");
+  pdfStartObj(4); pdfWrite(`<< /Length ${contentStream.length} >>`); pdfWrite("stream"); pdfWrite(contentStream); pdfWrite("endstream"); pdfWrite("endobj");
+  pdfStartObj(5); pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"); pdfWrite("endobj");
+  pdfStartObj(6); pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"); pdfWrite("endobj");
+
+  const xrefAt = byteOffset;
+  pdfWrite("xref"); pdfWrite("0 7");
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  pdfWrite("trailer"); pdfWrite("<< /Size 7 /Root 1 0 R >>"); pdfWrite("startxref"); pdfWrite(String(xrefAt)); pdfWrite("%%EOF");
 
   return base64EncodeBinary(new TextEncoder().encode(pdfLines.join("\n")));
 }
@@ -1594,12 +2056,20 @@ async function handleContractorSign(
   const contractDate = new Date().toLocaleDateString("en-US");
   const contractorName = contractorData?.company_name || signer.name || "Contractor";
   const homeownerName = autoFields.customer_name || "Homeowner";
-  const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
+  const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate, isInScopeForExhibitA);
 
   // For retail (non-insurance) jobs: generate a Scope of Work PDF and attach it as
   // document 2. The IC 24-5-11 compliance addendum shifts to document 3.
   // For insurance jobs the loss sheet serves as the scope reference — no SOW generated.
   const isRetail = fundingType !== "insurance";
+
+  // D-180 Exhibit A scoping
+  // In-scope: roofing full replacement (insurance RCV/ACV or retail roofing)
+  // Out-of-scope: retail siding-only, insurance repair jobs
+  const hasRoofingTrade = (claimData?.selected_trades || trades).some((t: string) => t.toLowerCase().includes("roofing"));
+  const isRepairJob = (claimData?.damage_type || "").toLowerCase().includes("repair") || claimData?.job_type === "repair";
+  const isInScopeForExhibitA = hasRoofingTrade && !isRepairJob;
+
   let scopeOfWorkBase64: string | null = null;
   if (isRetail) {
     try {
@@ -1630,19 +2100,57 @@ async function handleContractorSign(
     }
   }
 
+  // D-180: For insurance roofing full replacement, generate Exhibit A — FAIL LOUDLY.
+  // Never create the envelope without Exhibit A for in-scope insurance jobs.
+  let exhibitABase64: string | null = null;
+  if (isInScopeForExhibitA && !isRetail) {
+    try {
+      exhibitABase64 = generateExhibitAPdf({
+        homeownerName,
+        contractorName,
+        propertyAddress: claimData?.property_address || autoFields.customer_address || "",
+        claimId: claim_id,
+        bidId: bidData?.id ?? null,
+        bidCreatedAt: bidData?.created_at ?? null,
+        trades: claimData?.selected_trades || [trade],
+        fundingType,
+        bidAmount: bidData?.amount ?? bidData?.total_price ?? null,
+        valueAdds: bidData?.value_adds ?? null,
+        deckingPricePerSheet: bidData?.decking_price_per_sheet ?? null,
+        fullRedeckPrice: bidData?.full_redeck_price ?? null,
+        contractorNotes: bidData?.notes ?? null,
+        claimData,
+        contractDate,
+      });
+      if (!exhibitABase64) {
+        throw new Error("generateExhibitAPdf returned null or empty string");
+      }
+      console.log(`[D-180] Exhibit A (Bid Summary) generated for insurance claim ${claim_id}`);
+    } catch (exhibitErr) {
+      // D-180 FAIL-LOUD: abort envelope creation — no silent bypass
+      throw new Error(
+        `[D-180] Exhibit A PDF generation failed for insurance roofing job ${claim_id}. ` +
+        `Envelope creation aborted. Cause: ${exhibitErr instanceof Error ? exhibitErr.message : String(exhibitErr)}`
+      );
+    }
+  }
+
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Document IDs:
-  //   Insurance:  doc 1 = contractor agreement, doc 2 = Signature Page, doc 3 = IC 24-5-11 addendum
-  //   Retail:     doc 1 = contractor agreement, doc 2 = Signature Page, doc 3 = Scope of Work, doc 4 = IC 24-5-11 addendum
+  // Document IDs (D-180 Exhibit A numbering):
+  //   Insurance + in-scope roofing:  1(contract) + 2(sig page) + 3(Exhibit A) + 4(addendum)
+  //   Insurance + not in-scope:      1(contract) + 2(sig page) + 3(addendum)
+  //   Retail + in-scope roofing:     1(contract) + 2(sig page) + 3(SOW retitled as Exhibit A) + 4(addendum)
+  //   Retail + not in-scope:         1(contract) + 2(sig page) + 3(SOW) + 4(addendum)
   //
   // Doc 1 (contractor's arbitrary PDF) is DISPLAY-ONLY — no signing tabs. Contractor PDFs
   // don't contain the anchor strings DocuSign requires, so tabs on Doc 1 cause hard errors.
   // All signing tabs go on Doc 2 (generated Signature Page) which has known anchor text.
-  const documentId    = "1";             // contractor's PDF — display only
-  const sigPageDocId  = "2";             // generated Signature Page — signing tabs live here
-  const sowDocId      = "3";             // retail Scope of Work (shifted from "2")
-  const addendumDocId = isRetail && scopeOfWorkBase64 ? "4" : "3";  // shifted by sigPage insertion
+  const documentId    = "1";   // contractor's PDF — display only
+  const sigPageDocId  = "2";   // generated Signature Page — signing tabs live here
+  const exhibit3DocId = "3";   // Exhibit A (insurance) or SOW (retail) — slot 3
+  const sowDocId      = exhibit3DocId;  // retail SOW uses same slot as exhibit3
+  const addendumDocId = (!isRetail && exhibitABase64) || (isRetail && scopeOfWorkBase64) ? "4" : "3";
   const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
   const contractorTabs = buildSignerTabs(sigPageDocId, "contractor");
 
@@ -1680,10 +2188,17 @@ async function handleContractorSign(
         fileExtension: "pdf",
         documentId: sigPageDocId,
       },
-      // Scope of Work — retail jobs only (doc 3, shifted from doc 2 by Signature Page insertion).
-      ...(scopeOfWorkBase64 ? [{
+      // D-180: Exhibit A — Bid Summary (insurance roofing in-scope only — fail-loud above).
+      ...(!isRetail && exhibitABase64 ? [{
+        documentBase64: exhibitABase64,
+        name: "Exhibit A — Bid Summary",
+        fileExtension: "pdf",
+        documentId: exhibit3DocId,
+      }] : []),
+      // SOW — retail jobs only (doc 3). Per D-180: retitled for in-scope roofing jobs.
+      ...(isRetail && scopeOfWorkBase64 ? [{
         documentBase64: scopeOfWorkBase64,
-        name: "Scope of Work",
+        name: isInScopeForExhibitA ? "Exhibit A — Scope of Work and Bid Summary" : "Scope of Work",
         fileExtension: "pdf",
         documentId: sowDocId,
       }] : []),
