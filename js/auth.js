@@ -593,4 +593,50 @@ https://otterquote.com`;
                   console.log('Insurance cert uploaded:', filePath);
                 }
               } catch (uploadErr) {
-                console.
+                console.error('Error uploading insurance cert:', cert.name, uploadErr);
+              }
+            }
+          }
+        }
+
+        localStorage.removeItem('cs_contractor_signup');
+        sessionStorage.removeItem('cs_contractor_signup');
+      } catch (err) {
+        console.error('Error creating contractor profile:', err);
+      }
+    }
+
+    // Advance referral status to 'registered' if homeowner arrived via referral link
+    const referralId = localStorage.getItem('oq_referral_id') || sessionStorage.getItem('oq_referral_id');
+    if (referralId && sb) {
+      try {
+        await sb
+          .from('referrals')
+          .update({ status: 'registered', homeowner_email: user.email })
+          .eq('id', referralId)
+          .eq('status', 'clicked');
+        localStorage.removeItem('oq_referral_id');
+        sessionStorage.removeItem('oq_referral_id');
+      } catch (err) {
+        console.error('Error advancing referral status:', err);
+      }
+    }
+
+    // Route to appropriate dashboard
+    await this.redirectToDashboard();
+  },
+
+  /**
+   * Set up listener for auth state changes.
+   * Handles post-auth profile creation when user logs in.
+   */
+  onAuthStateChangeListener() {
+    if (!sb) return;
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User just signed in, create profile if needed
+        await this.handleAuthCallback();
+      }
+    });
+  }
+};
