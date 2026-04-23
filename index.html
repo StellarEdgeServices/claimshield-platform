@@ -946,6 +946,14 @@
         cta_destination: href,
         cta_location: sectionClass
       });
+
+      // GA4 funnel step — homeowner intake begins when they click a homeowner CTA
+      if (ctaType === 'homeowner_cta') {
+        gtag('event', 'form_start', {
+          form_name: 'homeowner_intake',
+          source_page: 'index',
+        });
+      }
     });
   });
 
@@ -999,17 +1007,4 @@
 
   // ── Time on Page Tracking ──
   // Fire at 30s, 60s, 120s to measure engagement quality
-  [30, 60, 120].forEach(function(seconds) {
-    setTimeout(function() {
-      gtag('event', 'time_on_page', {
-        seconds_elapsed: seconds,
-        page_path: '/index.html'
-      });
-    }, seconds * 1000);
-  });
-})();
-</script>
-
-</body>
-</html>
-<!-- deploy: 20260421234910 -->
+  [30, 60, 120].forEach(

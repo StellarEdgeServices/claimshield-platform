@@ -840,6 +840,15 @@
         document.getElementById('waitingIndicator').style.display = 'none';
         document.getElementById('viewTabs').style.display = 'flex';
         renderBids();
+
+        // GA4 funnel step — fire once when the homeowner first sees actual bids
+        if (!window._bidsViewedFired) {
+          window._bidsViewedFired = true;
+          gtag('event', 'bids_viewed', {
+            bid_count: bids.length,
+            job_type: currentClaim ? currentClaim.job_type : null,
+          });
+        }
       }
 
       // Show RCV disclaimer if this is an RCV job
@@ -2039,22 +2048,4 @@
               ${shingleItems.map(item => `<li style="font-size: 0.875rem; color: #1E3A5F;">${item}</li>`).join('')}
             </ul>
             ${notesHtml}
-            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingles other than the contractor's preferred product. Ask the contractor about specific warranty coverage before making your selection.</div>
-          </div>
-        `;
-      }
-
-      return html;
-    }
-
-    // ── Init ──
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  })();
-  </script>
-
-</body>
-</html>
+            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingles other than the contractor's preferred product. Ask the contracto
