@@ -398,7 +398,7 @@ function base64EncodeBinary(bytes: Uint8Array): string {
  * Uses a minimal PDF generator (no external libraries) to produce a valid PDF
  * with the required legal text.
  */
-function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string, includesExhibitA: boolean = false, includesRetailSow: boolean = false): string {
+function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string, includesExhibitA: boolean = false, includesRetailSow: boolean = false, includesInsuranceSow: boolean = false): string {
   // Minimal PDF generator — builds a valid PDF 1.4 document with text content
   const lines: string[] = [];
   const objects: { offset: number }[] = [];
@@ -543,6 +543,13 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   }
   // D-185: Incorporate Exhibit A cross-reference when retail Statement of Work is attached
   if (includesRetailSow) {
+    y = addWrappedText(50, y, 10, "F2",
+      "The Statement of Work attached as Exhibit A to this Agreement is incorporated herein by reference.",
+      512);
+    y -= 10;
+  }
+  // D-187: Incorporate Exhibit A cross-reference when insurance Statement of Work is attached
+  if (includesInsuranceSow) {
     y = addWrappedText(50, y, 10, "F2",
       "The Statement of Work attached as Exhibit A to this Agreement is incorporated herein by reference.",
       512);
@@ -1455,6 +1462,293 @@ function generateRetailScopeOfWorkPdf(params: {
 }
 
 
+
+// ========== D-187 EXHIBIT A — INSURANCE STATEMENT OF WORK ==========
+/**
+ * Generates an Insurance Statement of Work PDF (Exhibit A) for insurance
+ * roofing full-replacement jobs. Supersedes D-180 (Bid Summary approach).
+ *
+ * FAIL-LOUD: throws on any error — envelope creation aborted without Exhibit A.
+ *
+ * In-scope: insurance RCV/ACV roofing full replacement
+ *           (hasRoofingTrade && !isRepairJob && !isRetail)
+ *
+ * Sections: measurement disclaimer (verbatim D-185), project info,
+ *   insurance financial summary, roofing scope (brand/warranty/decking/supplement),
+ *   Hover measurements, value-adds, contractor message,
+ *   dual-party acknowledgment with /ContractorInitial/ and /HomeownerInitial/ anchors.
+ */
+function generateInsuranceSOWPdf(params: {
+  homeownerName: string;
+  contractorName: string;
+  propertyAddress: string;
+  claimId: string;
+  trades: string[];
+  fundingType: string;
+  bidAmount: number | null;
+  rcvAmount: number | null;
+  acvAmount: number | null;
+  deductibleAmount: number | null;
+  bidBrand: string | null;
+  bidProductLine: string | null;
+  workmansWarrantyYears: number | null;
+  manufacturerWarrantyYears: number | null;
+  warrantySummary: string | null;
+  deckingPricePerSheet: number | null;
+  fullRedeckPrice: number | null;
+  supplementAcknowledged: boolean;
+  estimatedStartDate: string | null;
+  contractorMessage: string | null;
+  valueAdds: any;
+  measurements: { roofSqFt: number | null; wallSqFt: number | null; perimeterFt: number | null; pitch: string | null } | null;
+  contractDate: string;
+}): string {
+  const {
+    homeownerName, contractorName, propertyAddress, claimId,
+    trades, fundingType, bidAmount, rcvAmount, acvAmount, deductibleAmount,
+    bidBrand, bidProductLine, workmansWarrantyYears, manufacturerWarrantyYears,
+    warrantySummary, deckingPricePerSheet, fullRedeckPrice,
+    supplementAcknowledged, estimatedStartDate, contractorMessage,
+    valueAdds, measurements, contractDate,
+  } = params;
+
+  const va = valueAdds || {};
+
+  // ── PDF builder state ────────────────────────────────────────────
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) {
+    pdfLines.push(s);
+    byteOffset += s.length + 1;
+  }
+
+  function pdfStartObj(n: number) {
+    pdfObjects[n] = byteOffset;
+    pdfWrite(`${n} 0 obj`);
+  }
+
+  const contentLines: string[] = [];
+
+  function esc(text: string): string {
+    return String(text || "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  }
+
+  function addText(x: number, y: number, fontSize: number, font: string, text: string) {
+    contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${esc(text)}) Tj ET`);
+  }
+
+  function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
+    const charWidth = fontSize * 0.5;
+    const maxChars = Math.floor(maxWidth / charWidth);
+    const words = String(text || "").split(" ");
+    let line = "";
+    let y = startY;
+    const ls = fontSize * 1.4;
+    for (const word of words) {
+      if (line.length + word.length + 1 > maxChars) {
+        addText(x, y, fontSize, font, line.trim());
+        y -= ls;
+        line = word + " ";
+      } else {
+        line += word + " ";
+      }
+    }
+    if (line.trim()) { addText(x, y, fontSize, font, line.trim()); y -= ls; }
+    return y;
+  }
+
+  function hLine(y: number) {
+    contentLines.push(`50 ${y} m 562 ${y} l S`);
+  }
+
+  function fmt$(val: number | null | undefined): string {
+    if (val == null) return "TBD";
+    return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  let y = 750;
+
+  // ── Header — D-187 (mirrors D-185 retail pattern) ───────────────
+  addText(50, y, 16, "F2", "EXHIBIT A \u2014 STATEMENT OF WORK"); y -= 20;
+  addText(50, y, 9, "F1", esc(propertyAddress)); y -= 13;
+  addText(50, y, 9, "F1", `Homeowner: ${esc(homeownerName)}   Contractor: ${esc(contractorName)}`); y -= 13;
+  addText(50, y, 9, "F1", `Date: ${contractDate}   Claim ID: ${claimId}`); y -= 8;
+  hLine(y); y -= 18;
+
+  // ── D-185 Verbatim Measurement Disclaimer (required on every Exhibit A) ──
+  addText(50, y, 10, "F2", "MEASUREMENT DISCLAIMER"); y -= 14;
+  y = addWrappedText(50, y, 9, "F1",
+    "Measurements included in this Exhibit A are derived from aerial imagery and estimation tools (including Hover) and are provided for scoping purposes only. Actual measurements may vary. The contractor is responsible for verifying all measurements on-site prior to beginning work. The homeowner and contractor agree that on-site measurements shall govern in the event of any discrepancy. Any material difference in on-site measurements that affects project scope or cost shall be addressed by written change order signed by both parties.",
+    512);
+  y -= 10;
+  hLine(y); y -= 18;
+
+  // ── Insurance Financial Summary ──────────────────────────────────
+  const fundingLabel = fundingType === "insurance" ? "Insurance (RCV / ACV)" : "Insurance";
+  addText(50, y, 11, "F2", "INSURANCE FINANCIAL SUMMARY"); y -= 16;
+  addText(50, y, 9, "F1", `Funding Type: ${fundingLabel}`); y -= 13;
+  if (rcvAmount != null) { addText(50, y, 9, "F1", `Replacement Cost Value (RCV): ${fmt$(rcvAmount)}`); y -= 13; }
+  if (acvAmount != null) { addText(50, y, 9, "F1", `Actual Cash Value (ACV): ${fmt$(acvAmount)}`); y -= 13; }
+  if (deductibleAmount != null) { addText(50, y, 9, "F1", `Homeowner Deductible: ${fmt$(deductibleAmount)}`); y -= 13; }
+  addText(50, y, 9, "F1", `Contractor Bid Amount: ${fmt$(bidAmount)}`); y -= 8;
+  hLine(y); y -= 18;
+
+  // ── Scope of Work ────────────────────────────────────────────────
+  const tradeList = trades.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(", ");
+  addText(50, y, 11, "F2", `SCOPE OF WORK \u2014 ${esc(tradeList)}`); y -= 16;
+
+  if (bidBrand || bidProductLine) {
+    const matLine = [bidBrand, bidProductLine].filter(Boolean).join(" \u2014 ");
+    addText(50, y, 9, "F1", `Shingle Product: ${esc(matLine)}`); y -= 13;
+  }
+  if (workmansWarrantyYears != null) {
+    addText(50, y, 9, "F1", `Workmanship Warranty: ${workmansWarrantyYears} year(s)`); y -= 13;
+  }
+  if (manufacturerWarrantyYears != null) {
+    addText(50, y, 9, "F1", `Manufacturer Warranty: ${manufacturerWarrantyYears} year(s)`); y -= 13;
+  }
+  if (warrantySummary) {
+    y = addWrappedText(50, y, 9, "F1", `Warranty Details: ${warrantySummary}`, 512); y -= 4;
+  }
+  if (supplementAcknowledged) {
+    addText(50, y, 9, "F1", "Supplement Acknowledged: Yes \u2014 contractor will pursue supplements for additional covered work."); y -= 13;
+  }
+  if (estimatedStartDate) {
+    addText(50, y, 9, "F1", `Estimated Start Date: ${esc(estimatedStartDate)}`); y -= 13;
+  }
+  y -= 5;
+  hLine(y); y -= 18;
+
+  // ── Decking Contingency ─────────────────────────────────────────
+  if (deckingPricePerSheet != null || fullRedeckPrice != null) {
+    addText(50, y, 11, "F2", "DECKING CONTINGENCY"); y -= 16;
+    y = addWrappedText(50, y, 9, "F1",
+      "Bad decking discovered during tear-off will be addressed at the rates below. Any decking replacement requires homeowner approval before work proceeds.",
+      512);
+    y -= 4;
+    if (deckingPricePerSheet != null) {
+      addText(50, y, 9, "F1", `Price per sheet (4x8 OSB/plywood): ${fmt$(deckingPricePerSheet)}`); y -= 13;
+    }
+    if (fullRedeckPrice != null) {
+      addText(50, y, 9, "F1", `Full re-deck (entire roof): ${fmt$(fullRedeckPrice)}`); y -= 13;
+    }
+    y -= 3;
+    hLine(y); y -= 18;
+  }
+
+  // ── Hover Aerial Measurements ────────────────────────────────────
+  if (measurements && (measurements.roofSqFt || measurements.perimeterFt || measurements.pitch)) {
+    addText(50, y, 11, "F2", "HOVER AERIAL MEASUREMENTS (Roofing)"); y -= 16;
+    if (measurements.roofSqFt) {
+      addText(50, y, 9, "F1", `Total Roof Area: ${measurements.roofSqFt.toFixed(1)} sq ft (${(measurements.roofSqFt / 100).toFixed(2)} squares)`); y -= 13;
+    }
+    if (measurements.perimeterFt) {
+      addText(50, y, 9, "F1", `Perimeter: ${measurements.perimeterFt.toFixed(1)} linear ft`); y -= 13;
+    }
+    if (measurements.pitch) {
+      addText(50, y, 9, "F1", `Pitch: ${esc(measurements.pitch)}`); y -= 13;
+    }
+    y = addWrappedText(50, y, 8, "F1",
+      "Measurements are aerial estimates only. See Measurement Disclaimer above.",
+      512);
+    y -= 5;
+    hLine(y); y -= 18;
+  }
+
+  // ── Value-Adds ──────────────────────────────────────────────────
+  const vaItems: string[] = [];
+  if (va.hauls_debris) vaItems.push("Debris Haul-Away");
+  if (va.installs_drip_edge) vaItems.push("Drip Edge Installation");
+  if (va.installs_ice_water_shield) vaItems.push("Ice & Water Shield");
+  if (va.installs_synthetic_underlayment) vaItems.push("Synthetic Underlayment");
+  if (va.replaces_pipe_boots) vaItems.push("Pipe Boot Replacement");
+  if (va.replaces_ridge_cap) vaItems.push("Ridge Cap Replacement");
+  if (va.replaces_flashing) vaItems.push("Flashing Replacement");
+  if (va.offers_financing) vaItems.push("Financing Available");
+
+  if (vaItems.length > 0) {
+    addText(50, y, 11, "F2", "INCLUDED SERVICES"); y -= 16;
+    for (const item of vaItems) {
+      addText(58, y, 9, "F1", `* ${item}`); y -= 12;
+    }
+    y -= 5;
+    hLine(y); y -= 18;
+  }
+
+  // ── Contractor Message ──────────────────────────────────────────
+  if (contractorMessage) {
+    addText(50, y, 11, "F2", "CONTRACTOR NOTES"); y -= 14;
+    y = addWrappedText(50, y, 9, "F1", contractorMessage, 512); y -= 5;
+    hLine(y); y -= 18;
+  }
+
+  // ── D-185/D-187: Dual-party acknowledgment — DocuSign initial tabs anchor here ──
+  addText(50, y, 11, "F2", "EXHIBIT A ACKNOWLEDGMENT"); y -= 16;
+  y = addWrappedText(50, y, 9, "F1",
+    "By initialing below, both parties acknowledge that they have reviewed the measurements and scope of work set forth in this Exhibit A and agree to its terms.",
+    512);
+  y -= 6;
+  y = addWrappedText(50, y, 9, "F1",
+    "This Exhibit A is incorporated by reference into the contractor agreement and is a binding part of that agreement. Scope details are based on the contractor's bid submission and may be supplemented by on-site assessment.",
+    512);
+  y -= 18;
+
+  // Contractor initial line + DocuSign anchor
+  contentLines.push(`50 ${y + 5} m 180 ${y + 5} l S`);
+  addText(50, y - 10, 8, "F1", "Contractor Initials");
+  addText(185, y + 10, 9, "F1", "/ContractorInitial/"); y -= 40;
+
+  // Homeowner initial line + DocuSign anchor
+  contentLines.push(`50 ${y + 5} m 180 ${y + 5} l S`);
+  addText(50, y - 10, 8, "F1", "Homeowner Initials");
+  addText(185, y + 10, 9, "F1", "/HomeownerInitial/"); y -= 20;
+
+  // ── Assemble PDF ─────────────────────────────────────────────────
+  const contentStream = contentLines.join("\n");
+  const streamLen = contentStream.length;
+
+  pdfWrite("%PDF-1.4");
+  pdfStartObj(1);
+  pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
+  pdfWrite("endobj");
+  pdfStartObj(2);
+  pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  pdfWrite("endobj");
+  pdfStartObj(3);
+  pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]");
+  pdfWrite("   /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
+  pdfWrite("endobj");
+  pdfStartObj(4);
+  pdfWrite(`<< /Length ${streamLen} >>`);
+  pdfWrite("stream");
+  pdfWrite(contentStream);
+  pdfWrite("endstream");
+  pdfWrite("endobj");
+  pdfStartObj(5);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  pdfWrite("endobj");
+  pdfStartObj(6);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  pdfWrite("endobj");
+
+  const xrefOffset = byteOffset;
+  pdfWrite("xref");
+  pdfWrite(`0 7`);
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) {
+    pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  }
+  pdfWrite("trailer");
+  pdfWrite("<< /Size 7 /Root 1 0 R >>");
+  pdfWrite("startxref");
+  pdfWrite(String(xrefOffset));
+  pdfWrite("%%EOF");
+
+  return btoa(pdfLines.join("\n"));
+}
+
 // ========== D-180 EXHIBIT A — BID SUMMARY PDF ==========
 /**
  * Generates a Bid Summary PDF (Exhibit A) for insurance roofing full replacement jobs.
@@ -2176,52 +2470,72 @@ async function handleContractorSign(
     }
   }
 
-  // D-180: For insurance roofing full replacement, generate Exhibit A — FAIL LOUDLY.
-  // Never create the envelope without Exhibit A for in-scope insurance jobs.
+  // D-187: Fetch Hover measurements for insurance SOW (same helper as retail path).
+  // Non-fatal: SOW renders TBD values if Hover data unavailable.
+  let insuranceMeasurements: { roofSqFt: number | null; wallSqFt: number | null; perimeterFt: number | null; pitch: string | null } | null = null;
+  if (isInScopeForExhibitA && !isRetail) {
+    try {
+      insuranceMeasurements = await fetchHoverMeasurements(supabase, claim_id);
+    } catch (hoverErr) {
+      console.warn("[D-187] Hover measurement fetch failed (non-fatal, SOW will show TBD):", hoverErr);
+    }
+  }
+
+  // D-187: For insurance roofing full replacement, generate Exhibit A (SOW) — FAIL LOUDLY.
+  // Supersedes D-180 (Bid Summary). Never create envelope without Exhibit A for in-scope jobs.
   let exhibitABase64: string | null = null;
   if (isInScopeForExhibitA && !isRetail) {
     try {
-      exhibitABase64 = generateExhibitAPdf({
+      exhibitABase64 = generateInsuranceSOWPdf({
         homeownerName,
         contractorName,
         propertyAddress: claimData?.property_address || autoFields.customer_address || "",
         claimId: claim_id,
-        bidId: bidData?.id ?? null,
-        bidCreatedAt: bidData?.created_at ?? null,
         trades: claimData?.selected_trades || [trade],
         fundingType,
         bidAmount: bidData?.amount ?? bidData?.total_price ?? null,
-        valueAdds: bidData?.value_adds ?? null,
+        rcvAmount: claimData?.rcv_amount ?? null,
+        acvAmount: claimData?.acv_amount ?? null,
+        deductibleAmount: claimData?.deductible_amount ?? null,
+        bidBrand: bidData?.brand ?? null,
+        bidProductLine: bidData?.product_line ?? null,
+        workmansWarrantyYears: bidData?.workmanship_warranty_years ?? null,
+        manufacturerWarrantyYears: bidData?.manufacturer_warranty_years ?? null,
+        warrantySummary: bidData?.warranty_summary ?? null,
         deckingPricePerSheet: bidData?.decking_price_per_sheet ?? null,
         fullRedeckPrice: bidData?.full_redeck_price ?? null,
-        contractorNotes: bidData?.notes ?? null,
-        claimData,
+        supplementAcknowledged: bidData?.supplement_acknowledged ?? false,
+        estimatedStartDate: bidData?.estimated_start_date ?? null,
+        contractorMessage: bidData?.contractor_message ?? bidData?.message_to_homeowner ?? null,
+        valueAdds: bidData?.value_adds ?? null,
+        measurements: insuranceMeasurements,
         contractDate,
       });
       if (!exhibitABase64) {
-        throw new Error("generateExhibitAPdf returned null or empty string");
+        throw new Error("generateInsuranceSOWPdf returned null or empty string");
       }
-      console.log(`[D-180] Exhibit A (Bid Summary) generated for insurance claim ${claim_id}`);
+      console.log(`[D-187] Exhibit A (Statement of Work) generated for insurance claim ${claim_id}`);
     } catch (exhibitErr) {
-      // D-180 FAIL-LOUD: abort envelope creation — no silent bypass
+      // D-187 FAIL-LOUD: abort envelope creation — no silent bypass
       throw new Error(
-        `[D-180] Exhibit A PDF generation failed for insurance roofing job ${claim_id}. ` +
+        `[D-187] Exhibit A (SOW) PDF generation failed for insurance roofing job ${claim_id}. ` +
         `Envelope creation aborted. Cause: ${exhibitErr instanceof Error ? exhibitErr.message : String(exhibitErr)}`
       );
     }
   }
 
   // Generate IC 24-5-11 compliance addendum LAST — after SOW generation so we know if it succeeded.
-  // D-185: includesRetailSow=true adds incorporation-by-reference language for the retail Exhibit A.
+  // D-185/D-187: includesRetailSow/includesInsuranceSow adds incorporation-by-reference language for Exhibit A.
   const includesRetailSow = isRetail && !!scopeOfWorkBase64;
-  const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate, isInScopeForExhibitA, includesRetailSow);
+  const includesInsuranceSow = !isRetail && !!exhibitABase64;
+  const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate, false, includesRetailSow, includesInsuranceSow);
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Document IDs (D-180 Exhibit A numbering):
-  //   Insurance + in-scope roofing:  1(contract) + 2(sig page) + 3(Exhibit A) + 4(addendum)
+  // Document IDs (D-187 Exhibit A numbering):
+  //   Insurance + in-scope roofing:  1(contract) + 2(sig page) + 3(Exhibit A = SOW) + 4(addendum)
   //   Insurance + not in-scope:      1(contract) + 2(sig page) + 3(addendum)
-  //   Retail + in-scope roofing:     1(contract) + 2(sig page) + 3(SOW retitled as Exhibit A) + 4(addendum)
+  //   Retail + in-scope roofing:     1(contract) + 2(sig page) + 3(SOW = Exhibit A) + 4(addendum)
   //   Retail + not in-scope:         1(contract) + 2(sig page) + 3(SOW) + 4(addendum)
   //
   // Doc 1 (contractor's arbitrary PDF) is DISPLAY-ONLY — no signing tabs. Contractor PDFs
@@ -2269,10 +2583,10 @@ async function handleContractorSign(
         fileExtension: "pdf",
         documentId: sigPageDocId,
       },
-      // D-180: Exhibit A — Bid Summary (insurance roofing in-scope only — fail-loud above).
+      // D-187: Exhibit A — Statement of Work (insurance roofing in-scope only — fail-loud above).
       ...(!isRetail && exhibitABase64 ? [{
         documentBase64: exhibitABase64,
-        name: "Exhibit A — Bid Summary",
+        name: "Exhibit A — Statement of Work",
         fileExtension: "pdf",
         documentId: exhibit3DocId,
       }] : []),
@@ -2301,8 +2615,8 @@ async function handleContractorSign(
           tabs: {
             textTabs,
             ...contractorTabs,
-            // D-185: Contractor initials on Exhibit A (routing order 1)
-            ...(isRetail && scopeOfWorkBase64 ? {
+            // D-185/D-187: Contractor initials on Exhibit A (retail SOW and insurance SOW paths)
+            ...((isRetail && scopeOfWorkBase64) || (!isRetail && exhibitABase64) ? {
               initialHereTabs: [{
                 anchorString: "/ContractorInitial/",
                 anchorUnits: "pixels",
@@ -2324,8 +2638,8 @@ async function handleContractorSign(
           tabs: {
             ...buildSignerTabs(sigPageDocId, "homeowner"),  // Signature Page, not contractor PDF
             ...buildAddendumTabs(addendumDocId),
-            // D-185: Homeowner initials on Exhibit A (routing order 2)
-            ...(isRetail && scopeOfWorkBase64 ? {
+            // D-185/D-187: Homeowner initials on Exhibit A (retail SOW and insurance SOW paths)
+            ...((isRetail && scopeOfWorkBase64) || (!isRetail && exhibitABase64) ? {
               initialHereTabs: [{
                 anchorString: "/HomeownerInitial/",
                 anchorUnits: "pixels",
