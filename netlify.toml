@@ -1,0 +1,15 @@
+# Netlify configuration — OtterQuote (D-182)
+# Production deploys from: main branch
+# Staging deploys from: staging branch
+
+[build]
+  publish = "."
+  ignore = "exit 0"
+
+# Staging context — deploys to staging--jade-alpaca-b82b5e.netlify.app
+[context.staging]
+  publish = "."
+
+# Branch deploy previews (feature branches)
+[context.deploy-preview]
+  publish = "."
