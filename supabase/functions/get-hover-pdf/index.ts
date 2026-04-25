@@ -320,4 +320,9 @@ async function getValidAccessToken(supabase: any): Promise<string | null> {
     .update({
       access_token: newTokenData.access_token,
       refresh_token: newTokenData.refresh_token || token.refresh_token,
-      expires_at: 
+      expires_at: newExpiresAt,
+    })
+    .eq("id", token.id);
+
+  return newTokenData.access_token;
+}

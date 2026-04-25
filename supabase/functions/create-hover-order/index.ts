@@ -185,7 +185,7 @@ serve(async (req) => {
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const jwtResult = await verifyJwt(req, supabaseUrl, supabaseAnonKey, corsHeaders);
   if (jwtResult instanceof Response) return jwtResult;
-  const { user: authedUser } = jwtResult;
+  const { user: authedUser } = jwtResult; // v57: extract user for per-user rate limiting
 
   try {
     const {
@@ -362,4 +362,7 @@ serve(async (req) => {
     console.error("create-hover-order error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

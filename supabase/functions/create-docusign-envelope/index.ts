@@ -3206,4 +3206,7 @@ serve(async (req) => {
       JSON.stringify({
         error: message,
       }),
-      { status: 500, h
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
