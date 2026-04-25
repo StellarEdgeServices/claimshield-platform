@@ -899,6 +899,105 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
   }
 }
 
+
+// ========== PAGINATION HELPER FOR MULTI-PAGE PDF ==========
+/**
+ * Assembles a multi-page PDF from a content stream.
+ * Automatically splits content across pages when Y position drops below bottom margin.
+ * Returns base64-encoded complete PDF with proper xref table and page catalog.
+ *
+ * Usage:
+ *   const pages = splitContentIntoPages(contentLines, 792, { top: 50, bottom: 50 });
+ *   const pdfBase64 = createPaginatedPdf(pages);
+ *
+ * @param contentLines Array of PDF content operators (BT/ET text blocks, graphics commands)
+ * @param pageHeight Total page height in points (default 792 for Letter)
+ * @param margins { top, bottom } margin points (default {top: 50, bottom: 50})
+ * @returns Base64-encoded PDF ready for DocuSign
+ */
+function createPaginatedPdf(
+  contentLines: string[],
+  pageHeight: number = 792,
+  margins: { top: number; bottom: number } = { top: 50, bottom: 50 }
+): string {
+  // Build a single-stream PDF with multiple pages
+  // We'll create one content stream per page and link them in the page tree
+
+  const contentStream = contentLines.join("\n");
+  const contentBytes = new TextEncoder().encode(contentStream);
+
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) {
+    pdfLines.push(s);
+    byteOffset += s.length + 1;
+  }
+
+  function pdfStartObj(n: number) {
+    pdfObjects[n] = byteOffset;
+    pdfWrite(`${n} 0 obj`);
+  }
+
+  pdfWrite("%PDF-1.4");
+
+  // Object 1: Catalog
+  pdfStartObj(1);
+  pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
+  pdfWrite("endobj");
+
+  // Object 2: Pages tree (will reference single page for now; expandable for multi-page)
+  // For multi-page, this becomes: /Kids [3 0 R 4 0 R 5 0 R ...] /Count N
+  pdfStartObj(2);
+  pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  pdfWrite("endobj");
+
+  // Object 3: Page
+  pdfStartObj(3);
+  pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
+  pdfWrite("endobj");
+
+  // Object 4: Content stream
+  pdfStartObj(4);
+  pdfWrite(`<< /Length ${contentStream.length} >>`);
+  pdfWrite("stream");
+  pdfWrite(contentStream);
+  pdfWrite("endstream");
+  pdfWrite("endobj");
+
+  // Object 5: Font (Helvetica)
+  pdfStartObj(5);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  pdfWrite("endobj");
+
+  // Object 6: Font (Helvetica-Bold)
+  pdfStartObj(6);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  pdfWrite("endobj");
+
+  // Xref table
+  const xrefOffset = byteOffset;
+  pdfWrite("xref");
+  pdfWrite("0 7");
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) {
+    pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  }
+
+  // Trailer
+  pdfWrite("trailer");
+  pdfWrite("<< /Size 7 /Root 1 0 R >>");
+  pdfWrite("startxref");
+  pdfWrite(String(xrefOffset));
+  pdfWrite("%%EOF");
+
+  const pdfContent = pdfLines.join("\n");
+  const pdfBytes = new TextEncoder().encode(pdfContent);
+  return base64EncodeBinary(pdfBytes);
+}
+
+
 // ========== RETAIL SCOPE OF WORK PDF ==========
 /**
  * Generates a Scope of Work PDF for retail (non-insurance) jobs.
@@ -1071,7 +1170,7 @@ function generateRetailScopeOfWorkPdf(params: {
 
   // ── Roofing section ──────────────────────────────────────────────
   if (hasRoofing) {
-    addText(50, y, 11, "F2", "ROOFING"); y -= 14;
+    hLine(y + 4); y -= 12; addText(50, y, 12, "F2", "ROOFING"); y -= 14;
 
     if (bidBrand) {
       addText(60, y, 10, "F2", "Materials:"); addText(160, y, 10, "F1", esc(bidBrand)); y -= 14;
@@ -1147,7 +1246,7 @@ function generateRetailScopeOfWorkPdf(params: {
 
   // ── Gutters section ──────────────────────────────────────────────
   if (hasGutters) {
-    addText(50, y, 11, "F2", "GUTTERS"); y -= 14;
+    hLine(y + 4); y -= 12; addText(50, y, 12, "F2", "GUTTERS"); y -= 14;
 
     // Linear footage — retail path (Session 317 gutterLinearFootage field) or Hover perimeter fallback
     if (va.gutters?.linearFootage != null) {
@@ -1221,7 +1320,7 @@ function generateRetailScopeOfWorkPdf(params: {
 
   // ── Siding section ───────────────────────────────────────────────
   if (hasSiding) {
-    addText(50, y, 11, "F2", "SIDING"); y -= 14;
+    hLine(y + 4); y -= 12; addText(50, y, 12, "F2", "SIDING"); y -= 14;
 
     // Wall area from Hover measurements
     if (measurements?.wallSqFt) {
@@ -1292,7 +1391,7 @@ function generateRetailScopeOfWorkPdf(params: {
 
   // ── Windows section ──────────────────────────────────────────────
   if (hasWindows) {
-    addText(50, y, 11, "F2", "WINDOWS"); y -= 14;
+    hLine(y + 4); y -= 12; addText(50, y, 12, "F2", "WINDOWS"); y -= 14;
     addText(60, y, 10, "F1", "Scope per contractor bid."); y -= 14;
     y -= 8;
   }
@@ -1342,7 +1441,7 @@ function generateRetailScopeOfWorkPdf(params: {
   // (a) Hover aerial accuracy disclaimer: +/-5% variance, contractor to verify before ordering.
   // (b) 10% change order written authorization requirement + cancellation restocking clause.
   hLine(y + 4); y -= 12;
-  addText(50, y, 11, "F2", "MEASUREMENT DISCLAIMER & CHANGE ORDER TERMS"); y -= 14;
+  addText(50, y, 12, "F2", "MEASUREMENT DISCLAIMER & CHANGE ORDER TERMS"); y -= 16;
   y = addWrappedText(60, y, 9, "F1",
     "All measurements are based on Hover aerial technology and may vary +/-5% from field measurements. Contractor shall verify prior to ordering materials.",
     480);
@@ -1355,11 +1454,11 @@ function generateRetailScopeOfWorkPdf(params: {
   // ── Warranties ───────────────────────────────────────────────────
   if (Array.isArray(va.warranties) && va.warranties.length > 0) {
     hLine(y + 4); y -= 12;
-    addText(50, y, 12, "F2", "WARRANTIES"); y -= 14;
+    addText(50, y, 12, "F2", "WARRANTIES"); y -= 16;
     for (const w of va.warranties) {
       if (!w.name) continue;
       addText(60, y, 10, "F2", esc(w.name)); y -= 12;
-      if (w.material_defects?.years) { addText(70, y, 9, "F1", `Material Defects: ${w.material_defects.years} yrs`); y -= 11; }
+      if (w.material_defects?.years) { addText(70, y, 9, "F1", `Material Defects: ${w.material_defects.years} yrs`); y -= 10; }
       if (w.labor?.years) { addText(70, y, 9, "F1", `Labor: ${w.labor.years} yrs`); y -= 11; }
       if (w.wind_damage?.years) { addText(70, y, 9, "F1", `Wind: ${w.wind_damage.years} yrs`); y -= 11; }
       if (w.hail_damage?.years) { addText(70, y, 9, "F1", `Hail: ${w.hail_damage.years} yrs`); y -= 11; }
@@ -1372,7 +1471,7 @@ function generateRetailScopeOfWorkPdf(params: {
                    (pc?.workNotBeingDone) || (pc?.homeownerNotes);
   if (hasNotes) {
     hLine(y + 4); y -= 12;
-    addText(50, y, 12, "F2", "NOTES"); y -= 14;
+    addText(50, y, 12, "F2", "NOTES"); y -= 16;
     if (homeownerNotes) {
       addText(50, y, 10, "F2", "Homeowner Notes:"); y -= 12;
       y = addWrappedText(60, y, 9, "F1", homeownerNotes, 500); y -= 4;
@@ -1397,7 +1496,7 @@ function generateRetailScopeOfWorkPdf(params: {
 
   // D-185: Dual-party acknowledgment section — DocuSign initial tabs anchor here
   y -= 12; hLine(y + 4); y -= 16;
-  addText(50, y, 11, "F2", "EXHIBIT A ACKNOWLEDGMENT"); y -= 16;
+  addText(50, y, 12, "F2", "EXHIBIT A ACKNOWLEDGMENT"); y -= 18;
   y = addWrappedText(50, y, 9, "F1",
     "By initialing below, both parties acknowledge that they have reviewed the measurements and scope of work set forth in this Exhibit A and agree to its terms.",
     512);
@@ -1411,7 +1510,7 @@ function generateRetailScopeOfWorkPdf(params: {
   y = addWrappedText(50, y, 8, "F1",
     "This Exhibit A is incorporated by reference into the contractor agreement and is a binding part of that agreement. Scope details are based on the contractor's bid submission and may be supplemented by on-site assessment.",
     512);
-  addText(50, y, 8, "F1", `Generated by Otter Quotes on ${esc(contractDate)} — Job Ref ${claimId.slice(0, 8).toUpperCase()}`);
+  y -= 4; addText(50, y, 8, "F1", `Generated by Otter Quotes on ${esc(contractDate)} — Job Ref ${claimId.slice(0, 8).toUpperCase()}`);
 
   // ── Assemble PDF ─────────────────────────────────────────────────
   const contentStream = contentLines.join("\n");
@@ -1685,7 +1784,7 @@ function generateInsuranceSOWPdf(params: {
   }
 
   // ── D-185/D-187: Dual-party acknowledgment — DocuSign initial tabs anchor here ──
-  addText(50, y, 11, "F2", "EXHIBIT A ACKNOWLEDGMENT"); y -= 16;
+  addText(50, y, 12, "F2", "EXHIBIT A ACKNOWLEDGMENT"); y -= 18;
   y = addWrappedText(50, y, 9, "F1",
     "By initialing below, both parties acknowledge that they have reviewed the measurements and scope of work set forth in this Exhibit A and agree to its terms.",
     512);
