@@ -878,12 +878,12 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // ── Rate limit guard (function-level; p_caller_id = null = global) ──────
-  // check_rate_limit() signature: p_function_name TEXT, p_caller_id UUID DEFAULT NULL
-  // Cron functions have no user UUID — pass null to use the global limit.
+  // ── Rate limit guard (function-level; p_user_id = null = shared anonymous bucket) ──────
+  // check_rate_limit() signature: p_function_name TEXT, p_user_id UUID DEFAULT NULL
+  // Cron functions have no user UUID — pass null to use the shared anonymous bucket.
   const { data: rateLimitOk, error: rlError } = await supabase.rpc(
     "check_rate_limit",
-    { p_function_name: FUNCTION_NAME, p_caller_id: null }
+    { p_function_name: FUNCTION_NAME, p_user_id: null }
   );
 
   if (rlError) {
@@ -930,5 +930,4 @@ serve(async (req) => {
 
   console.log(`[${FUNCTION_NAME}] Run complete:`, JSON.stringify(result));
 
-  return jsonResponse(result, 200, corsHeaders);
-});
+  return jsonResponse(result, 2

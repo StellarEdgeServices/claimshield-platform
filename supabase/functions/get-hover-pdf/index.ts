@@ -71,6 +71,7 @@ serve(async (req) => {
 
     // ── Authenticate caller ────────────────────────────────────────
     // Service role skips auth. Anon/JWT callers must own the claim.
+    let rateLimitUserId: string | null = null;
     const authHeader = req.headers.get("Authorization");
     if (authHeader && !authHeader.includes(supabaseKey)) {
       const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || supabaseKey, {
@@ -83,6 +84,7 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      rateLimitUserId = user.id;
       // Verify ownership OR active contractor status
       // Homeowners who own the claim may always access.
       // Active contractors may also access (they need Hover PDFs to bid). (86e10t26y)
@@ -116,7 +118,7 @@ serve(async (req) => {
     // ── Rate limit ─────────────────────────────────────────────────
     const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
       p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id,
+      p_user_id: rateLimitUserId,
     });
 
     if (rlError) {
@@ -318,9 +320,4 @@ async function getValidAccessToken(supabase: any): Promise<string | null> {
     .update({
       access_token: newTokenData.access_token,
       refresh_token: newTokenData.refresh_token || token.refresh_token,
-      expires_at: newExpiresAt,
-    })
-    .eq("id", token.id);
-
-  return newTokenData.access_token;
-}
+      expires_at: 

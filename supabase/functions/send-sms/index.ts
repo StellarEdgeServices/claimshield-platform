@@ -67,7 +67,7 @@ serve(async (req) => {
       "check_rate_limit",
       {
         p_function_name: FUNCTION_NAME,
-        p_caller_id: notification_id || null,
+        p_user_id: null,
       }
     );
 

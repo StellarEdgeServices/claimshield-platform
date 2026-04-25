@@ -231,7 +231,7 @@ serve(async (req) => {
     // ── Rate limit ─────────────────────────────────────────────────
     const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
       p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id,
+      p_user_id: null,
     });
 
     if (rlError) {
@@ -427,3 +427,4 @@ serve(async (req) => {
     );
   }
 });
+      

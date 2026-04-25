@@ -192,7 +192,7 @@ serve(async (req: Request) => {
     // ── Rate limiting ────────────────────────────────────────────────────────
     const { data: rlData, error: rlError } = await supabase.rpc("check_rate_limit", {
       p_function_name: FUNCTION_NAME,
-      p_caller_id: null,
+      p_user_id: null,
     });
     if (rlError) {
       console.error(`[${FUNCTION_NAME}] Rate limit RPC error:`, rlError.message);
@@ -363,3 +363,4 @@ ${ctaButton("View Your Dashboard →", PARTNER_DASH_URL)}
     });
   }
 });
+  

@@ -130,7 +130,7 @@ serve(async (req) => {
     // ===== RATE LIMIT =====
     const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
       p_function_name: FUNCTION_NAME,
-      p_caller_id: metadata.claim_id || null,
+      p_user_id: null,  // repo version: no JWT auth in handler; anonymous bucket applies
     });
     if (rlError) {
       console.error("Rate limit check failed:", rlError);

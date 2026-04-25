@@ -137,6 +137,40 @@ async function verifyHoverPayment(
   return { ok: true, amount: pi.amount };
 }
 
+
+/**
+ * Verify the incoming JWT using Supabase Auth.
+ * --no-verify-jwt bypasses the gateway (ES256/HS256 mismatch).
+ * This handler-level check closes that gap for authenticated callers.
+ * Returns { user } on success, or a ready-to-return 401 Response on failure.
+ */
+async function verifyJwt(
+  req: Request,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  corsHeaders: Record<string, string>,
+): Promise<{ user: any } | Response> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized. A valid user session is required." }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  const jwt = authHeader.slice(7);
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+  });
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized. Session invalid or expired." }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  return { user };
+}
+
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -144,6 +178,14 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // ===== JWT VERIFICATION =====
+  // Gateway JWT check disabled (--no-verify-jwt) due to ES256/HS256 mismatch.
+  // Manual verification here closes the unauthenticated-caller gap.
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const jwtResult = await verifyJwt(req, supabaseUrl, supabaseAnonKey, corsHeaders);
+  if (jwtResult instanceof Response) return jwtResult;
+  const { user: authedUser } = jwtResult;
 
   try {
     const {
@@ -221,7 +263,7 @@ serve(async (req) => {
     // ===== RATE LIMIT =====
     const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
       p_function_name: FUNCTION_NAME,
-      p_caller_id: claim_id || null,
+      p_user_id: authedUser?.id || null,
     });
     if (rlError) {
       console.error("Rate limit check failed:", rlError);
@@ -237,4 +279,87 @@ serve(async (req) => {
         reason: rateLimitResult?.reason,
         counts: rateLimitResult?.counts,
         estimated_spend: rateLimitResult?.estimated_spend,
-      }), { status: 429, headers: { ...corsHeaders, "Content-Type"
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ===== HOVER OAUTH =====
+    const HOVER_CLIENT_ID = Deno.env.get("HOVER_CLIENT_ID")!;
+    const HOVER_CLIENT_SECRET = Deno.env.get("HOVER_CLIENT_SECRET")!;
+    if (!HOVER_CLIENT_ID || !HOVER_CLIENT_SECRET) {
+      throw new Error("Hover OAuth credentials not configured.");
+    }
+    const accessToken = await getValidAccessToken(supabase, HOVER_CLIENT_ID, HOVER_CLIENT_SECRET);
+
+    // ===== CREATE CAPTURE REQUEST =====
+    const captureRequestBody = {
+      capture_request: {
+        capturing_user_email: homeowner_email,
+        capturing_user_phone: homeowner_phone || undefined,
+        capturing_user_name: homeowner_name,
+        signup_type: "homeowner",
+        job_attributes: {
+          location_line_1: address_line_1,
+          location_city: address_city || undefined,
+          location_region: address_state || undefined,
+          location_postal_code: address_zip || undefined,
+          name: `OtterQuote - ${address_line_1}`,
+          deliverable_id: String(deliverable_type_id),
+          external_identifier: claim_id || order_id,
+        },
+      },
+      current_user_email: Deno.env.get("HOVER_USER_EMAIL") || undefined,
+    };
+
+    console.log("Creating Hover capture request for:", address_line_1, "deliverable:", deliverable_type_id);
+    const captureResponse = await fetch(`${HOVER_API_BASE}/api/v2/capture_requests`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(captureRequestBody),
+    });
+    if (!captureResponse.ok) {
+      const errorData = await captureResponse.text();
+      console.error("Hover capture request failed:", captureResponse.status, errorData);
+      throw new Error(`Hover API error (HTTP ${captureResponse.status}): ${errorData}`);
+    }
+    const captureData = await captureResponse.json();
+    const captureLink = `${HOVER_API_BASE}/api/v2/capture_requests/${captureData.identifier}`;
+
+    // ===== PERSIST to hover_orders =====
+    // D-181: store payment_intent_id, amount charged, and flip rebate_due=true.
+    const { error: updateError } = await supabase
+      .from("hover_orders")
+      .update({
+        hover_job_id: captureData.pending_job_id || null,
+        capture_request_id: captureData.id,
+        capture_request_identifier: captureData.identifier,
+        capture_link: captureLink,
+        hover_link: captureLink,
+        status: "link_sent",
+        deliverable_type_id: deliverable_type_id,
+        capturing_user_email: homeowner_email,
+        capturing_user_phone: homeowner_phone || null,
+        homeowner_stripe_payment_intent_id: payment_intent_id,
+        homeowner_charge_amount: verifiedAmount,
+        rebate_due: true,
+      })
+      .eq("id", order_id);
+    if (updateError) {
+      console.error("Failed to update hover_orders:", updateError);
+      // Non-fatal — the capture request was created on Hover's side.
+    }
+
+    console.log("Hover capture request created. ID:", captureData.id, "Identifier:", captureData.identifier);
+
+    return new Response(JSON.stringify({
+      capture_request_id: captureData.id,
+      identifier: captureData.identifier,
+      capture_link: captureLink,
+      pending_job_id: captureData.pending_job_id,
+      state: captureData.state,
+      rate_limit_counts: rateLimitResult?.counts,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (error: any) {
+    console.error("create-hover-order error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content

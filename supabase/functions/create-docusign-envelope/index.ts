@@ -3134,10 +3134,11 @@ serve(async (req) => {
 
     // ========== RATE LIMIT CHECK ==========
     // Skip rate limit for homeowner_sign (no new envelope created)
+    // p_user_id: null — no user JWT is verified in this handler; anonymous bucket applies.
     if (document_type !== "homeowner_sign") {
       const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
         p_function_name: FUNCTION_NAME,
-        p_caller_id: claim_id || null,
+        p_user_id: null,
       });
 
       if (rlError) {
@@ -3205,7 +3206,4 @@ serve(async (req) => {
       JSON.stringify({
         error: message,
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
+      { status: 500, h
