@@ -601,7 +601,7 @@
 <!-- ═══════════════════════════════════════ -->
 <section class="hero">
   <div class="container">
-    <img src="/img/otter-icon-white.png" alt="Otter Quotes" class="hero-logo">
+    <img src="/img/brand-assets/logo-navy-amber.svg" alt="Otter Quotes" class="hero-logo">
     <div class="hero-brand-name">Otter Quotes</div>
     <div class="hero-badge">&#x1F4DD; Insurance Claims &amp; Retail Quotes — All in One Place</div>
     <h1>Stop chasing contractors. <em>Let them compete for you.</em></h1>
@@ -1007,4 +1007,17 @@
 
   // ── Time on Page Tracking ──
   // Fire at 30s, 60s, 120s to measure engagement quality
-  [30, 60, 120].forEach(
+  [30, 60, 120].forEach(function(seconds) {
+    setTimeout(function() {
+      gtag('event', 'time_on_page', {
+        seconds_elapsed: seconds,
+        page_path: '/index.html'
+      });
+    }, seconds * 1000);
+  });
+})();
+</script>
+
+</body>
+</html>
+<!-- deploy: 20260421234910 -->
