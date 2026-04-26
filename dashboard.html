@@ -61,6 +61,22 @@
       max-width: 400px;
     }
 
+    /* Explicit progress bar override — prevents design-system gradient from showing at 0% */
+    .welcome-progress .progress-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .welcome-progress .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--amber), var(--green));
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
     .progress-label {
       display: flex;
       justify-content: space-between;
@@ -125,6 +141,7 @@
     .section-header h2 {
       margin: 0;
       font-size: 1.25rem;
+      color: var(--white);
     }
 
     /* Project info section */
@@ -380,7 +397,7 @@
 
     .submit-section h3 {
       margin-bottom: var(--sp-4);
-      color: var(--white);
+      color: var(--navy);
     }
 
     .submit-section-hint {
@@ -2602,21 +2619,4 @@
                 [filenameField]: file.name,
               })
               .eq('id', currentClaim.id)
-              .select()
-              .single();
-
-            if (updateError) throw updateError;
-            currentClaim = data;
-          }
-          renderChecklist();
-          updateProgressBar();
-          updateSubmitButton();
-
-          // Hide progress after delay
-          setTimeout(() => {
-            if (progressEl) progressEl.classList.remove('active');
-          }, 1000);
-
-          showSuccess(`${type === 'estimate' ? 'Estimate' : 'Measurements'} uploaded successfully.`);
-
-     
+  

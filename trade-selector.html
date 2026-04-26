@@ -161,12 +161,21 @@
     .funding-card h3 {
       margin: 0;
       font-size: 1.25rem;
+      color: var(--white);
+    }
+
+    .funding-card.selected h3 {
+      color: var(--navy);
     }
 
     .funding-subtitle {
-      color: var(--slate);
+      color: rgba(255,255,255,0.8);
       font-size: 0.95rem;
       margin: 0;
+    }
+
+    .funding-card.selected .funding-subtitle {
+      color: rgba(15,36,64,0.7);
     }
 
     /* Policy type cards (RCV / ACV / IDK) */
@@ -208,13 +217,22 @@
     .policy-card h3 {
       margin: 0;
       font-size: 1.2rem;
+      color: var(--white);
+    }
+
+    .policy-card.selected h3 {
+      color: var(--navy);
     }
 
     .policy-card-desc {
-      color: var(--slate);
+      color: rgba(255,255,255,0.8);
       font-size: 0.95rem;
       margin: 0;
       line-height: 1.5;
+    }
+
+    .policy-card.selected .policy-card-desc {
+      color: rgba(15,36,64,0.7);
     }
 
     /* Policy info panel (shown after selection) */
@@ -428,6 +446,11 @@
     .trade-card h3 {
       margin: 0;
       font-size: 1.1rem;
+      color: var(--white);
+    }
+
+    .trade-card.selected h3 {
+      color: var(--navy);
     }
 
     /* Repair/Replace toggle section */
@@ -473,12 +496,21 @@
     .repair-replace-card h3 {
       margin: 0;
       font-size: 1.25rem;
+      color: var(--white);
+    }
+
+    .repair-replace-card.selected h3 {
+      color: var(--navy);
     }
 
     .repair-replace-subtitle {
-      color: var(--slate);
+      color: rgba(255,255,255,0.8);
       font-size: 0.95rem;
       margin: 0;
+    }
+
+    .repair-replace-card.selected .repair-replace-subtitle {
+      color: rgba(15,36,64,0.7);
     }
 
     /* Multi-trade repair/replace table */
@@ -515,12 +547,13 @@
 
     .toggle-btn {
       padding: var(--sp-2) var(--sp-4);
-      border: 1px solid rgba(255,255,255,0.2);
+      border: 1px solid rgba(0,0,0,0.2);
       background: transparent;
-      color: var(--white);
+      color: var(--navy);
       border-radius: var(--radius-sm);
       cursor: pointer;
       font-size: 0.9rem;
+      font-weight: 500;
       transition: all var(--duration) var(--ease);
     }
 
@@ -530,7 +563,7 @@
       border-color: var(--amber);
     }
 
-    .toggle-btn:hover {
+    .toggle-btn:not(.active):hover {
       border-color: var(--amber);
       color: var(--amber);
     }
@@ -1401,31 +1434,4 @@
         if (user && !CONFIG?.DEMO_MODE && window.sb) {
           try {
             const { data: existingClaim } = await window.sb
-              .from('claims')
-              .select('id')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            if (existingClaim) {
-              window.location.href = '/dashboard.html';
-              return;
-            }
-          } catch (e) {
-            // PGRST116 = no rows — new user, proceed with intake
-          }
-        }
-      } catch (error) {
-        console.error('Auth error:', error);
-      }
-    }
-
-    // Initialize on DOM ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initPage);
-    } else {
-      initPage();
-    }
-  </script>
-</body>
-</html>
+              .from('claim
