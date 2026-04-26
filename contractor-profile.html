@@ -1636,6 +1636,7 @@
 
         function updateContractTemplateView() {
             const el = document.getElementById('viewContractTemplate');
+            if (!el) return; // element removed in new grid UI (IMP-009)
             if (contractorRecord && contractorRecord.contract_pdf_url) {
                 // Session 254: XSS hardening — build DOM instead of templated innerHTML
                 // so that contract_pdf_url can never inject markup or handlers.
