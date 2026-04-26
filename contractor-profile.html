@@ -1617,7 +1617,8 @@
                 showUploadStatus('Contract template uploaded successfully!', 'success');
 
                 // Show anchor text help
-                document.getElementById('contractAnchorHelp').style.display = 'block';
+                const anchorHelp1 = document.getElementById('contractAnchorHelp');
+                if (anchorHelp1) anchorHelp1.style.display = 'block';
             } catch (err) {
                 console.error('Error uploading contract template:', err);
                 showUploadStatus('Failed to upload. Please try again.', 'error');
@@ -1660,7 +1661,8 @@
                 el.appendChild(link);
                 el.appendChild(document.createTextNode(' '));
                 el.appendChild(hint);
-                document.getElementById('contractAnchorHelp').style.display = 'block';
+                const anchorHelp2 = document.getElementById('contractAnchorHelp');
+                if (anchorHelp2) anchorHelp2.style.display = 'block';
             } else {
                 el.textContent = 'No contract uploaded';
             }
