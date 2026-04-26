@@ -1786,7 +1786,9 @@
 
     // ── Siding conditional handlers ────────────────────────────────────────────
     function handleTrimColorChange() {
-      const val = document.getElementById('trimColorType').value;
+      const trimEl = document.getElementById('trimColorType');
+      if (!trimEl) return; // element not present (D-164: trim captured in Hover pre-bid)
+      const val = trimEl.value;
       const otherGroup = document.getElementById('trimColorOtherGroup');
       if (otherGroup) otherGroup.style.display = val === 'Other' ? 'block' : 'none';
     }
