@@ -67,12 +67,12 @@
     .bid-card-avatar { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--mid); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; color: var(--amber); flex-shrink: 0; overflow: hidden; }
     .bid-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .bid-card-name { font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 2px; }
-    .bid-card-meta { font-size: 0.85rem; color: var(--slate); display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+    .bid-card-meta { font-size: 0.85rem; color: rgba(255,255,255,0.65); display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 
     /* Bid Metrics */
     .bid-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-bottom: var(--sp-6); }
     .bid-metric { display: flex; flex-direction: column; gap: 2px; }
-    .bid-metric-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--slate); }
+    .bid-metric-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); }
     .bid-metric-value { font-size: 1rem; font-weight: 700; color: var(--white); }
     .bid-metric-value.price { font-size: 1.35rem; color: var(--amber); }
 
@@ -84,7 +84,7 @@
     .bid-badge.warning { background: var(--amber-light); color: #92400E; }
 
     /* Bid Message */
-    .bid-message { background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-6); font-size: 0.9rem; color: var(--slate); line-height: 1.6; font-style: italic; border-left: 3px solid var(--amber); }
+    .bid-message { background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-6); font-size: 0.9rem; color: rgba(255,255,255,0.85); line-height: 1.6; font-style: italic; border-left: 3px solid var(--amber); }
 
     /* Bid Card Actions */
     .bid-card-actions { display: flex; gap: var(--sp-3); }
@@ -118,11 +118,11 @@
     /* Company Info */
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
     .info-item { display: flex; flex-direction: column; gap: 2px; }
-    .info-item-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--slate); }
+    .info-item-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.6); }
     .info-item-value { font-size: 1rem; font-weight: 600; color: var(--white); }
 
     /* Why Choose Us */
-    .why-choose { color: var(--slate); line-height: 1.8; }
+    .why-choose { color: rgba(255,255,255,0.85); line-height: 1.8; }
 
     /* Reviews Links */
     .review-links { display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -144,7 +144,7 @@
 
     /* Testimonials */
     .testimonial { background: rgba(255,255,255,0.03); border-radius: var(--radius-md); padding: var(--sp-5); margin-bottom: var(--sp-4); border-left: 3px solid var(--amber); }
-    .testimonial-text { color: var(--slate); font-style: italic; line-height: 1.7; margin-bottom: var(--sp-3); font-size: 0.95rem; }
+    .testimonial-text { color: rgba(255,255,255,0.85); font-style: italic; line-height: 1.7; margin-bottom: var(--sp-3); font-size: 0.95rem; }
     .testimonial-author { color: var(--white); font-weight: 600; font-size: 0.85rem; }
 
     /* Bid Summary in Profile */
@@ -153,7 +153,7 @@
 
     /* Team info */
     .team-info { display: flex; flex-direction: column; gap: var(--sp-3); }
-    .team-item { display: flex; align-items: center; gap: var(--sp-3); color: var(--slate); font-size: 0.95rem; }
+    .team-item { display: flex; align-items: center; gap: var(--sp-3); color: rgba(255,255,255,0.8); font-size: 0.95rem; }
     .team-item strong { color: var(--white); }
 
     /* Photo Gallery */
@@ -2053,4 +2053,4 @@
               ${shingleItems.map(item => `<li style="font-size: 0.875rem; color: #1E3A5F;">${item}</li>`).join('')}
             </ul>
             ${notesHtml}
-            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingles other than the contractor's preferred product. Ask the contracto
+            <div style="margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid #BFDBFE;font-size:0.75rem;color:#6B7280;">⚠️ Different warranty terms may apply to shingl
