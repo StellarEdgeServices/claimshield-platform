@@ -1718,6 +1718,41 @@
             }
         }
 
+
+        // ── Reject Modal ─────────────────────────────────────────────────────────
+        function openRejectModal(contractorId, companyName) {
+            const modal = document.getElementById('rejectModal');
+            modal.dataset.contractorId = contractorId;
+            document.getElementById('rejectCompanyName').textContent = companyName || contractorId;
+            document.getElementById('rejectReason').value = '';
+            const errEl = document.getElementById('rejectError');
+            if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+            modal.classList.add('show');
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').classList.remove('show');
+            const errEl = document.getElementById('rejectError');
+            if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+        }
+
+        async function submitReject() {
+            const contractorId = document.getElementById('rejectModal').dataset.contractorId;
+            if (!contractorId) return;
+            await rejectContractor(contractorId);
+        }
+
+        // ── Logout ───────────────────────────────────────────────────────────────
+        function logout() {
+            if (typeof Auth !== 'undefined' && Auth.signOut) {
+                Auth.signOut()
+                    .then(() => { window.location.href = '/login.html'; })
+                    .catch(() => { window.location.href = '/login.html'; });
+            } else {
+                window.location.href = '/login.html';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>

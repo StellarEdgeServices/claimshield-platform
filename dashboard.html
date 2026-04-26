@@ -2733,6 +2733,108 @@
         setTimeout(() => el.classList.remove('active'), 4000);
       }
 
+
+      // ── Job Type Selection ────────────────────────────────────────────────────
+      function selectJobType(type) {
+        window.selectedJobType = type;
+        document.querySelectorAll('.job-type-btn').forEach(btn => {
+          btn.classList.toggle('selected', btn.dataset.type === type);
+        });
+        document.getElementById('repairFields').style.display  = type === 'repair'        ? 'block' : 'none';
+        document.getElementById('acvFields').style.display     = type === 'insurance_acv' ? 'block' : 'none';
+        document.getElementById('retailFields').style.display  = type === 'retail'        ? 'block' : 'none';
+        document.getElementById('jobTypeHelp').style.display   = 'block';
+      }
+
+      function showJobTypeHelp() {
+        document.getElementById('help-modal-title').textContent = 'Which payment type applies?';
+        document.getElementById('help-modal-content').innerHTML = [
+          '<p style="margin-bottom:1rem;">Not sure which option to pick? Here's a quick guide:</p>',
+          '<ul style="padding-left:1.25rem; line-height:1.9; margin-bottom:1rem;">',
+          '<li><strong>Insurance (RCV)</strong> — Your policy covers full replacement cost. Most common for storm-damage claims.</li>',
+          '<li><strong>Insurance (ACV)</strong> — Your policy pays actual cash value (depreciated). There may be a gap you cover out of pocket.</li>',
+          '<li><strong>Retail / Cash</strong> — No insurance; you're paying for the project yourself.</li>',
+          '<li><strong>Repair Only</strong> — Partial repair from a specific estimate, not a full replacement.</li>',
+          '</ul>',
+          '<p style="color:var(--slate);font-size:0.9rem;">If you're still unsure, choose <strong>Insurance (RCV)</strong> — it's the most common and can be updated later.</p>'
+        ].join('');
+        document.getElementById('help-modal').classList.add('active');
+      }
+
+      function showHelpModal(key) {
+        const helpContent = {
+          estimate: {
+            title: 'Your Insurance Estimate',
+            html: [
+              '<p>Your insurance estimate (also called a "scope of loss") is the document your adjuster creates after inspecting your property. It lists every item being repaired or replaced and the associated costs.</p>',
+              '<p style="margin-top:0.75rem;"><strong>How to get it:</strong></p>',
+              '<ul style="padding-left:1.25rem;line-height:1.8;margin-top:0.5rem;">',
+              '<li>Log in to your insurance carrier's portal and download it from your claim documents.</li>',
+              '<li>Call your adjuster and ask them to email it to you.</li>',
+              '<li>Upload a photo of the printed document — we accept PDF, Word, JPG, and PNG.</li>',
+              '</ul>',
+              '<p style="margin-top:0.75rem;color:var(--slate);font-size:0.9rem;">If you need help getting this document, use the "Help Me" option on the upload button.</p>'
+            ].join('')
+          }
+        };
+        const c = helpContent[key] || { title: 'Help', html: '<p>Please contact support for assistance.</p>' };
+        document.getElementById('help-modal-title').textContent = c.title;
+        document.getElementById('help-modal-content').innerHTML = c.html;
+        document.getElementById('help-modal').classList.add('active');
+      }
+
+      // ── Switch Contractor Modal (D-171) ───────────────────────────────────────
+      function openSwitchContractorModal() {
+        document.getElementById('switch-survey-step').classList.remove('hidden');
+        document.getElementById('switch-success-step').classList.remove('visible');
+        document.querySelectorAll('input[name="switch_reason"]').forEach(cb => { cb.checked = false; });
+        document.querySelectorAll('.switch-reason-label').forEach(lbl => lbl.classList.remove('selected'));
+        document.getElementById('switch-notes').value = '';
+        document.getElementById('switch-contractor-modal').classList.add('active');
+      }
+
+      function closeSwitchModal() {
+        document.getElementById('switch-contractor-modal').classList.remove('active');
+      }
+
+      async function submitSwitchSurvey() {
+        const btn     = document.getElementById('submit-switch-btn');
+        const reasons = Array.from(document.querySelectorAll('input[name="switch_reason"]:checked')).map(cb => cb.value);
+        const notes   = document.getElementById('switch-notes').value.trim();
+
+        btn.disabled    = true;
+        btn.textContent = 'Submitting…';
+
+        try {
+          if (sb && currentClaim?.id) {
+            const reasonText = reasons.length > 0 ? reasons.join(', ') : 'No reason provided';
+            await fetch(`${window.location.origin}/functions/v1/send-support-email`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from_name:  currentProfile?.full_name || 'Homeowner',
+                from_email: currentUser?.email || '',
+                subject:    'Switch Contractor Request',
+                message:    `Claim ID: ${currentClaim.id}\nReasons: ${reasonText}\nNotes: ${notes || '(none)'}`
+              })
+            });
+          }
+
+          document.getElementById('switch-survey-step').classList.add('hidden');
+          document.getElementById('switch-success-step').classList.add('visible');
+        } catch (err) {
+          console.error('Switch survey error:', err);
+          btn.disabled    = false;
+          btn.textContent = 'Submit Switch Request';
+          alert('There was a problem submitting your request. Please try again or contact support.');
+        }
+      }
+
+      function toggleReasonLabel(checkbox) {
+        const label = checkbox.closest('.switch-reason-label');
+        if (label) label.classList.toggle('selected', checkbox.checked);
+      }
+
       document.addEventListener('DOMContentLoaded', init);
 
     })();

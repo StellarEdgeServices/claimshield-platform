@@ -984,6 +984,95 @@
                 document.getElementById('hoverCardErrors').textContent = err.message || 'Payment failed. Please try again.';
             }
         }
+
+        // ── Show message ─────────────────────────────────────────────────────────
+        function showMessage(text, type) {
+            const el = document.getElementById('statusMessage');
+            if (!el) return;
+            el.textContent = text;
+            el.className = 'status-message ' + (type || 'success');
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (type !== 'error') {
+                setTimeout(() => { el.className = 'status-message'; el.textContent = ''; }, 5000);
+            }
+        }
+
+        // ── Setup listeners ──────────────────────────────────────────────────────
+        function setupListeners() {
+            const emailField = document.getElementById('adjusterEmail');
+            const btn        = document.getElementById('sendMeasurementEmailBtn');
+            if (!emailField || !btn) return;
+            function checkReady() {
+                const email = emailField.value.trim();
+                btn.disabled = !email || !email.includes('@');
+            }
+            emailField.addEventListener('input', checkReady);
+            const nameField = document.getElementById('adjusterName');
+            if (nameField) nameField.addEventListener('input', checkReady);
+            checkReady();
+        }
+
+        // ── Cancel Hover payment form ─────────────────────────────────────────────
+        function cancelHoverPayment() {
+            document.getElementById('hoverPaymentForm').style.display = 'none';
+            const purchaseBtn = document.getElementById('purchaseHoverBtn');
+            if (purchaseBtn) purchaseBtn.style.display = '';
+            if (hoverCardElement) hoverCardElement.clear();
+            document.getElementById('hoverCardErrors').textContent = '';
+            hoverClientSecret     = null;
+            hoverPaymentIntentId  = null;
+        }
+
+        // ── Send measurement email to adjuster ────────────────────────────────────
+        async function sendMeasurementEmail() {
+            const btn           = document.getElementById('sendMeasurementEmailBtn');
+            const adjusterName  = (document.getElementById('adjusterName')?.value  || '').trim();
+            const adjusterEmail = (document.getElementById('adjusterEmail')?.value || '').trim();
+            const adjusterPhone = (document.getElementById('adjusterPhone')?.value || '').trim();
+
+            if (!adjusterEmail || !adjusterEmail.includes('@')) {
+                showMessage("Please enter the adjuster's email address.", 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = 'Sending…';
+
+            try {
+                if (!CONFIG.DEMO_MODE && sb && currentClaim) {
+                    await Services.sendAdjusterEmail({
+                        claim_id:        currentClaim.id,
+                        adjuster_name:   adjusterName  || 'Adjuster',
+                        adjuster_email:  adjusterEmail,
+                        homeowner_name:  currentProfile?.full_name || 'Homeowner',
+                        homeowner_phone: currentProfile?.phone || adjusterPhone || '',
+                        claim_number:    currentClaim.claim_number || null,
+                        request_type:    'measurements',
+                    });
+
+                    // Save adjuster info back to claim
+                    const updates = {};
+                    if (adjusterName  && !currentClaim.adjuster_name)  updates.adjuster_name  = adjusterName;
+                    if (adjusterEmail && !currentClaim.adjuster_email) updates.adjuster_email = adjusterEmail;
+                    if (adjusterPhone && !currentClaim.adjuster_phone) updates.adjuster_phone = adjusterPhone;
+                    if (Object.keys(updates).length > 0) {
+                        await sb.from('claims').update(updates).eq('id', currentClaim.id);
+                    }
+                }
+
+                btn.textContent = '✓ Email Sent!';
+                showMessage('Email sent to your adjuster. We'll follow up if they don't respond within 48 hours.', 'success');
+                if (typeof gtag !== 'undefined') gtag('event', 'measurement_email_sent');
+
+            } catch (err) {
+                console.error('Error sending measurement email:', err);
+                btn.disabled = false;
+                btn.textContent = originalText;
+                showMessage('Failed to send email. Please try again or contact support.', 'error');
+            }
+        }
+
     </script>
 </body>
 </html>

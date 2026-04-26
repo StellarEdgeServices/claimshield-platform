@@ -409,4 +409,34 @@
           <span class="faq-arrow">&#x25BC;</span>
         </button>
         <div class="faq-answer">
-   
+          <p>No — for most roofing and gutter projects you don't need to choose a color before signing. We walk you through color selection as part of the project confirmation process, after your Hover measurements are complete. For retail siding projects, color selection happens earlier (before bids are released) because contractors need to know the exact product and profile to price accurately. Either way, we'll prompt you at the right moment and show you your options directly on your home using Hover's 3D design tools.</p>
+        </div>
+      </div>
+
+    </div><!-- /.faq-grid -->
+  </div>
+</section>
+
+<section class="cta-bottom">
+  <div class="container">
+    <h2>Ready to Get Started?</h2>
+    <p>It takes less than 2 minutes. We'll handle the rest.</p>
+    <a href="get-started.html" class="btn btn-primary btn-lg">Get Started Free</a>
+  </div>
+</section>
+
+<footer id="site-footer"></footer>
+
+<script>
+  document.querySelectorAll('.faq-question').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    });
+  });
+</script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>
