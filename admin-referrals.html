@@ -439,6 +439,14 @@
             renderTable();
         }
 
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
         function updateSummaryCards() {
             const blocked       = allPartners.filter(p => p.payments_blocked).length;
             const pendingReview = allPartners.filter(p => p.w9_submitted_at && !p.w9_verified_at).length;
