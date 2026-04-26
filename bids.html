@@ -1920,13 +1920,6 @@
     };
 
     // ── Helpers ──
-    function esc(str) {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
     function formatDate(dateStr) {
       try {
         const d = new Date(dateStr);
