@@ -30,6 +30,7 @@ const Nav = {
       { href: '/contractor-opportunities.html',  label: 'Opportunities', id: 'opportunities' },
       { href: '/contractor-profile.html',        label: 'Profile',       id: 'profile' },
       { href: '/contractor-settings.html',       label: 'Settings',      id: 'settings' },
+      { href: '/contractor-auto-bids.html',      label: 'Auto Bids',     id: 'auto-bids' },
       { href: '/contractor-how-it-works.html',   label: 'How It Works',  id: 'how-it-works' },
       { href: '/contractor-faq.html',            label: 'FAQ',           id: 'faq' },
     ] : [
@@ -98,6 +99,7 @@ const Nav = {
       { href: '/contractor-opportunities.html', label: 'Opportunities' },
       { href: '/contractor-profile.html',       label: 'Profile' },
       { href: '/contractor-settings.html',      label: 'Settings' },
+      { href: '/contractor-auto-bids.html',     label: 'Auto Bids' },
       { href: '/contractor-how-it-works.html',  label: 'How It Works' },
       { href: '/contractor-faq.html',           label: 'FAQ' },
     ] : [
