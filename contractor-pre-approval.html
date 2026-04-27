@@ -444,6 +444,31 @@
 
             if (error) throw error;
             contractor.onboarding_step = 2;
+
+            // Notify admin — non-fatal
+            try {
+                const tradesDisplay = selectedTrades.join(', ') || 'N/A';
+                const licenseDisplay = noLicense ? 'No license required' : (licenseNumber || 'Not provided');
+                await sb.functions.invoke('send-support-email', {
+                    body: {
+                        from_name:  contractor.company_name || contractor.contact_name || 'New Applicant',
+                        from_email: currentUser.email,
+                        subject:    'New Contractor Application — Review Required',
+                        message:    `New contractor application submitted and ready for review.
+
+Company:  ${contractor.company_name || '(not provided)'}
+Contact:  ${contractor.contact_name || '(not provided)'}
+Email:    ${currentUser.email}
+Trades:   ${tradesDisplay}
+License:  ${licenseDisplay}
+
+Review at: https://otterquote.com/admin-contractors.html`,
+                    }
+                });
+            } catch (notifyErr) {
+                console.warn('Admin notification failed (non-fatal):', notifyErr);
+            }
+
             showStep(3);
         } catch (err) {
             console.error('Step 2 error:', err);

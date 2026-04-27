@@ -50,6 +50,7 @@ const EDGE_FUNCTIONS_TO_PING: string[] = [
   "process-dunning",
   "send-support-email",
   "admin-contractor-action",
+  "send-incomplete-onboarding-reminders",
 ];
 
 // Cron job staleness thresholds (milliseconds)
