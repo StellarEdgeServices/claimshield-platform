@@ -12,3 +12,20 @@
 # Branch deploy previews (feature branches)
 [context.deploy-preview]
   publish = "."
+
+# Force UTF-8 charset on all HTML responses.
+# Without this explicit header, some browsers fall back to Windows-1252 encoding
+# which garbles UTF-8 multi-byte characters (em dashes render as "â??", etc.).
+# This is the root-cause fix. HTML entities in source files are belt-and-suspenders.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Content-Type = "text/html; charset=UTF-8"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
