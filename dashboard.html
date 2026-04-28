@@ -1339,7 +1339,9 @@
         currentProfile = await Auth.getProfile();
         if (!currentProfile) {
           // Create default profile if doesn't exist — use actual DB column names
-          const signupData = JSON.parse(sessionStorage.getItem('cs_signup') || '{}');
+          // D-178 fix: read from localStorage first (persists after magic link redirect),
+          // fall back to sessionStorage (same-tab flows), then empty object.
+          const signupData = JSON.parse(localStorage.getItem('cs_signup') || sessionStorage.getItem('cs_signup') || '{}');
           const firstName = signupData.first_name || currentUser.user_metadata?.full_name?.split(' ')[0] || '';
           const lastName = signupData.last_name || currentUser.user_metadata?.full_name?.split(' ')[1] || '';
           currentProfile = {
