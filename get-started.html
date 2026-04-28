@@ -9,10 +9,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
-<title>Get Started â Free Roofing & Exterior Contractor Matching Â· OtterQuote</title>
+<title>Get Started Ã¢ÂÂ Free Roofing & Exterior Contractor Matching ÃÂ· OtterQuote</title>
 <meta name="description" content="Create your free OtterQuote account and start getting competitive quotes from qualified contractors for your roofing and exterior projects.">
 <link rel="canonical" href="https://otterquote.com/get-started.html">
-<meta property="og:title" content="Get Started â Free Roofing & Exterior Contractor Matching Â· OtterQuote">
+<meta property="og:title" content="Get Started Ã¢ÂÂ Free Roofing & Exterior Contractor Matching ÃÂ· OtterQuote">
 <meta property="og:description" content="Create your free OtterQuote account and start getting competitive quotes from qualified contractors for your roofing and exterior projects.">
 <meta property="og:url" content="https://otterquote.com/get-started.html">
 <meta property="og:type" content="website">
@@ -164,7 +164,7 @@
 }
 .benefit-text p { font-size: 0.85rem; }
 
-/* ââ Magic link sent state ââ */
+/* Ã¢ÂÂÃ¢ÂÂ Magic link sent state Ã¢ÂÂÃ¢ÂÂ */
 .magic-link-sent {
   display: none;
   text-align: center;
@@ -198,7 +198,7 @@
   font-size: 0.9rem;
 }
 
-/* ââ Loading ââ */
+/* Ã¢ÂÂÃ¢ÂÂ Loading Ã¢ÂÂÃ¢ÂÂ */
 .btn-loading {
   position: relative;
   color: transparent !important;
@@ -215,7 +215,7 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ââ SMS Consent Checkbox ââ */
+/* Ã¢ÂÂÃ¢ÂÂ SMS Consent Checkbox Ã¢ÂÂÃ¢ÂÂ */
 .form-checkbox {
   appearance: none;
   width: 20px;
@@ -238,7 +238,7 @@
 }
 
 .form-checkbox:checked::after {
-  content: 'â';
+  content: 'Ã¢ÂÂ';
   color: var(--navy);
   font-size: 0.75rem;
   font-weight: 700;
@@ -249,7 +249,7 @@
   height: 100%;
 }
 
-/* ââ Responsive ââ */
+/* Ã¢ÂÂÃ¢ÂÂ Responsive Ã¢ÂÂÃ¢ÂÂ */
 @media (max-width: 768px) {
   .gs-layout { grid-template-columns: 1fr; }
   .gs-right {
@@ -294,7 +294,7 @@
         <div class="form-group">
           <label class="form-label" for="email">Email</label>
           <input type="email" id="email" class="form-input" required autocomplete="email" placeholder="jane@example.com">
-          <span class="form-hint">We'll send you a secure login link â no password needed.</span>
+          <span class="form-hint">We'll send you a secure login link Ã¢ÂÂ no password needed.</span>
         </div>
 
         <div class="form-group">
@@ -382,7 +382,7 @@
         <div class="benefit-icon">&#x2709;&#xFE0F;</div>
         <div class="benefit-text">
           <h4>Check your email</h4>
-          <p>We'll send a secure magic link. Click it to log in â no password to remember.</p>
+          <p>We'll send a secure magic link. Click it to log in Ã¢ÂÂ no password to remember.</p>
         </div>
       </div>
 
@@ -441,7 +441,7 @@
     });
   });
 
-  // Phone formatting â handles manual typing, paste, and browser autofill
+  // Phone formatting Ã¢ÂÂ handles manual typing, paste, and browser autofill
   const phoneInput = document.getElementById('phone');
   function formatPhone() {
     let v = phoneInput.value.replace(/\D/g, '');
@@ -458,7 +458,7 @@
   phoneInput.addEventListener('input', formatPhone);
   phoneInput.addEventListener('change', formatPhone); // fires once after autofill completes
 
-  // D-189: Fire HubSpot contact creation â non-blocking, best-effort.
+  // D-189: Fire HubSpot contact creation Ã¢ÂÂ non-blocking, best-effort.
   // Called immediately after validation passes. Errors must never surface to the user.
   function fireHubSpotContact(data) {
     fetch(CONFIG.SUPABASE_URL + '/functions/v1/create-hubspot-contact', {
@@ -468,7 +468,7 @@
         'apikey': CONFIG.SUPABASE_ANON_KEY,
       },
       body: JSON.stringify(data),
-    }).catch(function() {}); // Intentionally fire-and-forget â do not await
+    }).catch(function() {}); // Intentionally fire-and-forget Ã¢ÂÂ do not await
   }
 
   // Form submission
@@ -571,7 +571,7 @@
         referral_source: referralSource || 'web',
       });
 
-      // GA4 conversion event â homeowner funnel
+      // GA4 conversion event Ã¢ÂÂ homeowner funnel
       gtag('event', 'homeowner_signup', {
         job_type: new URLSearchParams(location.search).get('job_type') || null,
         source: new URLSearchParams(location.search).get('utm_source') || referralSource || 'direct',
@@ -601,7 +601,7 @@
     }
   });
 
-  // Check if user is already logged in â route to appropriate dashboard
+  // Check if user is already logged in Ã¢ÂÂ route to appropriate dashboard
   Auth.getUser().then(async user => {
     if (user) {
       await Auth.redirectToDashboard();
