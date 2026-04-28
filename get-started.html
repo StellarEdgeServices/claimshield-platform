@@ -306,7 +306,7 @@
         <!-- TWILIO MESSAGE_FLOW: "I agree to receive transactional SMS from Otter Quotes. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe." -->
         <div class="form-group">
           <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; font-weight: 400;">
-            <input type="checkbox" id="sms-consent" class="form-checkbox" required style="margin-top: 2px; flex-shrink: 0;">
+            <input type="checkbox" id="sms-consent" class="form-checkbox" style="margin-top: 2px; flex-shrink: 0;">
             <span style="font-size: 0.9rem; line-height: 1.5;">I agree to receive transactional SMS from Otter Quotes. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe. See our <a href="privacy.html" style="color: var(--amber); text-decoration: underline;">Privacy Policy</a> and <a href="terms.html" style="color: var(--amber); text-decoration: underline;">Terms of Service</a>.</span>
           </label>
         </div>
@@ -489,12 +489,6 @@
     // Validation
     if (!firstName || !lastName || !email || !phone || !address) {
       errorEl.textContent = 'Please fill in all required fields.';
-      errorEl.style.display = 'block';
-      return;
-    }
-
-    if (!smsConsent) {
-      errorEl.textContent = 'Please consent to SMS messages to continue.';
       errorEl.style.display = 'block';
       return;
     }
