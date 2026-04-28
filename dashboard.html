@@ -1339,7 +1339,7 @@
         currentProfile = await Auth.getProfile();
         if (!currentProfile) {
           // Create default profile if doesn't exist — use actual DB column names
-          const signupData = JSON.parse(sessionStorage.getItem('cs_signup') || '{}');
+          const signupData = JSON.parse(localStorage.getItem('cs_signup') || sessionStorage.getItem('cs_signup') || '{}'); // D-178 fix: localStorage persists after magic link redirect
           const firstName = signupData.first_name || currentUser.user_metadata?.full_name?.split(' ')[0] || '';
           const lastName = signupData.last_name || currentUser.user_metadata?.full_name?.split(' ')[1] || '';
           currentProfile = {
@@ -1360,7 +1360,7 @@
           }
         } else if (!currentProfile.full_name) {
           // Profile row exists but name was never saved — derive from auth metadata and persist
-          const signupData = JSON.parse(sessionStorage.getItem('cs_signup') || '{}');
+          const signupData = JSON.parse(localStorage.getItem('cs_signup') || sessionStorage.getItem('cs_signup') || '{}'); // D-178 fix: localStorage persists after magic link redirect
           const firstName = signupData.first_name || currentUser.user_metadata?.full_name?.split(' ')[0] || '';
           const lastName  = signupData.last_name  || currentUser.user_metadata?.full_name?.split(' ')[1] || '';
           const derivedName = (firstName + ' ' + lastName).trim() || currentUser.email?.split('@')[0] || '';
