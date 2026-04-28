@@ -9,7 +9,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
-    <title>Contractor Profile - Otter Quotes</title>
+    <title>Contractor Profile - OtterQuote</title>
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
@@ -628,8 +628,8 @@
     <main>
         <!-- Incomplete-profile banner: shown when redirected from bid form -->
         <div id="incompleteBanner" style="display:none; background:#FEF3C7; border-bottom:3px solid #E07B00; padding:1rem 1.5rem; text-align:center;">
-            <strong style="color:#92400E;">⚠️ Complete your profile before bidding.</strong>
-            <span style="color:#78350F; margin-left:0.5rem;">Please fill in your company name, phone number, trades, and service counties — then you'll be ready to submit bids.</span>
+            <strong style="color:#92400E;">â ï¸ Complete your profile before bidding.</strong>
+            <span style="color:#78350F; margin-left:0.5rem;">Please fill in your company name, phone number, trades, and service counties â then you'll be ready to submit bids.</span>
         </div>
 
         <!-- Header -->
@@ -644,7 +644,7 @@
         <div class="container">
             <!-- Company Info Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">🏢</span>Company Information</h2>
+                <h2><span class="card-icon">ð¢</span>Company Information</h2>
 
                 <div class="edit-toggle" id="companyEditToggle">
                     <button class="btn btn-primary" onclick="toggleEdit('company')">Edit Company Info</button>
@@ -760,7 +760,7 @@
 
             <!-- Photos Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">📸</span>Photos</h2>
+                <h2><span class="card-icon">ð¸</span>Photos</h2>
 
                 <div class="edit-toggle">
                     <button class="btn btn-primary" onclick="toggleEdit('photos')">Edit Photos</button>
@@ -771,7 +771,7 @@
                     <div class="form-group">
                         <label class="form-label">Owner Photo</label>
                         <div style="width: 200px; height: 200px; background-color: var(--light); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--slate); margin-bottom: var(--sp-6);">
-                            📷 No photo
+                            ð· No photo
                         </div>
                     </div>
 
@@ -790,7 +790,7 @@
                         <div class="image-upload">
                             <input type="file" id="ownerPhotoInput" accept="image/*">
                             <label for="ownerPhotoInput" class="upload-label">
-                                📸 Click to upload owner photo or drag and drop
+                                ð¸ Click to upload owner photo or drag and drop
                             </label>
                         </div>
                         <div id="ownerPhotoPreview"></div>
@@ -801,7 +801,7 @@
                         <div class="image-upload">
                             <input type="file" id="galleryInput" accept="image/*" multiple>
                             <label for="galleryInput" class="upload-label">
-                                📸 Click to upload project photos or drag and drop
+                                ð¸ Click to upload project photos or drag and drop
                             </label>
                         </div>
                         <div class="gallery-grid" id="galleryPreview"></div>
@@ -816,7 +816,7 @@
 
             <!-- Credentials Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">✓</span>Credentials & Verification</h2>
+                <h2><span class="card-icon">â</span>Credentials & Verification</h2>
 
                 <!-- View Mode -->
                 <div id="credentialsView">
@@ -894,7 +894,7 @@
 
             <!-- Your Documents Card (IMP-007) -->
             <div class="profile-card">
-                <h2><span class="card-icon">📋</span>Your Documents</h2>
+                <h2><span class="card-icon">ð</span>Your Documents</h2>
 
                 <p style="color: var(--slate); margin-bottom: var(--sp-6); font-size: 0.95rem;">
                     Documents you uploaded during the contractor onboarding process. You can view or replace them here.
@@ -931,7 +931,7 @@
 
             <!-- Reviews & Ratings Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">⭐</span>Reviews & Ratings</h2>
+                <h2><span class="card-icon">â­</span>Reviews & Ratings</h2>
 
                 <div class="edit-toggle">
                     <button class="btn btn-primary" onclick="toggleEdit('reviews')">Edit Review Links</button>
@@ -999,7 +999,7 @@
 
             <!-- Service Area Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">📍</span>Service Area & Trades</h2>
+                <h2><span class="card-icon">ð</span>Service Area & Trades</h2>
 
                 <!-- View Mode -->
                 <div id="serviceAreaView">
@@ -1046,31 +1046,31 @@
 
             <!-- Contract Templates Card (IMP-009) -->
             <div class="profile-card" id="contract-templates">
-                <h2><span class="card-icon">📑</span>Contract Templates</h2>
+                <h2><span class="card-icon">ð</span>Contract Templates</h2>
 
                 <div class="info-box" style="margin-bottom: var(--sp-6);">
-                    Upload your contract template for each type of work. Otter Quotes will auto-populate your company details and get it signed by the homeowner. The contract is sent for e-signature via DocuSign.
+                    Upload your contract template for each type of work. OtterQuote will auto-populate your company details and get it signed by the homeowner. The contract is sent for e-signature via DocuSign.
                 </div>
 
                 <div style="margin-bottom: var(--sp-6);">
                     <h3 style="font-size: 1rem; margin-bottom: var(--sp-3); color: var(--text-secondary);">Auto-Fill Fields Detected</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--sp-3);">
-                        Otter Quotes scans your contract for these labels and auto-fills the corresponding data:
+                        OtterQuote scans your contract for these labels and auto-fills the corresponding data:
                     </p>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); font-size: 0.85rem;">
-                        <div><strong>Name</strong> → Homeowner name</div>
-                        <div><strong>Address:</strong> → Property address</div>
-                        <div><strong>Phone</strong> → Homeowner phone</div>
-                        <div><strong>Email:</strong> → Homeowner email</div>
-                        <div><strong>Insurance Co</strong> → Insurance carrier</div>
-                        <div><strong>Claim #</strong> → Claim number</div>
-                        <div><strong>Deductible:</strong> → Deductible amount</div>
-                        <div><strong>Contract Price:</strong> → Bid amount</div>
-                        <div><strong>Material:</strong> → Shingle brand/type</div>
-                        <div><strong>Warranty:</strong> → Warranty years</div>
+                        <div><strong>Name</strong> â Homeowner name</div>
+                        <div><strong>Address:</strong> â Property address</div>
+                        <div><strong>Phone</strong> â Homeowner phone</div>
+                        <div><strong>Email:</strong> â Homeowner email</div>
+                        <div><strong>Insurance Co</strong> â Insurance carrier</div>
+                        <div><strong>Claim #</strong> â Claim number</div>
+                        <div><strong>Deductible:</strong> â Deductible amount</div>
+                        <div><strong>Contract Price:</strong> â Bid amount</div>
+                        <div><strong>Material:</strong> â Shingle brand/type</div>
+                        <div><strong>Warranty:</strong> â Warranty years</div>
                     </div>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: var(--sp-3);">
-                        Tip: Include these exact labels in your contract to enable auto-fill. Fields not found will be left blank for manual entry. After uploading a template, click <strong>Review Mapping</strong> to customize which labels Otter Quotes looks for.
+                        Tip: Include these exact labels in your contract to enable auto-fill. Fields not found will be left blank for manual entry. After uploading a template, click <strong>Review Mapping</strong> to customize which labels OtterQuote looks for.
                     </p>
                 </div>
 
@@ -1090,15 +1090,15 @@
                             <h2 style="font-size: 1.25rem; margin: 0;">Review Field Mapping</h2>
                             <p id="fieldMappingSubtitle" style="font-size: 0.85rem; color: var(--text-muted); margin: var(--sp-1) 0 0;"></p>
                         </div>
-                        <button onclick="closeFieldMappingModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button>
+                        <button onclick="closeFieldMappingModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); line-height: 1;">â</button>
                     </div>
                     <p style="font-size: 0.9rem; color: var(--slate); margin-bottom: var(--sp-5);">
-                        Otter Quotes searches your PDF for the label text in the left column and replaces it with the Otter Quotes data shown on the right. If your contract uses different label text, update the left column to match exactly.
+                        OtterQuote searches your PDF for the label text in the left column and replaces it with the OtterQuote data shown on the right. If your contract uses different label text, update the left column to match exactly.
                     </p>
                     <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-2);">
                         <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Label in Your Contract</div>
                         <div></div>
-                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Otter Quotes Data</div>
+                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">OtterQuote Data</div>
                     </div>
                     <div id="fieldMappingRows" style="display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--sp-2); align-items: center;">
                         <!-- Populated by JS -->
@@ -1111,48 +1111,48 @@
                 </div>
             </div>
 
-            <!-- Project Confirmation Templates Card (D-161) — 8-slot grid, one per trade × funding type -->
+            <!-- Project Confirmation Templates Card (D-161) â 8-slot grid, one per trade Ã funding type -->
             <div class="profile-card" id="pc-templates">
-                <h2><span class="card-icon">📋</span>Project Confirmation Templates</h2>
+                <h2><span class="card-icon">ð</span>Project Confirmation Templates</h2>
 
                 <div class="info-box" style="margin-bottom: var(--sp-6);">
-                    Upload a project confirmation PDF template for each trade and funding type. After a homeowner signs the main contract, Otter Quotes selects the matching template and sends it to capture full scope details — structures, colors, materials, skylights, and work authorizations. Otter Quotes auto-fills homeowner name and property address before sending for e-signature via DocuSign.
+                    Upload a project confirmation PDF template for each trade and funding type. After a homeowner signs the main contract, OtterQuote selects the matching template and sends it to capture full scope details â structures, colors, materials, skylights, and work authorizations. OtterQuote auto-fills homeowner name and property address before sending for e-signature via DocuSign.
                 </div>
 
                 <div class="info-box" style="margin-bottom: var(--sp-6); background: rgba(245,158,11,0.08); border-left: 3px solid var(--amber);">
-                    <strong>⚠️ Templates are per-trade and per-funding type</strong> — your confirmation docs differ by trade and by insurance vs. retail, just like your contracts. Upload the right template into each slot you use.
+                    <strong>â ï¸ Templates are per-trade and per-funding type</strong> â your confirmation docs differ by trade and by insurance vs. retail, just like your contracts. Upload the right template into each slot you use.
                 </div>
 
                 <div id="pcTemplatesGrid" style="display: grid; gap: var(--sp-6); margin-top: var(--sp-8);">
-                    <div style="color: var(--slate); font-size: 0.875rem;">Loading templates…</div>
+                    <div style="color: var(--slate); font-size: 0.875rem;">Loading templatesâ¦</div>
                 </div>
             </div>
 
             <!-- Platform Stats Card -->
             <div class="profile-card">
-                <h2><span class="card-icon">📊</span>Platform Statistics</h2>
+                <h2><span class="card-icon">ð</span>Platform Statistics</h2>
 
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-label">Otter Quotes Jobs</div>
+                        <div class="stat-label">OtterQuote Jobs</div>
                         <div class="stat-value" id="statJobs">0</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-label">Platform Rating</div>
-                        <div class="stat-value" id="statRating">—</div>
+                        <div class="stat-value" id="statRating">â</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-label">Avg. First Contact</div>
-                        <div class="stat-value" id="statFirstContact">—</div>
+                        <div class="stat-value" id="statFirstContact">â</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-label">Avg. Bid Response</div>
-                        <div class="stat-value" id="statBidResponse">—</div>
+                        <div class="stat-value" id="statBidResponse">â</div>
                     </div>
                 </div>
 
                 <div class="info-box" style="margin-top: var(--sp-8);">
-                    Complete your first job with Otter Quotes to unlock performance metrics and recommendations algorithms.
+                    Complete your first job with OtterQuote to unlock performance metrics and recommendations algorithms.
                 </div>
             </div>
         </div>
@@ -1166,7 +1166,7 @@
     <script src="js/nav.js"></script>
 
     <script>
-        // CPA version — must match contractor-dashboard.html. Bump both when the CPA changes.
+        // CPA version â must match contractor-dashboard.html. Bump both when the CPA changes.
         const CURRENT_CPA_VERSION = 'v1-2026-04';
 
         // State
@@ -1174,7 +1174,7 @@
         let contractorRecord = null;
         let contractorCertifications = [];
 
-        // ── Initialize: Load contractor data from Supabase ──
+        // ââ Initialize: Load contractor data from Supabase ââ
         async function initProfile() {
             currentUser = await Auth.requireAuth('contractor');
             if (!currentUser && !CONFIG.DEMO_MODE) return;
@@ -1195,7 +1195,7 @@
 
                     contractorRecord = data;
 
-                    // CPA version guard — redirect to dashboard to show re-acceptance modal
+                    // CPA version guard â redirect to dashboard to show re-acceptance modal
                     if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION) {
                         if (!localStorage.getItem('oq_cpa_redirect_guard')) {
                             localStorage.setItem('oq_cpa_redirect_guard', '1');
@@ -1244,23 +1244,23 @@
             renderCertifications();
         }
 
-        // ── Populate view fields from contractor data ──
+        // ââ Populate view fields from contractor data ââ
         function populateViewFromData(c) {
-            document.getElementById('viewBusinessName').textContent = c.company_name || '—';
-            document.getElementById('viewOwnerName').textContent = c.contact_name || '—';
+            document.getElementById('viewBusinessName').textContent = c.company_name || 'â';
+            document.getElementById('viewOwnerName').textContent = c.contact_name || 'â';
             const _rawPhone = (c.phone || '').replace(/\D/g, '');
             document.getElementById('viewPhone').textContent = _rawPhone.length === 10
                 ? `(${_rawPhone.slice(0,3)}) ${_rawPhone.slice(3,6)}-${_rawPhone.slice(6)}`
                 : (_rawPhone.length === 11 && _rawPhone[0] === '1'
                     ? `(${_rawPhone.slice(1,4)}) ${_rawPhone.slice(4,7)}-${_rawPhone.slice(7)}`
-                    : c.phone || '—');
-            document.getElementById('viewEmail').textContent = c.email || '—';
+                    : c.phone || 'â');
+            document.getElementById('viewEmail').textContent = c.email || 'â';
             const website = c.website_url || '';
             document.getElementById('viewWebsite').innerHTML = website
                 ? `<a href="${website.startsWith('http') ? website : 'https://' + website}" target="_blank" style="color: var(--amber);">${website}</a>`
-                : '—';
-            document.getElementById('viewYearsInBusiness').textContent = c.years_in_business || '—';
-            document.getElementById('viewTeamSize').textContent = c.num_employees || '—';
+                : 'â';
+            document.getElementById('viewYearsInBusiness').textContent = c.years_in_business || 'â';
+            document.getElementById('viewTeamSize').textContent = c.num_employees || 'â';
             document.getElementById('viewAboutUs').textContent = c.about_us || 'Not yet provided.';
             document.getElementById('viewWhyChoose').textContent = c.why_choose_us || 'Not yet provided.';
 
@@ -1268,18 +1268,18 @@
             const trades = c.trades || [];
             document.getElementById('viewTrades').textContent = trades.length
                 ? trades.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')
-                : '—';
-            document.getElementById('viewBrands').textContent = c.preferred_brands ? c.preferred_brands.join(', ') : '—';
-            document.getElementById('viewServiceArea').textContent = c.service_area_description || c.service_counties ? (c.service_counties || []).join(', ') : '—';
+                : 'â';
+            document.getElementById('viewBrands').textContent = c.preferred_brands ? c.preferred_brands.join(', ') : 'â';
+            document.getElementById('viewServiceArea').textContent = c.service_area_description || c.service_counties ? (c.service_counties || []).join(', ') : 'â';
 
             // Contract template
             updateContractTemplateView();
             // Note: PC template grid (D-161) is rendered by loadPcTemplates()
-            // called from DOMContentLoaded — updateConfirmationTemplateView() was
+            // called from DOMContentLoaded â updateConfirmationTemplateView() was
             // retired (86e110nay/86e110ngd fix).
         }
 
-        // ── Populate edit fields from contractor data ──
+        // ââ Populate edit fields from contractor data ââ
         function populateEditFromData(c) {
             document.getElementById('editBusinessName').value = c.company_name || '';
             document.getElementById('editOwnerName').value = c.contact_name || '';
@@ -1297,7 +1297,7 @@
             document.getElementById('editServiceCounties').value = serviceCounties.join(', ');
             document.getElementById('editServiceStates').value = serviceStates.join(', ');
 
-            // Review links — populate edit inputs and rebuild view mode
+            // Review links â populate edit inputs and rebuild view mode
             document.getElementById('googleReviewsUrl').value = c.google_reviews_url || '';
             document.getElementById('bbbUrl').value = c.bbb_url || '';
             document.getElementById('angiUrl').value = c.angi_url || '';
@@ -1322,7 +1322,7 @@
             document.getElementById('editHasGeneralLiability').checked = !!c.has_general_liability;
         }
 
-        // ── Render credentials from licenses data ──
+        // ââ Render credentials from licenses data ââ
         function renderCredentials(licenses) {
             const container = document.getElementById('credentialsView');
             let html = '';
@@ -1330,7 +1330,7 @@
             if (licenses.length > 0) {
                 html += licenses.map(lic => `
                     <div class="form-group">
-                        <label class="form-label">Contractor License — ${lic.municipality || 'General'}</label>
+                        <label class="form-label">Contractor License â ${lic.municipality || 'General'}</label>
                         <div>
                             <span style="font-weight: 600; color: var(--navy);">${lic.license_number || 'On file'}</span>
                             <span class="badge ${lic.verified ? 'badge-verified' : 'badge-pending'}">${lic.verified ? 'Verified' : 'Pending Verification'}</span>
@@ -1352,7 +1352,7 @@
                     <label class="form-label">Workers' Compensation Insurance</label>
                     <div>
                         ${hasWC
-                            ? `<span class="badge badge-verified">✓ On File</span>`
+                            ? `<span class="badge badge-verified">â On File</span>`
                             : `<span class="badge badge-pending">Not on File</span>`
                         }
                     </div>
@@ -1361,7 +1361,7 @@
                     <label class="form-label">General Liability Insurance</label>
                     <div>
                         ${hasGL
-                            ? `<span class="badge badge-verified">✓ On File</span>`
+                            ? `<span class="badge badge-verified">â On File</span>`
                             : `<span class="badge badge-pending">Not on File</span>`
                         }
                     </div>
@@ -1389,10 +1389,10 @@
             }
         }
 
-        // ── Save profile changes to Supabase ──
+        // ââ Save profile changes to Supabase ââ
         async function saveProfile(section) {
             if (!contractorRecord || !sb) {
-                alert('Unable to save — not connected to database.');
+                alert('Unable to save â not connected to database.');
                 return;
             }
 
@@ -1542,8 +1542,8 @@
                     alert('Failed to save changes. Please try again.');
                 }
             } else if (section === 'confirmation-template') {
-                // D-161: single-upload path retired — use uploadPcTemplateFile() per-slot instead
-                console.warn('saveProfile(confirmation-template) called — this path is deprecated (D-161). Use the PC template grid.');
+                // D-161: single-upload path retired â use uploadPcTemplateFile() per-slot instead
+                console.warn('saveProfile(confirmation-template) called â this path is deprecated (D-161). Use the PC template grid.');
             } else if (section === 'photos') {
                 // Handle photo uploads
                 const ownerPhotoInput = document.getElementById('ownerPhotoInput');
@@ -1557,8 +1557,8 @@
 
                         if (uploadError) throw uploadError;
 
-                        // Store bare filePath — bucket is private; public URLs return 404.
-                        // Signed URLs are generated on read (same pattern as contract templates — Session 266).
+                        // Store bare filePath â bucket is private; public URLs return 404.
+                        // Signed URLs are generated on read (same pattern as contract templates â Session 266).
                         await sb.from('contractors')
                             .update({ owner_photo_url: filePath, updated_at: new Date().toISOString() })
                             .eq('id', contractorRecord.id);
@@ -1573,7 +1573,7 @@
             }
         }
 
-        // ── Contract Template Upload ──
+        // ââ Contract Template Upload ââ
         async function uploadContractTemplate() {
             const input = document.getElementById('contractPdfInput');
             const status = document.getElementById('contractUploadStatus');
@@ -1606,7 +1606,7 @@
 
                 if (uploadError) throw uploadError;
 
-                // Store only the path — bucket is private; public URLs would return "Bucket not found" 404.
+                // Store only the path â bucket is private; public URLs would return "Bucket not found" 404.
                 // viewContractTemplate() mints a short-lived signed URL at click time.
                 await sb.from('contractors')
                     .update({ contract_pdf_url: filePath, updated_at: new Date().toISOString() })
@@ -1640,13 +1640,13 @@
             const el = document.getElementById('viewContractTemplate');
             if (!el) return; // element removed in new grid UI (IMP-009)
             if (contractorRecord && contractorRecord.contract_pdf_url) {
-                // Session 254: XSS hardening — build DOM instead of templated innerHTML
+                // Session 254: XSS hardening â build DOM instead of templated innerHTML
                 // so that contract_pdf_url can never inject markup or handlers.
                 el.innerHTML = '';
                 const pdfUrl = contractorRecord.contract_pdf_url;
                 const link = document.createElement('a');
                 link.href = '#';
-                link.textContent = '📄 View uploaded contract';
+                link.textContent = 'ð View uploaded contract';
                 link.style.color = 'var(--amber)';
                 link.style.textDecoration = 'none';
                 link.addEventListener('click', (e) => {
@@ -1668,7 +1668,7 @@
             }
         }
 
-        // updateConfirmationTemplateView() retired — loadPcTemplates() now renders the 8-slot grid (D-161)
+        // updateConfirmationTemplateView() retired â loadPcTemplates() now renders the 8-slot grid (D-161)
 
         // Add certification to database
         async function addCertification() {
@@ -1676,7 +1676,7 @@
             if (!certName) return;
 
             if (!contractorRecord || !sb) {
-                alert('Unable to save — not connected to database.');
+                alert('Unable to save â not connected to database.');
                 return;
             }
 
@@ -1713,7 +1713,7 @@
                 if (list) list.innerHTML = '';
             } else {
                 view.innerHTML = contractorCertifications
-                    .map(cert => `<div style="margin-bottom: var(--sp-2);">• ${cert.certification_name}</div>`)
+                    .map(cert => `<div style="margin-bottom: var(--sp-2);">â¢ ${cert.certification_name}</div>`)
                     .join('');
 
                 if (list) {
@@ -1749,7 +1749,7 @@
             }
         }
 
-        // ── Load and Display Documents (IMP-007) ──
+        // ââ Load and Display Documents (IMP-007) ââ
         async function loadDocuments() {
             if (!contractorRecord || !sb || !currentUser) {
                 // Show placeholder in demo mode
@@ -1804,7 +1804,7 @@
                             const displayName = doc.friendlyName || docFile.name;
                             let html = `
                                 <div class="document-info">
-                                    <div class="document-icon">📄</div>
+                                    <div class="document-icon">ð</div>
                                     <div class="document-details">
                                         <div class="document-name">${displayName}</div>
                                         <div class="document-date">Uploaded: ${uploadDate}</div>
@@ -1819,7 +1819,7 @@
                             if (realFiles.length > 1) {
                                 html = `
                                     <div class="document-info">
-                                        <div class="document-icon">📄</div>
+                                        <div class="document-icon">ð</div>
                                         <div class="document-details">
                                             <div class="document-name">${realFiles.length} file(s) uploaded</div>
                                             <div class="document-date">Latest: ${displayName} (${uploadDate})</div>
@@ -1836,7 +1836,7 @@
                             // Bug 6 fix: insurance subfolder may be empty because the contractor
                             // confirmed coverage via checkbox rather than uploading a PDF.
                             // If the DB flags are set, show "Confirmed on file" to match the
-                            // Credentials section — both reflect the same underlying data.
+                            // Credentials section â both reflect the same underlying data.
                             let noFileHtml;
                             if (doc.subfolder === 'insurance' &&
                                 (contractorRecord?.has_workers_comp || contractorRecord?.has_general_liability)) {
@@ -1848,7 +1848,7 @@
                         }
                     } catch (err) {
                         console.error(`Error loading ${doc.subfolder} documents:`, err);
-                        // Show placeholder on error — not "Loading..." forever
+                        // Show placeholder on error â not "Loading..." forever
                         document.getElementById(doc.elementId).innerHTML = `
                             <span style="color: var(--slate);">Not uploaded</span>
                         `;
@@ -1859,17 +1859,17 @@
             }
         }
 
-        // ── Project Confirmation Templates (D-161) — 8-slot grid ──
+        // ââ Project Confirmation Templates (D-161) â 8-slot grid ââ
 
         const PC_TEMPLATE_SLOTS = [
-            { trade: 'roofing',  fundingType: 'insurance', label: 'Roofing — Insurance' },
-            { trade: 'roofing',  fundingType: 'retail',    label: 'Roofing — Retail' },
-            { trade: 'siding',   fundingType: 'insurance', label: 'Siding — Insurance' },
-            { trade: 'siding',   fundingType: 'retail',    label: 'Siding — Retail' },
-            { trade: 'gutters',  fundingType: 'insurance', label: 'Gutters — Insurance' },
-            { trade: 'gutters',  fundingType: 'retail',    label: 'Gutters — Retail' },
-            { trade: 'windows',  fundingType: 'insurance', label: 'Windows — Insurance' },
-            { trade: 'windows',  fundingType: 'retail',    label: 'Windows — Retail' },
+            { trade: 'roofing',  fundingType: 'insurance', label: 'Roofing â Insurance' },
+            { trade: 'roofing',  fundingType: 'retail',    label: 'Roofing â Retail' },
+            { trade: 'siding',   fundingType: 'insurance', label: 'Siding â Insurance' },
+            { trade: 'siding',   fundingType: 'retail',    label: 'Siding â Retail' },
+            { trade: 'gutters',  fundingType: 'insurance', label: 'Gutters â Insurance' },
+            { trade: 'gutters',  fundingType: 'retail',    label: 'Gutters â Retail' },
+            { trade: 'windows',  fundingType: 'insurance', label: 'Windows â Insurance' },
+            { trade: 'windows',  fundingType: 'retail',    label: 'Windows â Retail' },
         ];
 
         async function loadPcTemplates() {
@@ -1892,7 +1892,7 @@
                 }
             }
 
-            // Session 254: XSS hardening — build DOM instead of templated innerHTML
+            // Session 254: XSS hardening â build DOM instead of templated innerHTML
             // so that DB-sourced file_url / filename values can never inject markup.
             gridContainer.innerHTML = '';
             const grid = document.createElement('div');
@@ -1977,7 +1977,7 @@
 
                     const iconEl = document.createElement('div');
                     iconEl.className = 'template-upload-icon';
-                    iconEl.textContent = '📋';
+                    iconEl.textContent = 'ð';
 
                     const textEl = document.createElement('div');
                     textEl.className = 'template-upload-text';
@@ -2008,11 +2008,11 @@
             gridContainer.appendChild(grid);
         }
 
-        // View a PC template — bucket is private so mint a signed URL
+        // View a PC template â bucket is private so mint a signed URL
         async function viewPcTemplate(fileUrl) {
             if (!fileUrl) { alert('No file available for this slot.'); return; }
             try {
-                // Extract storage path — handles both full public URL and bare path
+                // Extract storage path â handles both full public URL and bare path
                 const pathMatch = fileUrl.match(/contractor-templates\/(.+?)(\?|$)/);
                 const storagePath = pathMatch
                     ? decodeURIComponent(pathMatch[1])
@@ -2032,7 +2032,7 @@
             }
         }
 
-        // Trigger replace — creates a hidden file input if needed
+        // Trigger replace â creates a hidden file input if needed
         function replacePcTemplate(slotKey, inputId) {
             let input = document.getElementById(inputId);
             if (!input) {
@@ -2056,7 +2056,7 @@
             if (!contractorRecord || !sb) { alert('Not connected to database.'); return; }
 
             try {
-                // Store ONLY the path — bucket is private; public URLs would 404
+                // Store ONLY the path â bucket is private; public URLs would 404
                 const [trade, funding] = slotKey.split('/');
                 const timestamp = Date.now();
                 const filePath = `${contractorRecord.id}/pc_${trade}_${funding}_${timestamp}.pdf`;
@@ -2083,7 +2083,7 @@
                 const { data, error: updateError } = await sb.from('contractors')
                     .update({
                         color_confirmation_template:  updated,
-                        pc_template_migration_pending: false,  // contractor has actively managed slots — no longer pending
+                        pc_template_migration_pending: false,  // contractor has actively managed slots â no longer pending
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', contractorRecord.id)
@@ -2099,9 +2099,9 @@
             }
         }
 
-        // ── Load and Display Contract Templates (IMP-009) ──
+        // ââ Load and Display Contract Templates (IMP-009) ââ
         async function loadContractTemplates() {
-            // Session 262: XSS hardening — build DOM instead of templated innerHTML
+            // Session 262: XSS hardening â build DOM instead of templated innerHTML
             // so that DB-sourced file_url / filename values can never inject markup.
             // Also refactored to single DB fetch (was one query per slot = 8 round trips).
             const templateSlots = [
@@ -2144,7 +2144,7 @@
 
                 const header = document.createElement('div');
                 header.className = 'template-slot-header';
-                header.textContent = `${slot.trade} — ${slot.fundingType}`;
+                header.textContent = `${slot.trade} â ${slot.fundingType}`;
                 cell.appendChild(header);
 
                 if (matchingTemplate) {
@@ -2172,7 +2172,7 @@
                     const btnRow = document.createElement('div');
                     btnRow.style.cssText = 'display: flex; gap: var(--sp-3); flex-wrap: wrap;';
 
-                    // View — mints signed URL; never navigates to stored URL directly
+                    // View â mints signed URL; never navigates to stored URL directly
                     const viewBtn = document.createElement('button');
                     viewBtn.className = 'btn-small btn-small-primary';
                     viewBtn.textContent = 'View';
@@ -2208,7 +2208,7 @@
 
                     const icon = document.createElement('div');
                     icon.className = 'template-upload-icon';
-                    icon.textContent = '📄';
+                    icon.textContent = 'ð';
 
                     const uploadText = document.createElement('div');
                     uploadText.className = 'template-upload-text';
@@ -2241,7 +2241,7 @@
             gridContainer.appendChild(grid);
         }
 
-        // View contract template — bucket is private, so mint a signed URL at click time
+        // View contract template â bucket is private, so mint a signed URL at click time
         async function viewContractTemplate(fileUrl) {
             if (!fileUrl) {
                 alert('No file URL available for this template.');
@@ -2317,7 +2317,7 @@
 
                 if (uploadError) throw uploadError;
 
-                // Store only the path — bucket is private; public URLs would return "Bucket not found" 404.
+                // Store only the path â bucket is private; public URLs would return "Bucket not found" 404.
                 // viewContractTemplate() mints a short-lived signed URL at click time.
                 const currentTemplates = contractorRecord.contract_templates || [];
                 const updatedTemplates = currentTemplates.filter(t => !(t.trade === trade && t.funding_type === fundingType));
@@ -2347,7 +2347,7 @@
             }
         }
 
-        // ── Field Mapping Modal ──
+        // ââ Field Mapping Modal ââ
 
         const DEFAULT_FIELD_MAPPINGS = {
             homeowner_name:    { label: 'Name',           description: 'Homeowner name' },
@@ -2369,7 +2369,7 @@
             fieldMappingCurrentTrade = trade;
             fieldMappingCurrentFundingType = fundingType;
 
-            document.getElementById('fieldMappingSubtitle').textContent = `${trade} — ${fundingType}`;
+            document.getElementById('fieldMappingSubtitle').textContent = `${trade} â ${fundingType}`;
 
             // Get current mappings for this template (fall back to defaults)
             const currentTemplates = contractorRecord?.contract_templates || [];
@@ -2385,7 +2385,7 @@
                     <input type="text" id="fm_${key}"
                         value="${currentLabel.replace(/"/g, '&quot;')}"
                         style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; font-family: inherit; width: 100%;">
-                    <span style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">→</span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">â</span>
                     <span style="font-size: 0.875rem; color: var(--text-secondary);">${defaults.description}</span>
                 `;
             }
