@@ -663,7 +663,7 @@
         const advBtn = document.getElementById('step2-advance-btn');
         if (advBtn && advBtn.dataset.submitting === 'true') return;  // duplicate-submit guard
         if (!docState.coi.file) { alert('Please upload your CGL certificate.'); return; }
-        if (!docState.wc.satisfied) { alert('Please provide workers' compensation info or exemption.'); return; }
+        if (!docState.wc.satisfied) { alert("Please provide workers' compensation info or exemption."); return; }
         if (licenseState.entries.length === 0 && !licenseState.noLicense) { alert('Please add a contractor license or check "I don\'t have a license for this work".'); return; }
 
         if (advBtn) { advBtn.dataset.submitting = 'true'; advBtn.disabled = true; advBtn.style.opacity = '0.5'; advBtn.textContent = 'Saving…'; }
