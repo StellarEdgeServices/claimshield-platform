@@ -7,14 +7,14 @@
 # fix attempts addressed symptoms because Chrome does not surface
 # SyntaxErrors prominently. node --check would have caught it in 50ms.
 #
+# Also catches inline <script> SyntaxErrors in HTML files.
+# May 7, 2026: unescaped apostrophe in contractor-pre-approval.html
+# submitStep2() caused 54 Sentry events and a 3-hour production outage
+# (bug-killer case 86e18fcny). node --check on the extracted inline script
+# would have caught it at push time.
+#
 # Run from repo root: bash scripts/pre-push-check.sh
 # FAIL count > 0 blocks push (waiver via [LINT-WAIVER: reason] in commit message).
-#
-# SCOPE: vanilla-JS files under js/. HTML inline-script linting is a
-# separate problem (cross-block scope, multiple inline blocks per file)
-# that needs a real bundler-aware approach; left for a future iteration.
-# Don't bolt on a noisy heuristic here — it would train people to ignore
-# the output, which is exactly the failure mode this script exists to fix.
 #
 set -uo pipefail
 
@@ -31,6 +31,64 @@ for f in $JS_FILES; do
     FAIL=$((FAIL+1))
   else
     echo "  ok: $f"
+  fi
+done
+
+echo ""
+echo "=== HTML inline script syntax check ==="
+HTML_FILES=$(find . -maxdepth 1 -name "*.html" -type f 2>/dev/null)
+INLINE_FAIL=0
+for html in $HTML_FILES; do
+  result=$(python3 - "$html" << 'PYBLOCK'
+import sys, re, subprocess, tempfile, os
+
+html_file = sys.argv[1]
+with open(html_file, 'r', encoding='utf-8', errors='replace') as fh:
+    content = fh.read()
+
+# Match inline scripts that:
+#   - have no src attribute (not external)
+#   - have no type attribute that is NOT text/javascript
+#     (excludes application/ld+json, text/template, etc.)
+pattern = (
+    r'<script'
+    r'(?![^>]*\bsrc\b)'                                            # no src=
+    r'(?![^>]*\btype\b\s*=\s*["\'](?!text/javascript)[^"\']*["\'])'  # no non-JS type
+    r'[^>]*>(.*?)</script>'
+)
+blocks = re.findall(pattern, content, re.DOTALL | re.IGNORECASE)
+
+failures = []
+for i, block in enumerate(blocks):
+    stripped = block.strip()
+    if not stripped:
+        continue
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
+        tmp.write(stripped)
+        tmp_path = tmp.name
+    try:
+        result = subprocess.run(
+            ['node', '--check', tmp_path],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            err = result.stderr.strip().split('\n')[0]
+            failures.append(f'block {i+1}: {err}')
+    finally:
+        os.unlink(tmp_path)
+
+if failures:
+    for f in failures:
+        print(f'INLINE_FAIL:{f}')
+PYBLOCK
+)
+  if echo "$result" | grep -q "^INLINE_FAIL:"; then
+    echo "FAIL: $html (inline script syntax error)"
+    echo "$result" | grep "^INLINE_FAIL:" | sed 's/^INLINE_FAIL:/    /'
+    FAIL=$((FAIL+1))
+    INLINE_FAIL=$((INLINE_FAIL+1))
+  else
+    echo "  ok: $html"
   fi
 done
 
