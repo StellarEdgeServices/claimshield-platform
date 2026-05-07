@@ -1491,7 +1491,7 @@
                 .from('quotes')
                 .select('warranty_document_url')
                 .eq('claim_id', data.id)
-                .in('status', ['selected', 'awarded'])
+                .in('status', ['selected'])
                 .not('warranty_document_url', 'is', null)
                 .order('warranty_uploaded_at', { ascending: false })
                 .limit(1)
@@ -2215,7 +2215,7 @@
               .from('quotes')
               .select('id', { count: 'exact', head: true })
               .eq('claim_id', currentClaim.id)
-              .in('status', ['submitted', 'selected', 'awarded']);
+              .in('status', ['submitted', 'selected']);
             bidCount = count || 0;
           }
         } catch (e) {
@@ -3354,3 +3354,5 @@
     }
   });
 })();
+</body>
+</html>

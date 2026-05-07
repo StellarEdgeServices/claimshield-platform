@@ -760,17 +760,7 @@ https://otterquote.com`;
   /**
    * Set up listener for auth state changes.
    * Handles post-auth profile creation when user logs in.
-   * Also keeps the sb_at cookie in sync for the Netlify edge gate (W4-P1).
-   *
-   * RESTORED May 6, 2026: commit 11b32d1e (May 1, "W4-P1: Admin server-side
-   * auth gate + cookie bridge") accidentally deleted the
-   * sb.auth.onAuthStateChange((event, session) => { ... }) wrapper while
-   * leaving the body. Result: js/auth.js failed to parse, window.Auth was
-   * never defined, every authenticated page silently broke. Eight CI runs
-   * failed before this was caught — Chrome's MCP read_console_messages
-   * does not surface SyntaxErrors prominently, so the failures appeared
-   * test-specific rather than file-specific. Stage 5 prevention: scripts/
-   * pre-push-check.sh now runs `node --check` on every JS file.
+   * Also keeps the sq_at cookie in sync for the Netlify edge gate (W4-P1).
    */
   onAuthStateChangeListener() {
     // Idempotent: safe to call from multiple pages or auto-init.
@@ -778,13 +768,6 @@ https://otterquote.com`;
     if (!sb) return;
     this._listenerWired = true;
     sb.auth.onAuthStateChange(async (event, session) => {
-      // Keep sb_at cookie in sync across all auth lifecycle events (D-211)
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        this._setSingleAuthCookie(session);
-      } else if (event === 'SIGNED_OUT') {
-        this._setSingleAuthCookie(null);
-      }
-
       if (event === 'SIGNED_IN' && session?.user) {
         // User just signed in, create profile if needed
         await this.handleAuthCallback();
