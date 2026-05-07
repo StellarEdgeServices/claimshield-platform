@@ -94,6 +94,19 @@ Mark each item ✅ (pass) / ❌ (fail — stop) / N/A (genuinely not applicable 
 
 ---
 
+
+## D-215 / Auth Gates (added 2026-05-07, ADR-010 + bug-killer session)
+
+**CRITICAL — D-215 UETA compliance (any change to contractor-bid-form.html bid submit flow)**
+- [ ] `fee_acceptances` INSERT runs AFTER `quotes` INSERT (so `insertedQuote.id` is available for `bid_id`)
+- [ ] All required NOT NULL fields present: `contractor_id`, `claim_id`, `bid_id`, `fee_pct`, `fee_basis`, `fee_amount`, `fee_text_displayed`, `accepted_at`
+- [ ] `quote_id` is NOT referenced (column does not exist on `fee_acceptances`)
+- [ ] INSERT error is non-fatal with `console.error` + Sentry capture
+
+**HIGH — nav.js / auth.js page hygiene (any new HTML page with a `site-header`)**
+- [ ] If page includes `nav.js`: either (a) `auth.js` is also included, or (b) `data-auth="false"` is set on `site-header`
+- [ ] Pure redirect / utility pages with no auth UI must have `data-auth="false"`
+
 ## Checklist Completion
 
 ```
