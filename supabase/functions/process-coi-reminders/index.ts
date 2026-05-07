@@ -1144,5 +1144,20 @@ serve(async (req) => {
 
   console.log(`[${FUNCTION_NAME}] Run complete:`, JSON.stringify(result));
 
+  // ── Write cron_health so platform-health-check staleness monitor sees this run ──
+  // IMPORTANT: process-coi-reminders is a "self-reporting" cron job — it must call
+  // record_cron_health on every successful exit. Removing this call causes false
+  // stale-cron alerts within 25 hours (bug class: 86e194gtz, 2026-05-07).
+  try {
+    await supabase.rpc("record_cron_health", {
+      p_job_name: FUNCTION_NAME,
+      p_status:   "success",
+      p_error:    null,
+    });
+    console.log(`[${FUNCTION_NAME}] cron_health updated.`);
+  } catch (healthErr) {
+    console.warn(`[${FUNCTION_NAME}] record_cron_health write failed (non-fatal):`, healthErr);
+  }
+
   return jsonResponse(result, 200, corsHeaders);
 });
