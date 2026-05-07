@@ -300,6 +300,16 @@
       color: #CBD5E1;
       line-height: 1.65;
     }
+    /* ── Credentials Education Popup ── */
+    .cred-info-btn { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.35); border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; font-weight: 700; color: #A5B4FC; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; vertical-align: middle; flex-shrink: 0; line-height: 1; }
+    .cred-info-btn:hover { background: rgba(99,102,241,0.3); }
+    .cred-info-popup { display: none; margin-top: var(--sp-3); padding: var(--sp-4); background: rgba(15,23,42,0.97); border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-sm); font-size: 0.8rem; color: #CBD5E1; line-height: 1.65; }
+    .cred-info-popup h4 { color: var(--white); font-size: 0.8rem; font-weight: 700; margin: 0 0 var(--sp-1); }
+    .cred-info-popup p { margin: 0 0 var(--sp-3); }
+    .cred-info-popup p:last-child { margin-bottom: 0; }
+    .cred-info-popup .cred-disclaimer { color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.08); padding-top: var(--sp-3); margin-top: var(--sp-1); font-style: italic; font-size: 0.77rem; }
+    .cred-info-popup a { color: #93C5FD; text-decoration: none; }
+    .cred-info-popup a:hover { text-decoration: underline; }
     /* All-expired banner */
     .all-expired-banner {
       display: flex;
@@ -1277,6 +1287,16 @@
             <div class="bid-badges">
               ${c.verified ? '<span class="bid-badge verified">✓ Licensed</span>' : ''}
               ${c.specialties ? parseCerts(c.specialties).map(cert => `<span class="bid-badge info">${esc(cert)}</span>`).join('') : ''}
+              <button class="cred-info-btn" onclick="toggleCredInfo(event)" aria-label="About contractor credentials" title="About licensing, permits &amp; bonds">?</button>
+            </div>
+            <div class="cred-info-popup">
+              <h4>🔒 Contractor Licensing</h4>
+              <p>Many states and localities require contractors to hold an active license before performing roofing, siding, or other home improvement work. A license means the contractor has met minimum experience or competency requirements set by your state or local government.</p>
+              <h4>📋 Permits</h4>
+              <p>Permits are approvals from your local building department that ensure work meets local building codes. Your contractor is typically responsible for pulling required permits — but it's worth confirming before work starts.</p>
+              <h4>🛡️ Surety Bonds</h4>
+              <p>A surety bond is a financial guarantee that protects you if a contractor fails to complete the job or doesn't pay their subcontractors or suppliers. Not all states or job types require bonding, but it adds an important layer of protection.</p>
+              <p class="cred-disclaimer">Otter Quotes shows you what contractors have uploaded. Verifying whether those credentials meet your local requirements is your responsibility. To check requirements in your area, visit your <a href="https://www.usa.gov/state-contractor-license" target="_blank" rel="noopener">state licensing board</a> or your local building department's website.</p>
             </div>
 
             <!-- ── LICENSES (D-218) ── -->
@@ -1966,6 +1986,17 @@
       if (tooltip && tooltip.classList.contains('expiry-tooltip')) {
         const isVisible = tooltip.style.display === 'block';
         tooltip.style.display = isVisible ? 'none' : 'block';
+      }
+    };
+
+    // ── Toggle credentials education popup (? button next to bid badges) ──
+    window.toggleCredInfo = function(event) {
+      event.stopPropagation();
+      const btn = event.currentTarget;
+      const popup = btn.closest('.bid-badges').nextElementSibling;
+      if (popup && popup.classList.contains('cred-info-popup')) {
+        const isVisible = popup.style.display === 'block';
+        popup.style.display = isVisible ? 'none' : 'block';
       }
     };
 
