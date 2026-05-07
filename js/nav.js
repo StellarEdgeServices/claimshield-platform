@@ -147,6 +147,23 @@ const Nav = {
     const mobileSlot = document.getElementById('nav-mobile-auth-slot');
     if (!slot && !mobileSlot) return;
 
+    // Defensive guard: if auth.js hasn't loaded, render guest state and bail.
+    // This prevents ReferenceError crashes on pages that include nav.js but
+    // not auth.js (e.g. pure redirect pages). Guest state is correct fallback.
+    if (typeof Auth === 'undefined') {
+      const guestDesktop = `
+        <a href="/get-started.html" class="btn btn-sm btn-primary">Get Started</a>
+        <a href="/contractor-login.html" class="btn btn-sm btn-ghost">Contractor Login</a>
+      `;
+      const guestMobile = `
+        <a href="/get-started.html" class="nav-link nav-mobile-cta">Get Started</a>
+        <a href="/contractor-login.html" class="nav-link nav-mobile-cta-secondary">Contractor Login</a>
+      `;
+      if (slot) slot.innerHTML = guestDesktop;
+      if (mobileSlot) mobileSlot.innerHTML = guestMobile;
+      return;
+    }
+
     const user = await Auth.getUser();
     let desktopHTML, mobileHTML;
 
