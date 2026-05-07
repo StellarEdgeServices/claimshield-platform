@@ -5278,24 +5278,6 @@
 
           } else {
 
-            // ── D-215 Layer 1: Insert fee_acceptances record (UETA evidence) ──
-            if (!changeBidMode) {
-              const { error: feeAccError } = await sb.from('fee_acceptances').insert({
-                quote_id: null,  // Will be linked after quote insert
-                contractor_id: currentContractor.id,
-                fee_amount: _feeAmount,
-                fee_text_displayed: _exactFeeText,
-                accepted_at: _acceptedAt,
-                ip_address: _contractorIP,
-                user_agent: _userAgent,
-              }).select('id').single();
-
-              if (feeAccError) {
-                throw new Error('Fee acceptance could not be recorded: ' + feeAccError.message);
-              }
-            }
-
-
             const { data: insertedQuote, error } = await sb
               .from('quotes')
               .insert(quoteData)
@@ -5306,6 +5288,33 @@
 
             // Store the new quote ID for contract signing
             window._newQuoteId = insertedQuote?.id || null;
+
+            // ── D-215 Layer 1: Insert fee_acceptances record (UETA evidence) ──
+            // Runs AFTER quote insert so bid_id (insertedQuote.id) is available.
+            // Non-fatal: quote is already committed; log failures for compliance audit.
+            if (!changeBidMode) {
+              const { error: feeAccError } = await sb.from('fee_acceptances').insert({
+                contractor_id: currentContractor.id,
+                claim_id: currentClaim.id,
+                bid_id: insertedQuote.id,
+                fee_pct: _feePct,
+                fee_basis: 'bid_amount',
+                fee_amount: _feeAmount,
+                fee_text_displayed: _exactFeeText,
+                accepted_at: _acceptedAt,
+                ip_address: _contractorIP,
+                user_agent: _userAgent,
+              }).select('id').single();
+
+              if (feeAccError) {
+                console.error('[D-215] Fee acceptance record failed (non-fatal, quote committed):', feeAccError.message);
+                if (typeof Sentry !== 'undefined') {
+                  Sentry.captureException(feeAccError, {
+                    extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }
+                  });
+                }
+              }
+            }
 
             // GA4 conversion event — bid funnel
             gtag('event', 'bid_submit', {
