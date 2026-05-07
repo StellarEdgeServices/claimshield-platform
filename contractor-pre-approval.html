@@ -197,15 +197,15 @@
                         <div style="margin-bottom: 1rem;">
                             <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.75rem;">
                                 <input type="radio" name="wc-choice" value="file" onchange="updateWCCardState()">
-                                <span style="font-size: 0.95rem;">Upload certificate</span>
+                                <span style="font-size: 0.95rem; color: #1e293b;">Upload certificate</span>
                             </label>
                             <div id="wc-file-section" style="display: none; padding-left: 1.5rem; margin-bottom: 0.75rem;">
                                 <input type="file" id="wc-upload" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
                                 <button type="button" onclick="document.getElementById('wc-upload').click()" class="btn-secondary" style="width: 100%; margin-bottom: 0.75rem;">Choose File</button>
                                 <div id="wc-filename" style="font-size: 0.85rem; color: var(--slate); display: none;">📎 <span id="wc-name"></span></div>
                                 <div style="margin-top: 0.75rem;">
-                                    <label for="wc-expiry" style="font-size: 0.9rem; color: var(--navy); display: block; margin-bottom: 0.5rem;">Expiry Date (optional)</label>
-                                    <input type="date" id="wc-expiry" class="form-input" style="width: 100%; max-width: 200px;">
+                                    <label for="wc-expiry" style="font-size: 0.9rem; color: #1e293b; display: block; margin-bottom: 0.5rem;">Expiry Date <span style="color:#ef4444;">*</span></label>
+                                    <input type="date" id="wc-expiry" class="form-input" style="width: 100%; max-width: 200px; background:#fff; color:#1e293b; border:1px solid #cbd5e1;">
                                 </div>
                             </div>
                         </div>
@@ -213,8 +213,18 @@
                         <div style="border-top: 1px solid var(--light); padding-top: 1rem;">
                             <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
                                 <input type="radio" name="wc-choice" value="exemption" onchange="updateWCCardState()">
-                                <span style="font-size: 0.95rem;">I qualify for WCE-1 exemption (sole proprietor, no employees)</span>
+                                <span style="font-size: 0.95rem; color: #1e293b;">I qualify for WCE-1 exemption (sole proprietor, no employees)</span>
                             </label>
+                            <div id="wce1-file-section" style="display: none; padding-left: 1.5rem; margin-top: 0.75rem;">
+                                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 0.75rem;">Upload your Indiana WCE-1 Workers' Compensation Clearance Certificate (state-issued, valid 1 year). Max 10MB.</p>
+                                <input type="file" id="wce1-upload" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+                                <button type="button" onclick="document.getElementById('wce1-upload').click()" class="btn-secondary" style="width: 100%; margin-bottom: 0.75rem;">Choose File</button>
+                                <div id="wce1-filename" style="font-size: 0.85rem; color: #475569; display: none; margin-bottom: 0.5rem;">📎 <span id="wce1-name"></span></div>
+                                <div style="margin-top: 0.75rem;">
+                                    <label for="wce1-expiry" style="font-size: 0.9rem; color: #1e293b; display: block; margin-bottom: 0.5rem;">Certificate Expiry Date <span style="color:#ef4444;">*</span></label>
+                                    <input type="date" id="wce1-expiry" class="form-input" style="width: 100%; max-width: 200px; background:#fff; color:#1e293b; border:1px solid #cbd5e1;">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -394,6 +404,7 @@
 
     <footer id="site-footer"></footer>
 
+    <script src="js/cookie-storage.js"></script>
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/nav.js"></script>
@@ -482,7 +493,7 @@
     // ── Document upload state ──────────────────────────────────────────────
     let docState = {
         coi: { satisfied: false, file: null },
-        wc: { satisfied: false, choice: null, file: null, expiry: null }
+        wc: { satisfied: false, choice: null, file: null, expiry: null, wce1File: null }
     };
 
     // Multi-license state (D-218)
@@ -505,15 +516,22 @@
         const choice = document.querySelector('input[name="wc-choice"]:checked')?.value;
         docState.wc.choice = choice;
         const fileSection = document.getElementById('wc-file-section');
-        
+        const wce1Section = document.getElementById('wce1-file-section');
+
         if (choice === 'file') {
             fileSection.style.display = 'block';
-            docState.wc.satisfied = docState.wc.file !== null;
+            if (wce1Section) wce1Section.style.display = 'none';
+            const expiryVal = document.getElementById('wc-expiry')?.value;
+            docState.wc.satisfied = docState.wc.file !== null && !!expiryVal;
         } else if (choice === 'exemption') {
             fileSection.style.display = 'none';
-            docState.wc.satisfied = true;
+            if (wce1Section) wce1Section.style.display = 'block';
             docState.wc.file = null;
+            const wce1ExpiryVal = document.getElementById('wce1-expiry')?.value;
+            docState.wc.satisfied = docState.wc.wce1File !== null && !!wce1ExpiryVal;
         } else {
+            fileSection.style.display = 'none';
+            if (wce1Section) wce1Section.style.display = 'none';
             docState.wc.satisfied = false;
         }
         updateStep2Button();
@@ -663,7 +681,7 @@
         const advBtn = document.getElementById('step2-advance-btn');
         if (advBtn && advBtn.dataset.submitting === 'true') return;  // duplicate-submit guard
         if (!docState.coi.file) { alert('Please upload your CGL certificate.'); return; }
-        if (!docState.wc.satisfied) { alert("Please provide workers' compensation info or exemption."); return; }
+        if (!docState.wc.satisfied) { alert('Please provide workers' compensation info or exemption.'); return; }
         if (licenseState.entries.length === 0 && !licenseState.noLicense) { alert('Please add a contractor license or check "I don\'t have a license for this work".'); return; }
 
         if (advBtn) { advBtn.dataset.submitting = 'true'; advBtn.disabled = true; advBtn.style.opacity = '0.5'; advBtn.textContent = 'Saving…'; }
@@ -677,28 +695,42 @@
             if (docState.coi.file) {
                 const coiFileName = `${user_id}/${Date.now()}-${docState.coi.file.name}`;
                 const { data: coiData, error: coiError } = await sb.storage
-                    .from('coi-documents')
+                    .from('contractor-documents')
                     .upload(coiFileName, docState.coi.file, { upsert: true });
                 
                 if (coiError) throw new Error(`COI upload failed: ${coiError.message}`);
                 coi_document_url = coiFileName;
             }
 
-            // Upload WC if file selected
+            // Upload WC certificate or WCE-1 exemption document
             let wc_cert_file_ref = null;
             let wc_cert_expiry = null;
             if (docState.wc.choice === 'file' && docState.wc.file) {
                 const wcFileName = `${user_id}/${Date.now()}-${docState.wc.file.name}`;
                 const { data: wcData, error: wcError } = await sb.storage
-                    .from('wc-documents')
+                    .from('contractor-documents')
                     .upload(wcFileName, docState.wc.file, { upsert: true });
-                
+
                 if (wcError) throw new Error(`WC upload failed: ${wcError.message}`);
                 wc_cert_file_ref = wcFileName;
-                
+
                 const expiryInput = document.getElementById('wc-expiry');
                 if (expiryInput.value) {
                     wc_cert_expiry = new Date(expiryInput.value).toISOString();
+                }
+            } else if (docState.wc.choice === 'exemption' && docState.wc.wce1File) {
+                // D-213: WCE-1 path requires actual document upload (state-issued certificate)
+                const wce1FileName = `${user_id}/wce1_cert_${Date.now()}_${docState.wc.wce1File.name}`;
+                const { error: wce1Error } = await sb.storage
+                    .from('contractor-documents')
+                    .upload(wce1FileName, docState.wc.wce1File, { upsert: true });
+
+                if (wce1Error) throw new Error(`WCE-1 upload failed: ${wce1Error.message}`);
+                wc_cert_file_ref = wce1FileName;
+
+                const wce1ExpiryInput = document.getElementById('wce1-expiry');
+                if (wce1ExpiryInput.value) {
+                    wc_cert_expiry = new Date(wce1ExpiryInput.value).toISOString();
                 }
             }
 
@@ -717,9 +749,10 @@
                 updateObj.wc_cert_expiry = wc_cert_expiry;
                 updateObj.wc_cert_uploaded_at = new Date().toISOString();
             } else if (docState.wc.choice === 'exemption') {
-                updateObj.wc_cert_file_ref = 'WCE-1-EXEMPT';
-                updateObj.wc_cert_expiry = null;
-                updateObj.wc_cert_uploaded_at = null;
+                // D-213: store actual file ref + expiry (not sentinel)
+                updateObj.wc_cert_file_ref = wc_cert_file_ref;
+                updateObj.wc_cert_expiry = wc_cert_expiry;
+                updateObj.wc_cert_uploaded_at = new Date().toISOString();
             }
 
             if (licenseState.noLicense) {
@@ -962,82 +995,4 @@
             currentUser = session.user;
 
             // Load contractor record
-            let { data: ct, error: ctErr } = await sb.from('contractors')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .maybeSingle();
-
-            if (ctErr && ctErr.code !== 'PGRST116') throw ctErr;
-
-            if (!ct) {
-                // Contractor record doesn't exist yet — create from localStorage signup data
-                const signupRaw = localStorage.getItem('cs_contractor_signup');
-                const signup    = signupRaw ? JSON.parse(signupRaw) : {};
-                const insertRes = await sb.from('contractors').insert({
-                    user_id:                 currentUser.id,
-                    email:                   currentUser.email,
-                    company_name:            signup.company_name || '',
-                    contact_name:            signup.contact_name || '',
-                    attestation_signer_title: signup.signer_title || '',
-                    status:                  'pending_approval',
-                    onboarding_step:         1,
-                }).select().single();
-
-                if (insertRes.error) throw insertRes.error;
-                ct = insertRes.data;
-            }
-
-            contractor = ct;
-
-            // If already active, send to dashboard
-            if (contractor.status === 'active') {
-                window.location.href = 'contractor-dashboard.html';
-                return;
-            }
-
-            // If already submitted (step 4 done), show submitted panel
-            if (contractor.onboarding_step >= 4 || contractor.status === 'pending_approval' && contractor.onboarding_step >= 4) {
-                document.getElementById('submittedEmail').textContent = currentUser.email || '';
-                showPanel('submitted');
-                return;
-            }
-
-            // Determine which step to show
-            const step = Math.max(2, (contractor.onboarding_step || 1) + 1);
-            showStep(Math.min(step, 4));
-
-        } catch (err) {
-            console.error('Pre-approval init error:', err);
-            showPanel('error');
-        }
-
-        // Attach file input change listeners for Step 2 document cards
-        const coiUpload = document.getElementById('coi-upload');
-        const wcUpload = document.getElementById('wc-upload');
-        const wcExpiry = document.getElementById('wc-expiry');
-
-        if (coiUpload) {
-            coiUpload.addEventListener('change', function(e) {
-                handleDocumentSelect('coi', this);
-                updateStep2Button();
-            });
-        }
-        if (wcUpload) {
-            wcUpload.addEventListener('change', function(e) {
-                handleDocumentSelect('wc', this);
-                updateWCCardState();
-            });
-        }
-        if (wcExpiry) {
-            wcExpiry.addEventListener('change', updateStep2Button);
-        }
-
-        // Initialize multi-license card (D-218)
-        renderLicenseEntries();
-
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
+    
