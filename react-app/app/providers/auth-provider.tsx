@@ -17,7 +17,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { AuthContextValue, AuthState, OtterRole } from '../types/auth';
+import type { AuthContextValue, AuthState, AuthUser, OtterRole } from '../types/auth';
 
 // ─── Admin allow-list (mirrors admin-auth-gate.ts) ───────────────────────────
 const ADMIN_EMAILS: string[] = [
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ]);
             setSbAtCookie(session);
             setState({
-              user: session.user as AuthContextValue['user'],
+              user: session.user as unknown as AuthUser,
               role,
               isAdmin,
               loading: false,
