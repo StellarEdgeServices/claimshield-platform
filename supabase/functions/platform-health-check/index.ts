@@ -63,6 +63,14 @@ const EDGE_FUNCTIONS_TO_PING: string[] = [
 ];
 
 // Cron job staleness thresholds (milliseconds)
+// ARCHITECTURE NOTE — "self-reporting" vs "externally-written" cron_health rows:
+//   Jobs listed here that are NOT in EDGE_FUNCTIONS_TO_PING and NOT in PUBLIC_PATHS
+//   must call supabase.rpc("record_cron_health", ...) themselves at the end of every
+//   successful run. If that call is dropped (e.g., in a deploy), this monitor will
+//   fire false stale-cron alerts within the threshold window.
+//   Self-reporting jobs: process-coi-reminders, process-bid-expirations,
+//                        process-payout-reminders, check-siding-design-completion
+//   (86e194gtz — 2026-05-07: process-coi-reminders writer was missing; fixed)
 const CRON_STALENESS_THRESHOLDS: Record<string, number> = {
   "process-bid-expirations":       2 * 60 * 60 * 1000,   // 2 hours
   "check-siding-design-completion": 45 * 60 * 1000,       // 45 minutes
@@ -470,6 +478,15 @@ async function runStalenessCheck(
 
     // Alert if stale
     if (ageMs > thresholdMs) {
+      // WRITER-GAP DIAGNOSTIC: if a self-reporting job (one not written by this function's
+      // Phase 1 or Phase 3) is stale, the most likely cause is that the job's EF no longer
+      // calls record_cron_health(). Check the job's EF for that call before investigating
+      // the cron schedule itself. (86e194gtz — 2026-05-07)
+      console.warn(
+        `[platform-health-check] STALE: ${jobName} — age ${Math.round(ageMs / 60000)}min ` +
+        `(threshold ${Math.round(thresholdMs / 60000)}min). ` +
+        `If this is a self-reporting job, verify it calls record_cron_health() on success.`
+      );
       results.push({ jobName, status: "stale", lastRunAt, ageMs });
 
       const thresholdHuman = thresholdMs >= 3600000
