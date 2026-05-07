@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useClaimStatus } from '../use-claim-status';
 
 // Mock Supabase
-vi.mock('@/lib/supabase', () => ({
+vi.mock('@/app/lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
     channel: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('@/lib/supabase', () => ({
   },
 }));
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/app/lib/supabase';
 
 describe('useClaimStatus', () => {
   beforeEach(() => {
