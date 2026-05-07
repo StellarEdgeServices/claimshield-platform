@@ -314,6 +314,24 @@
     .all-expired-banner .aeb-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
     .all-expired-banner .aeb-body { font-size: 0.9rem; color: var(--white); line-height: 1.6; }
     .all-expired-banner .aeb-body strong { color: var(--amber); }
+
+    /* ── License Drill-Down (D-218) ── */
+    .license-section { margin-bottom: var(--sp-6); }
+    .license-drill-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4); font-size: 0.875rem; font-weight: 600; color: var(--white); cursor: pointer; text-align: left; font-family: var(--font-body); transition: background 0.2s; }
+    .license-drill-btn:hover { background: rgba(255,255,255,0.07); }
+    .lic-chevron { font-size: 0.7rem; color: var(--slate); transition: transform 0.2s; display: inline-block; }
+    .license-header-row { display: flex; align-items: center; padding: var(--sp-3) var(--sp-4); font-size: 0.875rem; color: var(--slate); background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); }
+    .license-detail-panel { border: 1px solid rgba(255,255,255,0.08); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); overflow: hidden; }
+    .lic-row { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .lic-row:last-child { border-bottom: none; }
+    .lic-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-1); }
+    .lic-jurisdiction { font-size: 0.8rem; font-weight: 600; color: var(--white); }
+    .lic-verify-link { font-size: 0.75rem; color: var(--amber); text-decoration: none; }
+    .lic-verify-link:hover { text-decoration: underline; }
+    .lic-row-details { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+    .lic-detail-item { font-size: 0.78rem; }
+    .lic-detail-key { color: rgba(255,255,255,0.5); }
+    .lic-detail-val { color: rgba(255,255,255,0.85); }
   </style>
 </head>
 <body>
@@ -504,6 +522,7 @@
     let currentClaim = null;
     let bids = [];
     let contractors = {};  // keyed by contractor_id
+    let contractorLicenses = {};  // keyed by contractor_id → array of license rows
     let currentView = 'grid';
 
     // ── Init ──
@@ -523,6 +542,7 @@
 
         await loadClaimData();
         await loadBids();
+        await loadContractorLicenses();
         await resolveContractorPhotos();
         await loadBidUpdatedNotifications();
         render();
@@ -559,7 +579,7 @@
           *,
           contractors (
             id, user_id, company_name, contact_name, owner_photo_url, about_us, years_in_business,
-            service_area_description, service_counties, license_number, verified,
+            service_area_description, service_counties, license_number, license_path, verified,
             google_reviews_url, rating, review_count, bbb_url, angi_url, yelp_url,
             specialties, why_choose_us, num_employees, trades, website_url
           )
@@ -575,9 +595,31 @@
       }
     }
 
+
+    async function loadContractorLicenses() {
+      if (!sb || !bids.length) return;
+      const ids = [...new Set(bids.map(b => b.contractor_id).filter(Boolean))];
+      if (!ids.length) return;
+      try {
+        const { data, error } = await sb
+          .from('contractor_licenses')
+          .select('contractor_id, municipality, license_number, expiration_date, verification_url, jurisdiction_level')
+          .in('contractor_id', ids);
+        if (!error && data) {
+          contractorLicenses = {};
+          data.forEach(lic => {
+            if (!contractorLicenses[lic.contractor_id]) contractorLicenses[lic.contractor_id] = [];
+            contractorLicenses[lic.contractor_id].push(lic);
+          });
+        }
+      } catch (e) {
+        console.warn('loadContractorLicenses error:', e);
+      }
+    }
     async function pollForBids() {
       const prevCount = bids.length;
       await loadBids();
+      await loadContractorLicenses();
       if (bids.length > prevCount) {
         await resolveContractorPhotos();
         render();
@@ -1237,6 +1279,9 @@
               ${c.specialties ? parseCerts(c.specialties).map(cert => `<span class="bid-badge info">${esc(cert)}</span>`).join('') : ''}
             </div>
 
+            <!-- ── LICENSES (D-218) ── -->
+            ${renderLicenses(bid, c)}
+
             <!-- ── MATERIALS & INSTALLATION ── -->
             ${renderMaterialsSection(bid, ss)}
 
@@ -1271,6 +1316,70 @@
         `;
       }).join('');
     }
+
+
+    // ── License drill-down (D-218) ────────────────────────────────────────────
+    function renderLicenses(bid, c) {
+      const contractorId = bid.contractor_id;
+
+      // Case: license_path = 'not_provided'
+      if (c.license_path === 'not_provided') {
+        return `<div class="license-section">
+          <div class="license-header-row">📋 License: Not provided by contractor</div>
+        </div>`;
+      }
+
+      const licenses = contractorLicenses[contractorId];
+
+      // Case: no license data — graceful fallback (hide section)
+      if (!licenses || licenses.length === 0) return '';
+
+      // Case: licenses on file
+      const n = licenses.length;
+      const safeId = 'lic-panel-' + contractorId.replace(/-/g, '');
+      const rows = licenses.map(lic => {
+        const label = [lic.jurisdiction_level, lic.municipality].filter(Boolean).join(' — ') || 'Jurisdiction on file';
+        let exp = '—';
+        if (lic.expiration_date) {
+          const d = new Date(lic.expiration_date + 'T00:00:00');
+          exp = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        const verLink = lic.verification_url
+          ? `<a href="${esc(lic.verification_url)}" target="_blank" rel="noopener" class="lic-verify-link">Verify ↗</a>`
+          : '';
+        return `<div class="lic-row">
+          <div class="lic-row-top">
+            <span class="lic-jurisdiction">${esc(label)}</span>
+            ${verLink}
+          </div>
+          <div class="lic-row-details">
+            <span class="lic-detail-item"><span class="lic-detail-key">Lic #</span> <span class="lic-detail-val">${esc(lic.license_number || '—')}</span></span>
+            <span class="lic-detail-item"><span class="lic-detail-key">Expires</span> <span class="lic-detail-val">${exp}</span></span>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div class="license-section">
+        <button class="license-drill-btn" onclick="toggleLicenses('${safeId}')" aria-expanded="false" aria-controls="${safeId}">
+          <span>&#128203; Licenses: ${n} on file</span>
+          <span class="lic-chevron">&#9660;</span>
+        </button>
+        <div id="${safeId}" class="license-detail-panel" hidden>
+          ${rows}
+        </div>
+      </div>`;
+    }
+
+    window.toggleLicenses = function(panelId) {
+      const panel = document.getElementById(panelId);
+      const btn = panel ? panel.previousElementSibling : null;
+      if (!panel || !btn) return;
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      btn.setAttribute('aria-expanded', String(opening));
+      const chev = btn.querySelector('.lic-chevron');
+      if (chev) chev.style.transform = opening ? 'rotate(180deg)' : '';
+    };
 
     // ── Per-trade breakdown (wizard / multi-trade bids) ─────────────────
     function renderPerTradeBreakdown(bid) {
@@ -1815,7 +1924,7 @@
               '',
               'Contractor: ' + (c.company_name || 'Unknown'),
               'Property: ' + (currentClaim ? (currentClaim.property_address || 'N/A') : 'N/A'),
-              'Job #' + (currentClaim ? currentClaim.id.slice(-8).toUpperCase() : 'N/A'),
+              'Claim ID: ' + (currentClaim ? currentClaim.id : 'N/A'),
               'Quote ID: ' + bidId,
               '',
               'The contractor has been notified via their dashboard' + (notifOk ? '.' : ' (notification may have failed — check manually).'),
