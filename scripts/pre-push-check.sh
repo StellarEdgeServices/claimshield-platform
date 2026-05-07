@@ -35,6 +35,22 @@ for f in $JS_FILES; do
 done
 
 echo ""
+echo "=== React app scaffold check (main/staging branches) ==="
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "staging" ]]; then
+  if [ ! -f "react-app/package.json" ]; then
+    echo "FAIL: react-app/package.json missing on branch '$CURRENT_BRANCH'."
+    echo "      The Netlify otterquote-app site (app.otterquote.com) requires react-app/ to exist."
+    echo "      Merge or restore react-app/ before pushing to main/staging."
+    FAIL=$((FAIL+1))
+  else
+    echo "  ok: react-app/package.json present"
+  fi
+else
+  echo "  skip: not main/staging (branch: $CURRENT_BRANCH)"
+fi
+
+echo ""
 echo "=== Summary ==="
 echo "FAIL: $FAIL"
 
