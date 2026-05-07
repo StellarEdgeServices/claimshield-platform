@@ -759,11 +759,9 @@
                 }
             }
 
-            // Sync contractor pre-approval data to HubSpot (D-210, D-217)
-            // Map wc_path and license_path to HubSpot enumeration properties
-            const wc_path = docState.wc.choice === 'exemption' ? 'sole_prop_exemption' : 'has_wc';
-            let license_path = licenseState.noLicense ? 'not_provided' : 'has_license';
-            
+            // Sync contractor pre-approval data to HubSpot (D-210, D-218)
+            // EF derives wc_path from contractors.wc_cert_file_ref and
+            // license_path/license_count/license_summary from contractor_licenses table.
             try {
                 await fetch('/functions/v1/create-hubspot-contact', {
                     method: 'POST',
@@ -774,11 +772,10 @@
                     body: JSON.stringify({
                         mode: 'contractor',
                         email: currentUser.email,
-                        wc_path: wc_path,
-                        license_path: license_path
+                        contractor_id: contractor.id
                     })
                 });
-                console.log('HubSpot contact updated with wc_path and license_path');
+                console.log('HubSpot contact synced (wc_path, license_path, license_count, license_summary)');
             } catch (e) {
                 console.warn('HubSpot sync failed (non-fatal):', e);
             }

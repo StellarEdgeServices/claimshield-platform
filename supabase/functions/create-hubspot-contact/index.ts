@@ -7,21 +7,26 @@
  *   Called fire-and-forget from get-started.html page 1.
  *   Auth: no JWT required — called pre-auth
  *
- * Contractor mode (D-210 / D-218):
+ * Contractor mode (D-210/D-218):
  *   Called from contractor-pre-approval.html after page 2 submission.
- *   Updates existing contractor contact with wc_path, license_path, license_count, license_summary.
- *   license_path, license_count, license_summary are computed server-side from contractor_licenses rows.
- *   Auth: requires JWT (contractor is signed in)
+ *   Queries Supabase for WC and license state; sets all 4 HubSpot properties:
+ *     wc_path, license_path, license_count, license_summary.
+ *   Auth: requires JWT (contractor is signed in); contractor_id passed in body.
+ *
+ * Bootstrap mode (one-time admin):
+ *   Updates HubSpot wc_path and license_path enum options to D-218 values.
+ *   Protected by bootstrap_key. Run once after initial deploy.
  *
  * Environment variables:
- *   HUBSPOT_PRIVATE_APP_TOKEN  — pat-na2-... private app token (scopes: contacts r/w)
- *   SUPABASE_URL               — auto-provided by Supabase
- *   SUPABASE_SERVICE_ROLE_KEY  — auto-provided by Supabase
+ *   HUBSPOT_PRIVATE_APP_TOKEN  — pat-na2-... private app token (scopes: contacts r/w, properties r/w)
+ *   SUPABASE_URL               — injected automatically by Supabase Edge Function runtime
+ *   SUPABASE_SERVICE_ROLE_KEY  — injected automatically by Supabase Edge Function runtime
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const HUBSPOT_API = "https://api.hubapi.com";
+const BOOTSTRAP_KEY = "otter-hs-prop-bootstrap-d218-2026";
 
 const ALLOWED_ORIGINS = [
   "https://otterquote.com",
@@ -54,65 +59,6 @@ function jsonResponse(
     headers: { ...cors, "Content-Type": "application/json" },
   });
 }
-
-// ---------------------------------------------------------------------------
-// Supabase REST helpers (service-role, no RLS bypass needed — EF has full access)
-// ---------------------------------------------------------------------------
-
-interface ContractorRow {
-  id: string;
-  no_license_required: boolean | null;
-}
-
-interface LicenseRow {
-  municipality: string;
-  jurisdiction_level: string;
-}
-
-async function fetchContractorByEmail(
-  supabaseUrl: string,
-  serviceKey: string,
-  email: string
-): Promise<ContractorRow | null> {
-  const url = `${supabaseUrl}/rest/v1/contractors?email=eq.${encodeURIComponent(email)}&select=id,no_license_required&limit=1`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-    },
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "?");
-    console.error(`create-hubspot-contact: contractors lookup failed ${res.status}: ${t}`);
-    return null;
-  }
-  const rows: ContractorRow[] = await res.json();
-  return rows.length > 0 ? rows[0] : null;
-}
-
-async function fetchLicenses(
-  supabaseUrl: string,
-  serviceKey: string,
-  contractorId: string
-): Promise<LicenseRow[]> {
-  const url = `${supabaseUrl}/rest/v1/contractor_licenses?contractor_id=eq.${encodeURIComponent(contractorId)}&select=municipality,jurisdiction_level&order=created_at.asc`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-    },
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "?");
-    console.error(`create-hubspot-contact: contractor_licenses lookup failed ${res.status}: ${t}`);
-    return [];
-  }
-  return res.json();
-}
-
-// ---------------------------------------------------------------------------
-// Main handler
-// ---------------------------------------------------------------------------
 
 serve(async (req: Request) => {
   const cors = buildCorsHeaders(req);
@@ -150,56 +96,150 @@ serve(async (req: Request) => {
     "Content-Type": "application/json",
   };
 
-  // -------------------------------------------------------------------------
-  // Contractor mode (D-210 / D-218): update existing contact with insurance +
-  // license data. license_path, license_count, license_summary are computed
-  // server-side from contractor_licenses rows.
-  // -------------------------------------------------------------------------
+  // ── BOOTSTRAP MODE ──────────────────────────────────────────────────────────
+  // One-time admin action: adds correct D-218 enum options to wc_path and
+  // license_path HubSpot Contact properties. Run once after initial deploy.
+  if (body.mode === "bootstrap") {
+    if (body.bootstrap_key !== BOOTSTRAP_KEY) {
+      console.warn("create-hubspot-contact (bootstrap): unauthorized attempt");
+      return jsonResponse({ error: "unauthorized" }, 401, cors);
+    }
+
+    const results: Record<string, unknown> = {};
+
+    // Update wc_path: add wc_policy + wce1_certificate, hide legacy values
+    const wcPatchRes = await fetch(
+      `${HUBSPOT_API}/crm/v3/properties/contacts/wc_path`,
+      {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({
+          options: [
+            { label: "WC Policy (COI)", value: "wc_policy", displayOrder: 0, hidden: false },
+            { label: "WCE-1 Certificate", value: "wce1_certificate", displayOrder: 1, hidden: false },
+            { label: "Has Workers\' Comp (legacy)", value: "has_wc", displayOrder: 2, hidden: true },
+            { label: "Sole Prop Exemption (legacy)", value: "sole_prop_exemption", displayOrder: 3, hidden: true },
+          ],
+        }),
+      }
+    );
+    results.wc_path = { status: wcPatchRes.status, ok: wcPatchRes.ok };
+    if (!wcPatchRes.ok) {
+      const errText = await wcPatchRes.text().catch(() => "(unreadable)");
+      console.error("bootstrap: wc_path update failed:", errText);
+      results.wc_path_error = errText;
+    } else {
+      console.log("bootstrap: wc_path options updated successfully");
+    }
+
+    // Update license_path: add license_uploaded, keep not_provided, hide legacy has_license
+    const lpPatchRes = await fetch(
+      `${HUBSPOT_API}/crm/v3/properties/contacts/license_path`,
+      {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({
+          options: [
+            { label: "License Uploaded", value: "license_uploaded", displayOrder: 0, hidden: false },
+            { label: "Not Provided", value: "not_provided", displayOrder: 1, hidden: false },
+            { label: "Has License (legacy)", value: "has_license", displayOrder: 2, hidden: true },
+          ],
+        }),
+      }
+    );
+    results.license_path = { status: lpPatchRes.status, ok: lpPatchRes.ok };
+    if (!lpPatchRes.ok) {
+      const errText = await lpPatchRes.text().catch(() => "(unreadable)");
+      console.error("bootstrap: license_path update failed:", errText);
+      results.license_path_error = errText;
+    } else {
+      console.log("bootstrap: license_path options updated successfully");
+    }
+
+    return jsonResponse({ success: true, results }, 200, cors);
+  }
+
+  // ── CONTRACTOR MODE (D-210 / D-218) ─────────────────────────────────────────
+  // Queries Supabase for WC and license state; updates all 4 HubSpot properties.
+  // Non-fatal: HubSpot failures log and continue, do not block onboarding (D-189).
   if (body.mode === "contractor") {
     const email = body.email as string | undefined;
-    const wc_path = body.wc_path as string | undefined;
+    const contractor_id = body.contractor_id as string | undefined;
 
     if (!email) {
       return jsonResponse({ error: "email required for contractor mode" }, 400, cors);
     }
-
-    if (!wc_path) {
-      return jsonResponse({ error: "wc_path required for contractor mode" }, 400, cors);
+    if (!contractor_id) {
+      return jsonResponse({ error: "contractor_id required for contractor mode" }, 400, cors);
     }
 
-    // --- Fetch license data from Supabase ---
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    let licenseCount = 0;
-    let licenseSummary = "";
-    let licensePathComputed = "not_provided";
+      if (!supabaseUrl || !serviceKey) {
+        console.error("create-hubspot-contact (contractor): Supabase env vars not set");
+        // Non-fatal — fall through with defaults
+        return jsonResponse({ success: false, reason: "supabase_not_configured" }, 200, cors);
+      }
 
-    if (supabaseUrl && serviceKey) {
+      const sbHeaders = {
+        "Authorization": `Bearer ${serviceKey}`,
+        "apikey": serviceKey,
+        "Content-Type": "application/json",
+      };
+
+      // ── Step 1: Determine wc_path from contractors.wc_cert_file_ref ──────────
+      // wc_policy   = WC COI uploaded (wc_cert_file_ref IS NOT NULL)
+      // wce1_certificate = WCE-1 exemption path (no COI on file)
+      let wc_path = "wce1_certificate";
       try {
-        const contractor = await fetchContractorByEmail(supabaseUrl, serviceKey, email);
-        if (contractor) {
-          const licenses = await fetchLicenses(supabaseUrl, serviceKey, contractor.id);
-          licenseCount = licenses.length;
-          licenseSummary = licenses.map((l) => l.municipality).filter(Boolean).join(", ");
-          // has_license if any contractor_licenses rows exist; not_provided otherwise
-          licensePathComputed = licenseCount > 0 ? "has_license" : "not_provided";
-          console.log(
-            `create-hubspot-contact (contractor): ${email} → license_count=${licenseCount}, license_path=${licensePathComputed}`
-          );
+        const contractorRes = await fetch(
+          `${supabaseUrl}/rest/v1/contractors?id=eq.${encodeURIComponent(contractor_id)}&select=wc_cert_file_ref`,
+          { headers: sbHeaders }
+        );
+        if (contractorRes.ok) {
+          const rows = await contractorRes.json() as Array<{ wc_cert_file_ref: string | null }>;
+          if (rows.length > 0 && rows[0].wc_cert_file_ref) {
+            wc_path = "wc_policy";
+          }
         } else {
-          console.warn(`create-hubspot-contact (contractor): no contractor row found for ${email} — using not_provided`);
+          console.warn(`create-hubspot-contact (contractor): contractor query ${contractorRes.status}`);
         }
       } catch (err) {
-        // Non-fatal: proceed with defaults (license_count=0, not_provided)
-        console.error("create-hubspot-contact (contractor): supabase license lookup exception", err);
+        console.warn("create-hubspot-contact (contractor): contractor query exception", err);
       }
-    } else {
-      console.warn("create-hubspot-contact (contractor): SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — skipping license lookup");
-    }
 
-    // --- Find HubSpot contact ---
-    try {
+      // ── Step 2: Derive license_path, license_count, license_summary ───────────
+      // license_uploaded = rows exist in contractor_licenses
+      // not_provided     = no rows
+      // license_summary  = sorted comma-separated municipality labels (NULL if zero rows)
+      let license_path = "not_provided";
+      let license_count = 0;
+      let license_summary: string | null = null;
+      try {
+        const licensesRes = await fetch(
+          `${supabaseUrl}/rest/v1/contractor_licenses?contractor_id=eq.${encodeURIComponent(contractor_id)}&select=municipality&order=municipality.asc`,
+          { headers: sbHeaders }
+        );
+        if (licensesRes.ok) {
+          const rows = await licensesRes.json() as Array<{ municipality: string | null }>;
+          license_count = rows.length;
+          if (license_count > 0) {
+            license_path = "license_uploaded";
+            const labels = rows
+              .map((r) => r.municipality)
+              .filter((m): m is string => !!m);
+            license_summary = labels.length > 0 ? labels.join(", ") : null;
+          }
+        } else {
+          console.warn(`create-hubspot-contact (contractor): licenses query ${licensesRes.status}`);
+        }
+      } catch (err) {
+        console.warn("create-hubspot-contact (contractor): licenses query exception", err);
+      }
+
+      // ── Step 3: Find HubSpot contact by email ────────────────────────────────
       const searchRes = await fetch(`${HUBSPOT_API}/crm/v3/objects/contacts/search`, {
         method: "POST",
         headers: authHeaders,
@@ -226,34 +266,39 @@ serve(async (req: Request) => {
 
       const contactId = searchData.results[0].id;
 
-      // --- Update HubSpot contact ---
+      // ── Step 4: PATCH all 4 properties on the HubSpot contact ────────────────
+      // license_summary omitted when null (HubSpot ignores absent keys)
+      const hsProps: Record<string, string | number> = {
+        wc_path,
+        license_path,
+        license_count,
+      };
+      if (license_summary !== null) {
+        hsProps.license_summary = license_summary;
+      }
+
       const updateRes = await fetch(
         `${HUBSPOT_API}/crm/v3/objects/contacts/${contactId}`,
         {
           method: "PATCH",
           headers: authHeaders,
-          body: JSON.stringify({
-            properties: {
-              wc_path,
-              license_path: licensePathComputed,
-              license_count: String(licenseCount),
-              license_summary: licenseSummary,
-            },
-          }),
+          body: JSON.stringify({ properties: hsProps }),
         }
       );
 
       if (updateRes.ok) {
         console.log(
-          `create-hubspot-contact (contractor): updated contact ${contactId} for ${email} — wc_path=${wc_path}, license_path=${licensePathComputed}, license_count=${licenseCount}`
+          `create-hubspot-contact (contractor): updated ${contactId} for ${email} —`,
+          `wc_path=${wc_path} license_path=${license_path} license_count=${license_count}`
         );
         return jsonResponse({
           success: true,
           id: contactId,
           action: "updated",
           mode: "contractor",
-          license_count: licenseCount,
-          license_path: licensePathComputed,
+          wc_path,
+          license_path,
+          license_count,
         }, 200, cors);
       } else {
         const errText = await updateRes.text().catch(() => "(unreadable)");
@@ -266,9 +311,8 @@ serve(async (req: Request) => {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Homeowner mode (D-189): original logic
-  // -------------------------------------------------------------------------
+  // ── HOMEOWNER MODE (D-189) ───────────────────────────────────────────────────
+  // Original logic — unchanged.
   const { email, firstname, lastname, phone, address } = body as Record<string, string>;
 
   if (!email) {
@@ -280,7 +324,6 @@ serve(async (req: Request) => {
   if (lastname)  properties.lastname  = lastname;
   if (phone)     properties.phone     = phone;
   if (address)   properties.address   = address;
-  // Source tracking
   properties.hs_lead_status        = "NEW";
   properties.lead_source_detail    = "OtterQuote Get Started Form";
 
