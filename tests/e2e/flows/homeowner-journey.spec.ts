@@ -22,6 +22,12 @@
  *   + Supabase auth. Full flow automation is planned post-launch when the product
  *   is stable and DocuSign sandbox credentials are configured.
  *
+ * Session sharing (B2 → B3 → B4):
+ *   B2 generates one magic link and saves storageState to a temp file.
+ *   B3 and B4 restore from that storageState — no additional magic link calls.
+ *   This prevents hitting Supabase's ~60s per-address magic link rate limit
+ *   that caused intermittent B4 failures in CI.
+ *
  * Prerequisites:
  *   - Run `npm run seed` before this spec
  *   - .env.test must have SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BASE_URL
@@ -50,9 +56,13 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
 
 test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   let state: TestState;
+  // Shared storageState path — written by B2, read by B3 and B4.
+  // Eliminates duplicate magic link calls that hit Supabase's ~60s rate limit.
+  let storageStatePath: string;
 
   test.beforeAll(() => {
     state = getTestState();
+    storageStatePath = `/tmp/homeowner-session-${Date.now()}.json`;
   });
 
 
@@ -97,10 +107,14 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // B2: Magic link authentication
+  // B2: Magic link authentication — generates the single shared session
+  // used by B3 and B4 via storageState restore.
   // ──────────────────────────────────────────────────────────────────────────
   test('B2: test homeowner authenticates via magic link and lands on dashboard', async ({ page }) => {
     await loginAsHomeowner(page, state);
+
+    // Persist the authenticated session for B3 and B4 (no additional magic links needed)
+    await page.context().storageState({ path: storageStatePath });
 
     // Must be on the homeowner dashboard
     await expect(page).toHaveURL(/dashboard/);
@@ -108,46 +122,63 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // B3: Homeowner dashboard — authenticated state
+  // B3: Homeowner dashboard — restores B2's session, no new magic link
   // ──────────────────────────────────────────────────────────────────────────
-  test('B3: homeowner dashboard loads without errors for test account', async ({ page }) => {
-    await loginAsHomeowner(page, state);
+  test('B3: homeowner dashboard loads without errors for test account', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: storageStatePath,
+      baseURL: state.baseUrl,
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${state.baseUrl}/dashboard.html`);
+      await page.waitForLoadState('load');
 
-    // Page body must be visible and error-free
-    await expect(page.locator('body')).toBeVisible();
-    await expect(page.locator('body')).not.toContainText(/uncaught|typeerror|referenceerror/i);
-    // Visibility-aware error check: the #gate-error div is in the DOM at all times
-    // (display:none by default) and only populated/shown if saveWaitlistSpot() throws.
-    // toContainText() reads textContent of hidden elements, so we use visibility instead.
-    await expect(page.locator('#gate-error')).not.toBeVisible();
+      // Page body must be visible and error-free
+      await expect(page.locator('body')).toBeVisible();
+      await expect(page.locator('body')).not.toContainText(/uncaught|typeerror|referenceerror/i);
+      // Visibility-aware error check: the #gate-error div is in the DOM at all times
+      // (display:none by default) and only populated/shown if saveWaitlistSpot() throws.
+      // toContainText() reads textContent of hidden elements, so we use visibility instead.
+      await expect(page.locator('#gate-error')).not.toBeVisible();
 
-    // Must not be redirected
-    await expect(page).not.toHaveURL(/login|get-started/);
+      // Must not be redirected
+      await expect(page).not.toHaveURL(/login|get-started/);
 
-    // Verify test claim exists in DB (belt + suspenders — seed already created it)
-    const claim = await getTestClaim(state.testClaimId);
-    expect(claim).not.toBeNull();
-    expect(claim?.status).toBe('bidding');
-    expect(claim?.property_state).toBe('IN');
+      // Verify test claim exists in DB (belt + suspenders — seed already created it)
+      const claim = await getTestClaim(state.testClaimId);
+      expect(claim).not.toBeNull();
+      expect(claim?.status).toBe('bidding');
+      expect(claim?.property_state).toBe('IN');
+    } finally {
+      await context.close();
+    }
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // B4: Bids page — authenticated homeowner can view bid comparison
+  // B4: Bids page — restores B2's session, no new magic link
   // ──────────────────────────────────────────────────────────────────────────
-  test('B4: bids.html renders bid comparison UI for test claim', async ({ page }) => {
-    await loginAsHomeowner(page, state);
+  test('B4: bids.html renders bid comparison UI for test claim', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: storageStatePath,
+      baseURL: state.baseUrl,
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${state.baseUrl}/bids.html?claim_id=${state.testClaimId}`);
+      await page.waitForLoadState('load');
 
-    await page.goto(`/bids.html?claim_id=${state.testClaimId}`);
-    await page.waitForLoadState('load');
+      // Must remain authenticated
+      await expect(page).not.toHaveURL(/login|get-started/);
 
-    // Must remain authenticated
-    await expect(page).not.toHaveURL(/login|get-started/);
+      // Page body must be visible
+      await expect(page.locator('body')).toBeVisible();
 
-    // Page body must be visible
-    await expect(page.locator('body')).toBeVisible();
-
-    // Bid-related content should be on the page
-    await expect(page.locator('body')).not.toContainText(/uncaught|typeerror/i);
+      // Bid-related content should be on the page
+      await expect(page.locator('body')).not.toContainText(/uncaught|typeerror/i);
+    } finally {
+      await context.close();
+    }
   });
 
   // ──────────────────────────────────────────────────────────────────────────
