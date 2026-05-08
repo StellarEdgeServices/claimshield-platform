@@ -16,6 +16,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useAuthReady } from '@/hooks/use-auth-ready';
 import { supabase } from '@/lib/supabase';
 
@@ -114,7 +115,7 @@ export default function GetStartedPage() {
   }, [loading, user, role]);
 
   // ── Phone formatting on autofill ──
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoneChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setPhone(formatPhoneValue(e.target.value));
   }, []);
 
@@ -124,7 +125,7 @@ export default function GetStartedPage() {
   }, []);
 
   // ── Form submission ──
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -243,7 +244,7 @@ export default function GetStartedPage() {
   };
 
   // ── Resend magic link ──
-  const handleResend = async (e: React.MouseEvent) => {
+  const handleResend = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (!sentToEmail) return;
     try {
