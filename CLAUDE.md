@@ -15,6 +15,7 @@ The Cowork Edit tool **silently truncates files** when writing through the Windo
 |------|--------|
 | `contractor-profile.html` | Large page — confirmed truncation risk |
 | `contractor-bid-form.html` | Large page — confirmed truncation risk |
+| `contractor-about.html` | Large page (969 lines) — confirmed truncation risk (May 1, 2026) |
 | `supabase/functions/create-docusign-envelope/index.ts` | Large Edge Function — confirmed truncation risk |
 | `supabase/functions/create-hover-order/index.ts` | Large Edge Function — confirmed truncation risk |
 | `supabase/functions/get-hover-pdf/index.ts` | Large Edge Function — confirmed truncation risk |
