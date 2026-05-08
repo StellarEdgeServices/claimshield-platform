@@ -13,12 +13,19 @@
 # (bug-killer case 86e18fcny). node --check on the extracted inline script
 # would have caught it at push time.
 #
+# HARDENED (2026-05-08):
+# - Null-byte check: detects partial writes and truncated file corruption
+# - Truncated HTML check: catches HTML files missing closing tag (truncation)
+# - File size delta check: warns on large deletions (< 50% original size)
+# See 86e19cdbq for incident context (51 corruption incidents pre-2026-05-08).
+#
 # Run from repo root: bash scripts/pre-push-check.sh
 # FAIL count > 0 blocks push (waiver via [LINT-WAIVER: reason] in commit message).
 #
 set -uo pipefail
 
 FAIL=0
+WARN=0
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -93,6 +100,71 @@ PYBLOCK
 done
 
 echo ""
+echo "=== Null-byte check (86e19cdbq hardening) ==="
+# Scan all tracked files for null bytes. Exclude known binary types.
+# A null byte in a text file indicates truncation, partial write, or corruption.
+NULL_BYTE_FILES=$(grep -rPl $'\x00' \
+  --include='*.html' --include='*.js' --include='*.css' --include='*.ts' \
+  --include='*.tsx' --include='*.jsx' --include='*.sql' --include='*.md' \
+  --include='*.sh' --include='*.toml' --include='*.yml' --include='*.yaml' \
+  --include='*.json' . 2>/dev/null || true)
+if [ -z "$NULL_BYTE_FILES" ]; then
+  echo "  ok: no null bytes in tracked text files"
+else
+  while IFS= read -r f; do
+    count=$(grep -ao $'\x00' "$f" | wc -l)
+    echo "FAIL: $f (null bytes: $count)"
+    FAIL=$((FAIL+1))
+  done <<< "$NULL_BYTE_FILES"
+fi
+
+echo ""
+echo "=== Truncated HTML check (86e19cdbq hardening) ==="
+# Each .html file MUST have a closing </html> tag within the last 500 bytes.
+# Absence indicates truncation or file corruption during write.
+for html in $(find . -maxdepth 1 -name "*.html" -type f 2>/dev/null); do
+  if [ ! -s "$html" ]; then
+    echo "  skip: $html (empty file)"
+    continue
+  fi
+  tail_bytes=$(tail -c 500 "$html")
+  if ! echo "$tail_bytes" | grep -qi '</html>'; then
+    echo "FAIL: $html (missing closing </html> tag in last 500 bytes — possible truncation)"
+    FAIL=$((FAIL+1))
+  else
+    echo "  ok: $html"
+  fi
+done
+
+echo ""
+echo "=== File size delta check (86e19cdbq hardening — WARN only) ==="
+# For each modified file (staged for commit), compare byte count to HEAD.
+# If new size is < 50% of old size AND old > 100 bytes, issue WARN.
+# This catches large unexpected deletions without blocking (legitimate deletions exist).
+if git rev-parse --git-dir > /dev/null 2>&1; then
+  MODIFIED=$(git diff --cached --name-only --diff-filter=M 2>/dev/null || true)
+  if [ -n "$MODIFIED" ]; then
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      if git show "HEAD:$f" > /tmp/head_version 2>/dev/null; then
+        old_size=$(wc -c < /tmp/head_version)
+        new_size=$(wc -c < "$f")
+        if [ "$old_size" -gt 100 ] && [ "$new_size" -lt $((old_size / 2)) ]; then
+          pct=$((new_size * 100 / old_size))
+          echo "WARN: $f (size delta: $old_size → $new_size bytes, $pct% of original)"
+          WARN=$((WARN+1))
+        fi
+      fi
+    done <<< "$MODIFIED"
+  else
+    echo "  skip: no modified files staged"
+  fi
+  rm -f /tmp/head_version
+else
+  echo "  skip: not a git repository"
+fi
+
+echo ""
 echo "=== React app scaffold check (main/staging branches) ==="
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "staging" ]]; then
@@ -110,11 +182,11 @@ fi
 
 echo ""
 echo "=== Summary ==="
-echo "FAIL: $FAIL"
+echo "FAIL: $FAIL, WARN: $WARN"
 
 if [ $FAIL -gt 0 ]; then
   echo ""
-  echo "BLOCKED. Fix syntax errors above or add [LINT-WAIVER: reason] to commit message."
+  echo "BLOCKED. Fix errors above or add [LINT-WAIVER: reason] to commit message."
   exit 1
 fi
 echo "PASS"
