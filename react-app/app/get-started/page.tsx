@@ -82,7 +82,6 @@ export function isValidEmail(email: string): boolean {
 
 export default function GetStartedPage() {
   const { user, role, loading } = useAuthReady();
-  const router = useRouter();
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -776,7 +775,7 @@ export default function GetStartedPage() {
                 </div>
 
                 {/* Referral Source */}
-                <fieldset className="referral-section" style={{ border: 'none', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <fieldset className="referral-section" style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <legend className="referral-legend">How did you hear about us?</legend>
                   <div className="referral-options">
                     {(
