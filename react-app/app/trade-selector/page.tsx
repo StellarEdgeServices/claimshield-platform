@@ -20,6 +20,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactNode, ChangeEvent } from 'react';
 import { useAuthReady } from '@/hooks/use-auth-ready';
 import { supabase } from '@/lib/supabase';
 
@@ -166,7 +167,7 @@ function SelectionCard({
 }: {
   selected: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div
@@ -405,7 +406,7 @@ export default function TradeSelectorPage() {
   }, []);
 
   // ── Loss sheet upload ──
-  const handleLossSheetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLossSheetUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setLossSheetFile(file);
