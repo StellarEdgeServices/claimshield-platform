@@ -83,18 +83,14 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // now lives in the React app and is outside the static-site E2E scope.
   // ──────────────────────────────────────────────────────────────────────────
   test('B1: get-started.html redirects to React app registration (D-211)', async ({ page }) => {
-    // Abort the redirect before it fires so we can inspect the static page's meta tag
-    // without leaving the test server's origin.
-    await page.route('https://app.otterquote.com/**', route => route.abort());
-
-    await page.goto('/get-started.html');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Verify meta-refresh redirect is present and points to the correct destination
-    const metaContent = await page
-      .locator('meta[http-equiv="refresh"]')
-      .getAttribute('content');
-    expect(metaContent).toMatch(/url=https:\/\/app\.otterquote\.com\/get-started/i);
+    // D-211 Phase 2: get-started.html is a meta-refresh redirect stub to app.otterquote.com.
+    // Use request.get() to inspect the raw HTML without triggering browser navigation —
+    // the meta-refresh fires immediately on render making DOM-based assertions unreliable.
+    const response = await page.request.get('/get-started.html');
+    const html = await response.text();
+    expect(html).toMatch(
+      /http-equiv=["'\s]*refresh["'\s][^>]*url=https:\/\/app\.otterquote\.com\/get-started/i
+    );
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -183,3 +179,4 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // Assert trade-specific form fields render (roofing: shingle color, drip edge, etc.)
   // Verify project_confirmation JSONB persists on submit.
 });
+
