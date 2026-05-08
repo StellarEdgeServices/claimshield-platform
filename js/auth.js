@@ -274,12 +274,20 @@ window.Auth = {
         if (contractor && !error) {
           return 'contractor';
         }
+        // PGRST116 = 0 rows (expected for homeowners) — fall through to profile check.
+        // Any other error = transient failure (JWT expiry, network, RLS) — return null
+        // to avoid falling through to a potentially stale profile value and misfiring
+        // the requireAuth() role-mismatch redirect. (Bug fix: May 7, 2026)
+        if (error && error.code !== 'PGRST116') {
+          return null;
+        }
       } catch (e) {
-        // No contractor record found — fall through to profile check
+        // Network/JS exception — return null, not a wrong-role fallthrough
+        return null;
       }
     }
 
-    // Fall back to profile role if no contractor record exists
+    // Fall back to profile role only when contractors table confirmed 0 rows (PGRST116)
     const profile = await this.getProfile();
     return profile?.role || null;
   },
@@ -401,7 +409,8 @@ window.Auth = {
 
     // Handle homeowner signup data (check localStorage first, fall back to sessionStorage)
     const signupData = localStorage.getItem('cs_signup') || sessionStorage.getItem('cs_signup');
-    if (signupData) {
+    // Never overwrite a contractor's profile with homeowner signup data (bug fix May 7, 2026)
+    if (signupData && role !== 'contractor') {
       try {
         const data = JSON.parse(signupData);
         const fullName = `${data.first_name} ${data.last_name}`.trim();
