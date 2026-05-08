@@ -1,4 +1,4 @@
-<!-- D-221 soak cycle 1 — 2026-05-08T15:12:35Z -->
+<!-- D-221 soak cycle 3 — 2026-05-08T15:14:08Z (soak complete) -->
 # OtterQuote Deploy — Claude Working Rules
 
 This file governs how Claude (and any AI assistant) interacts with the files in this directory.
