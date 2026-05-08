@@ -33,6 +33,19 @@ Use Python or bash to apply patches. Read the file in memory, modify, write to `
 
 **Safe operations on the mount:** direct writes via Python `shutil.copy2` (preferred), or `cp /tmp/file mount/file` from a sandbox temp file. Avoid the Cowork Write/Edit tools entirely on this directory.
 
+**Null-byte padding variant (confirmed May 8, 2026 on `commit_via_api.py` at 89 lines):**
+
+A second truncation mode exists where the file appears full-size (byte count matches expected) but the tail of the content is replaced with `\x00` null bytes. The file SIZE check passes — only a null-byte scan catches this variant. Always run both checks after any write:
+
+```python
+with open(dst_path, 'rb') as f:
+    content = f.read()
+assert len(content) == expected_size, f"Size mismatch: {len(content)} vs {expected_size}"
+assert content.count(b'\x00') == 0, f"Null bytes in file — content is corrupted (null-byte padding variant)"
+```
+
+Retry `shutil.copy2` up to 3 times on failure before surfacing to Dustin.
+
 **Recovery command for Edge Functions if truncated:**
 ```bash
 supabase functions download [function-name] --project-ref yeszghaspzwwstvsrioa
