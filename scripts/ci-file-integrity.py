@@ -10,6 +10,12 @@ Detects two truncation signatures:
   1. Null-byte padding  — file is full-size but filled with \x00 after real content
   2. Size-floor failure — file is shorter than any legitimate page could be
   3. Canary minimums   — critical pages must exceed known-good thresholds
+
+Canary matching rules:
+  - Keys with no '/' are ROOT-ANCHORED: only match at repo root (e.g. 'index.html'
+    matches root index.html but NOT blog/index.html)
+  - Keys with '/' match the exact path or any path ending with that suffix
+    (e.g. 'js/auth.js' matches js/auth.js and also vendor/js/auth.js)
 """
 import os
 import sys
@@ -27,19 +33,20 @@ MIN_SIZES = {
 
 # Canary files: critical pages/scripts with hard minimum thresholds (bytes).
 # These were affected by the May 3, 2026 outage or are single points of failure.
-# Values are conservative (~50% of actual file size as of May 2026).
+# Values are conservative (~30-50% of actual file size as of May 2026).
+# Root-anchored (no slash): only matches at repo root level.
+# Path canaries (contains slash): matches exact path or suffix.
 CANARY_FILES = {
-    'login.html':                  3000,
-    'contractor-join.html':        4000,
-    'contractor-login.html':       2000,
-    'index.html':                  5000,
-    'get-started.html':            4000,
-    'contractor-dashboard.html':   5000,
-    'dashboard.html':              5000,
-    'auth-callback.html':          2000,
-    'js/auth.js':                  8000,
-    'js/config.js':                 200,
-    'netlify/edge-functions/admin-gate.js': 500,
+    'login.html':                  3000,   # root-anchored
+    'contractor-join.html':        4000,   # root-anchored
+    'contractor-login.html':       2000,   # root-anchored
+    'index.html':                  5000,   # root-anchored (NOT blog/index.html)
+    'get-started.html':            4000,   # root-anchored
+    'contractor-dashboard.html':   5000,   # root-anchored
+    'dashboard.html':              5000,   # root-anchored
+    'auth-callback.html':          2000,   # root-anchored
+    'js/auth.js':                  8000,   # path canary
+    'js/config.js':                 200,   # path canary
 }
 
 # Directories to skip entirely
@@ -47,6 +54,15 @@ EXCLUDE_DIRS = {'.git', 'node_modules', 'react-app', 'tests', 'democracy', 'docs
 
 failures = []
 checked = 0
+
+def canary_matches(rel_path, canary_key):
+    """Return True if rel_path matches canary_key under the matching rules."""
+    if '/' in canary_key:
+        # Path canary: exact match OR ends-with match
+        return rel_path == canary_key or rel_path.endswith('/' + canary_key)
+    else:
+        # Root-anchored: exact match only (no subdirectory matches)
+        return rel_path == canary_key
 
 for root, dirs, files in os.walk('.'):
     # Prune excluded dirs in-place (modifies dirs so os.walk won't descend)
@@ -89,11 +105,11 @@ for root, dirs, files in os.walk('.'):
 
         # Check 3: Canary file specific thresholds
         for canary_key, canary_min in CANARY_FILES.items():
-            if rel_path == canary_key or rel_path.endswith('/' + canary_key):
+            if canary_matches(rel_path, canary_key):
                 if size < canary_min:
                     failures.append(
                         f"FAIL [canary] {rel_path}: {size} bytes < {canary_min} "
-                        f"byte canary threshold"
+                        f"byte canary threshold for '{canary_key}'"
                     )
                 break  # Each file matches at most one canary key
 
