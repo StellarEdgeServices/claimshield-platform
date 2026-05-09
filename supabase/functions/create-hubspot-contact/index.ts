@@ -190,9 +190,11 @@ serve(async (req: Request) => {
       };
 
       // ── Step 1: Determine wc_path from contractors.wc_cert_file_ref ──────────
-      // wc_policy   = WC COI uploaded (wc_cert_file_ref IS NOT NULL)
-      // wce1_certificate = WCE-1 exemption path (no COI on file)
-      let wc_path = "wce1_certificate";
+      // null ref                            → wc_path = null (omit from HubSpot update)
+      // ref includes 'wce1_cert_' OR
+      //   ref === 'WCE-1-EXEMPT' (sentinel) → wc_path = "wce1_certificate" (backward compat)
+      // any other non-null ref              → wc_path = "wc_policy" (COI on file)
+      let wc_path: string | null = null;
       try {
         const contractorRes = await fetch(
           `${supabaseUrl}/rest/v1/contractors?id=eq.${encodeURIComponent(contractor_id)}&select=wc_cert_file_ref`,
@@ -200,9 +202,15 @@ serve(async (req: Request) => {
         );
         if (contractorRes.ok) {
           const rows = await contractorRes.json() as Array<{ wc_cert_file_ref: string | null }>;
-          if (rows.length > 0 && rows[0].wc_cert_file_ref) {
-            wc_path = "wc_policy";
+          if (rows.length > 0 && rows[0].wc_cert_file_ref !== null) {
+            const ref = rows[0].wc_cert_file_ref;
+            if (ref.includes("wce1_cert_") || ref === "WCE-1-EXEMPT") {
+              wc_path = "wce1_certificate";
+            } else {
+              wc_path = "wc_policy";
+            }
           }
+          // null ref → wc_path stays null (no WC document on file yet)
         } else {
           console.warn(`create-hubspot-contact (contractor): contractor query ${contractorRes.status}`);
         }
@@ -266,13 +274,16 @@ serve(async (req: Request) => {
 
       const contactId = searchData.results[0].id;
 
-      // ── Step 4: PATCH all 4 properties on the HubSpot contact ────────────────
+      // ── Step 4: PATCH properties on the HubSpot contact ──────────────────────
+      // wc_path omitted when null (no WC doc on file yet — leave existing HS value intact)
       // license_summary omitted when null (HubSpot ignores absent keys)
       const hsProps: Record<string, string | number> = {
-        wc_path,
         license_path,
         license_count,
       };
+      if (wc_path !== null) {
+        hsProps.wc_path = wc_path;
+      }
       if (license_summary !== null) {
         hsProps.license_summary = license_summary;
       }
@@ -289,7 +300,7 @@ serve(async (req: Request) => {
       if (updateRes.ok) {
         console.log(
           `create-hubspot-contact (contractor): updated ${contactId} for ${email} —`,
-          `wc_path=${wc_path} license_path=${license_path} license_count=${license_count}`
+          `wc_path=${wc_path ?? "(omitted)"} license_path=${license_path} license_count=${license_count}`
         );
         return jsonResponse({
           success: true,
