@@ -2,7 +2,7 @@
  * Flow B — Homeowner Journey (Phase 1 Stub)
  *
  * Current coverage (Phase 1):
- *   B1: get-started.html loads and renders registration form
+ *   B1: get-started.html has correct meta-refresh redirect → app.otterquote.com (D-211 Phase 2)
  *   B2: test homeowner authenticates via magic link injection
  *   B3: homeowner dashboard loads without errors
  *   B4: bids.html renders for the test claim
@@ -85,25 +85,22 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // B1: Public page — homeowner registration form
+  // B1: Public page — meta-refresh redirect to React app (D-211 Phase 2)
+  //
+  // D-211 Phase 2 turned get-started.html into a redirect stub pointing to
+  // the React homeowner intake at app.otterquote.com/get-started. This test
+  // verifies the redirect is correctly in place. The registration form itself
+  // now lives in the React app and is outside the static-site E2E scope.
   // ──────────────────────────────────────────────────────────────────────────
-  test('B1: get-started.html loads and renders the registration form', async ({ page }) => {
-    await page.goto('/get-started.html');
-    await page.waitForLoadState('load');
-
-    await expect(page).toHaveTitle(/get started|register|otter/i);
-
-    // Registration form must be visible
-    await expect(page.locator('form').first()).toBeVisible();
-
-    // Email field required per D-035 (contact info first)
-    await expect(page.locator('input[type="email"]').first()).toBeVisible();
-
-    // Phone field required per D-035
-    const phoneField = page.locator(
-      'input[type="tel"], input[id*="phone"], input[name*="phone"]'
-    ).first();
-    await expect(phoneField).toBeVisible();
+  test('B1: get-started.html redirects to React app registration (D-211)', async ({ page }) => {
+    // D-211 Phase 2: get-started.html is a meta-refresh redirect stub to app.otterquote.com.
+    // Use request.get() to inspect the raw HTML without triggering browser navigation —
+    // the meta-refresh fires immediately on render making DOM-based assertions unreliable.
+    const response = await page.request.get('/get-started.html');
+    const html = await response.text();
+    expect(html).toMatch(
+      /http-equiv=["'\s]*refresh["'\s][^>]*url=https:\/\/app\.otterquote\.com\/get-started/i
+    );
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -183,8 +180,8 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
 
   // ──────────────────────────────────────────────────────────────────────────
   // TODO: B5 — Claim creation flow
-  // Navigate to get-started.html, fill contact info, proceed through
-  // trade-selector.html, verify claim created in DB.
+  // Navigate to app.otterquote.com/get-started, fill contact info, proceed
+  // through /trade-selector, verify claim created in DB.
   // Deferred: requires Stripe test mode for Hover payment step.
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -213,3 +210,4 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // Assert trade-specific form fields render (roofing: shingle color, drip edge, etc.)
   // Verify project_confirmation JSONB persists on submit.
 });
+

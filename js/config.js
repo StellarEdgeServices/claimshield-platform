@@ -55,7 +55,11 @@ var CONFIG = {
 };
 
 // ── Initialize Supabase Client ──
-let sb;
-if (typeof supabase !== 'undefined') {
-  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage } });
+// Use window scope to avoid "sb declared twice" error on page script reloads or multiple loads.
+if (typeof window !== 'undefined') {
+  if (typeof window.sb === 'undefined' && typeof supabase !== 'undefined') {
+    window.sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage } });
+  }
 }
+// Global reference for backward compatibility with code expecting `sb` in local scope
+var sb = (typeof window !== 'undefined') ? window.sb : undefined;

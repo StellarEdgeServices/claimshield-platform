@@ -1,0 +1,25 @@
+name: File Integrity Check
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  file-integrity:
+    name: Null-Byte & Size Sanity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run file integrity checks
+        run: python3 scripts/ci-file-integrity.py
