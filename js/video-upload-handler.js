@@ -1,211 +1,102 @@
-// Video Upload Handler for Dashboard
-// Phase 1: Homeowner uploads video during intake; contractors see it in Phase 2 (D-211 gated)
+/**
+ * VideoUploadManager — OtterQuote
+ * Handles video uploads for damage walkthrough clips.
+ * Uses direct Supabase client (sb) — no Edge Functions required.
+ * Storage bucket: claim-documents
+ * Path pattern: videos/{user_id}/{claim_id}/{timestamp}.{ext}
+ * DB: claims.video_url = storage path
+ */
 
 class VideoUploadManager {
   constructor(claimId, userId) {
     this.claimId = claimId;
     this.userId = userId;
-    this.isUploading = false;
-    this.videoFile = null;
-    this.maxDuration = 60; // seconds
-    this.maxFileSize = 250 * 1024 * 1024; // 250MB
+    this.maxSizeBytes = 250 * 1024 * 1024; // 250 MB
+    this.maxDurationSec = 60;
+    this.allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
+    this.allowedExtensions = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' };
   }
 
-  async handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Validate file size
-    if (file.size > this.maxFileSize) {
-      this.showError(`File size exceeds 250MB limit. Selected: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
-      return;
+  /**
+   * Validate file type, size, and duration.
+   * Returns { valid: true } or { valid: false, error: string }
+   */
+  async validate(file) {
+    if (!this.allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Unsupported format. Please upload MP4, MOV, or WebM.' };
     }
-
-    // Validate file type
-    const validTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
-    if (!validTypes.includes(file.type)) {
-      this.showError(`Invalid video format. Supported: MP4, MOV, WebM`);
-      return;
+    if (file.size > this.maxSizeBytes) {
+      const mb = (file.size / 1024 / 1024).toFixed(0);
+      return { valid: false, error: `File too large (${mb} MB). Maximum is 250 MB.` };
     }
-
-    // Load and validate video metadata
-    const videoUrl = URL.createObjectURL(file);
-    const videoElement = document.getElementById('previewVideo');
-    
-    if (!videoElement) {
-      this.showError('Preview video element not found');
-      return;
-    }
-
-    videoElement.src = videoUrl;
-    
-    videoElement.onloadedmetadata = () => {
-      const duration = videoElement.duration;
-      
-      // Validate duration
-      if (duration > this.maxDuration) {
-        this.showError(`Video duration exceeds ${this.maxDuration} second limit. Actual: ${Math.round(duration)}s`);
-        videoElement.src = '';
-        this.clearVideo();
-        return;
-      }
-
-      this.videoFile = file;
-      this.showPreview(videoUrl, duration);
-      this.uploadVideo(file);
-    };
-
-    videoElement.onerror = () => {
-      this.showError('Failed to load video. Please check the file format.');
-      this.clearVideo();
-    };
-  }
-
-  showPreview(videoUrl, duration) {
-    const previewContainer = document.getElementById('videoPreview');
-    const metadata = document.getElementById('videoMetadata');
-    
-    if (previewContainer && metadata) {
-      previewContainer.style.display = 'block';
-      metadata.textContent = `${this.videoFile.name} • ${Math.round(duration)}s • ${(this.videoFile.size / 1024 / 1024).toFixed(1)}MB`;
-    }
-  }
-
-  async uploadVideo(file) {
-    if (this.isUploading) return;
-    
-    this.isUploading = true;
-    this.showUploadProgress();
-
     try {
-      // Generate signed URL from Supabase
-      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${file.name.split('.').pop()}`;
-      const filePath = `videos/${this.userId}/${fileName}`;
-
-      // Call edge function to get signed URL
-      const response = await fetch('/api/get-signed-video-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: filePath, bucket: 'claim-documents' })
-      });
-
-      if (!response.ok) throw new Error('Failed to get upload URL');
-      
-      const { signedUrl } = await response.json();
-
-      // Upload file using signed URL
-      await this.uploadToSignedUrl(signedUrl, file);
-
-      // Save URL to claims table
-      await this.saveVideoUrlToDatabase(filePath);
-
-      this.showSuccess('Video uploaded successfully');
-      this.disableUploadButton();
-    } catch (error) {
-      this.showError(`Upload failed: ${error.message}`);
-      this.clearVideo();
-    } finally {
-      this.isUploading = false;
-      this.hideUploadProgress();
+      const duration = await this._getDuration(file);
+      if (duration > this.maxDurationSec) {
+        return { valid: false, error: `Video is ${Math.round(duration)}s — maximum is ${this.maxDurationSec}s.` };
+      }
+    } catch (_) {
+      // Duration check non-fatal — proceed
     }
+    return { valid: true };
   }
 
-  async uploadToSignedUrl(signedUrl, file) {
+  /**
+   * Upload file to Supabase storage and record path in claims table.
+   * Requires global `sb` (Supabase client) to be initialised.
+   * Returns { success: true, path: string } or { success: false, error: string }
+   */
+  async upload(file) {
+    if (typeof sb === 'undefined') {
+      return { success: false, error: 'Supabase client not initialised.' };
+    }
+    const ext = this.allowedExtensions[file.type] || 'mp4';
+    const filePath = `videos/${this.userId}/${this.claimId}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await sb.storage
+      .from('claim-documents')
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      console.error('[VideoUploadManager] storage error:', uploadError);
+      return { success: false, error: uploadError.message || 'Upload failed.' };
+    }
+
+    const { error: dbError } = await sb
+      .from('claims')
+      .update({ video_url: filePath })
+      .eq('id', this.claimId);
+
+    if (dbError) {
+      console.error('[VideoUploadManager] db error:', dbError);
+      // Storage succeeded — don't surface a fatal error, but log it
+      return { success: true, path: filePath, warning: 'Saved to storage but failed to record in database.' };
+    }
+
+    return { success: true, path: filePath };
+  }
+
+  /**
+   * Convenience: validate then upload. Returns same shape as upload().
+   */
+  async validateAndUpload(file) {
+    const v = await this.validate(file);
+    if (!v.valid) return { success: false, error: v.error };
+    return this.upload(file);
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────────
+
+  _getDuration(file) {
     return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      const progressBar = document.getElementById('progressBar');
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable && progressBar) {
-          const percentComplete = (e.loaded / e.total) * 100;
-          progressBar.style.width = percentComplete + '%';
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
-      });
-
-      xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-      xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
-
-      xhr.open('PUT', signedUrl, true);
-      xhr.setRequestHeader('Content-Type', file.type);
-      xhr.send(file);
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration); };
+      video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('metadata load failed')); };
+      video.src = url;
     });
-  }
-
-  async saveVideoUrlToDatabase(filePath) {
-    // Call edge function to save video URL to claims table
-    const response = await fetch('/api/save-claim-video', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        claimId: this.claimId,
-        videoUrl: filePath
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save video URL to database');
-    }
-  }
-
-  clearVideo() {
-    this.videoFile = null;
-    const videoInput = document.getElementById('homeownerVideo');
-    const previewContainer = document.getElementById('videoPreview');
-    const videoElement = document.getElementById('previewVideo');
-    
-    if (videoInput) videoInput.value = '';
-    if (videoElement) videoElement.src = '';
-    if (previewContainer) previewContainer.style.display = 'none';
-  }
-
-  showError(message) {
-    const uploadStatus = document.getElementById('videoUploadStatus');
-    const uploadMessage = document.getElementById('uploadMessage');
-    
-    if (uploadStatus && uploadMessage) {
-      uploadStatus.style.display = 'block';
-      uploadMessage.textContent = `Error: ${message}`;
-      uploadMessage.style.color = '#d32f2f';
-    }
-  }
-
-  showSuccess(message) {
-    const uploadStatus = document.getElementById('videoUploadStatus');
-    const uploadMessage = document.getElementById('uploadMessage');
-    
-    if (uploadStatus && uploadMessage) {
-      uploadStatus.style.display = 'block';
-      uploadMessage.textContent = message;
-      uploadMessage.style.color = '#388e3c';
-    }
-  }
-
-  showUploadProgress() {
-    const uploadStatus = document.getElementById('videoUploadStatus');
-    if (uploadStatus) uploadStatus.style.display = 'block';
-  }
-
-  hideUploadProgress() {
-    // Keep progress visible for 2 seconds, then hide
-    setTimeout(() => {
-      const uploadStatus = document.getElementById('videoUploadStatus');
-      if (uploadStatus) uploadStatus.style.display = 'none';
-    }, 2000);
-  }
-
-  disableUploadButton() {
-    const selectBtn = document.getElementById('selectVideoBtn');
-    if (selectBtn) {
-      selectBtn.disabled = true;
-      selectBtn.textContent = 'Video uploaded';
-    }
   }
 }
+
+// Expose globally for use by dashboard.html inline handlers
+window.VideoUploadManager = VideoUploadManager;
