@@ -9,9 +9,11 @@
 # The build command substitutes the live Stripe publishable key with the test-mode
 # key before Netlify publishes the files. STRIPE_PK_TEST must be set as a
 # Netlify environment variable scoped to the staging deploy context.
+# Guard: if STRIPE_PK_TEST is unset, logs a warning and leaves pk_live_ in place
+# rather than substituting with an empty string (which would break the frontend).
 [context.staging]
   publish = "."
-  command = "sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js"
+  command = "if [ -n \"$STRIPE_PK_TEST\" ]; then sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js && echo '[staging] Stripe publishable key substituted to test-mode'; else echo '[WARNING] STRIPE_PK_TEST not set — staging will use live publishable key until env var is added'; fi"
 
 # Branch deploy previews (feature branches)
 [context.deploy-preview]
