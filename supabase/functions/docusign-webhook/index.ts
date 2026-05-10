@@ -247,7 +247,7 @@ serve(async (req) => {
             // Look up the winning quote to get contractor ID and amount
             const { data: quote, error: quoteErr } = await supabase
               .from("quotes")
-              .select("id, contractor_id, total_price, payment_status")
+              .select("id, contractor_id, total_price, payment_status, platform_fee_pct, fee_percentage")
               .eq("claim_id", claim.id)
               .eq("status", "awarded")
               .single();
@@ -282,20 +282,12 @@ serve(async (req) => {
               );
             }
 
-            // Fetch platform fee percentage
-            const { data: platformSettings, error: psErr } = await supabase
-              .from("platform_settings")
-              .select("platform_fee_percent")
-              .single();
-
-            if (psErr) {
-              console.warn(
-                "Could not fetch platform fee, using default 5%:",
-                psErr
-              );
-            }
+            // D-214/D-215 compliance: use the accepted fee rate from the quote record,
+            // not the current platform config. The operative fee is the one accepted at
+            // bid submission (UETA Layer 1 evidence on quotes.platform_fee_pct).
+            // Falls back to fee_percentage (legacy field) then 5% hard floor.
             const platformFeePercent =
-              platformSettings?.platform_fee_percent || 5;
+              quote.platform_fee_pct || quote.fee_percentage || 5;
             const feeAmount = Math.round(
               quote.total_price * (platformFeePercent / 100) * 100
             );
