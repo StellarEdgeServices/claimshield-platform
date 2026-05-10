@@ -5,12 +5,18 @@
 // 3-tier escalation per D-199:
 //   Tier 1 (auto):    no manualOverrides supplied → "auto_validated" or "manual_mapping_pending"
 //   Tier 2 (manual):  manualOverrides supplied   → "manual_validated" or "manual_mapping_pending"
-//   Tier 3 (admin):   set by admin-template-review.html (separate code path)
+//   Tier 3 (admin):   set by admin-template-review.html (manualOverrides === "admin" string)
+//
+// Auth gate (added 2026-05-10, fixes Architect finding 86e1adykz):
+//   All non-health-check calls require Authorization: Bearer <token>.
+//   Contractor path (Tier 1 + 2): JWT verified + caller must own the template.
+//   Admin path (manualOverrides === "admin"): JWT verified + caller must have app_metadata.role === "admin".
 //
 // Inputs (JSON POST body):
 //   { contractor_template_id: uuid }                          — Tier 1 auto-validate
 //   { contractor_template_id: uuid, manualOverrides: {...} }  — Tier 2 manual mapping submission
-//   { health_check: true }                                    — keepalive ping
+//   { contractor_template_id: uuid, manualOverrides: "admin" } — Tier 3 admin path
+//   { health_check: true }                                    — keepalive ping (no auth required)
 //
 // Outputs:
 //   { ok: true, status: "auto_validated" | "manual_validated" | "manual_mapping_pending",
@@ -245,21 +251,54 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Keepalive
+    // Keepalive — no auth required
     if (body.health_check === true) {
       return jsonResponse({ ok: true, function: "validate-contract-template", manifestVersion: MANIFEST.version });
     }
 
-    const { contractor_template_id, manualOverrides } = body;
+    const { contractor_template_id } = body;
+    // Use let so the admin path can clear this after role verification
+    let manualOverrides = body.manualOverrides;
+
     if (!contractor_template_id) {
       return jsonResponse({ error: "Missing contractor_template_id" }, 400);
     }
+
+    // ─── Auth Gate ────────────────────────────────────────────────────────────
+    // All non-health-check paths require a valid caller JWT.
+    // Contractor path: caller must own the template (contractor_id match).
+    // Admin path (manualOverrides === "admin"): caller must have app_metadata.role === "admin".
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Missing or invalid Authorization header" }, 401);
+    }
+    const bearerToken = authHeader.slice(7);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
+
+    // Verify the caller's JWT
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(bearerToken);
+    if (authErr || !user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    // Determine path: admin vs contractor
+    const isAdminPath = manualOverrides === "admin";
+
+    if (isAdminPath) {
+      // Admin path: verify admin role in JWT claims
+      const callerRole = (user.app_metadata as any)?.role;
+      if (callerRole !== "admin") {
+        return jsonResponse({ error: "Forbidden: admin role required" }, 403);
+      }
+      // Clear admin flag — not used as anchor overrides downstream
+      manualOverrides = undefined;
+    }
+    // ─── End Auth Gate ────────────────────────────────────────────────────────
 
     // Load template row
     const { data: tmpl, error: loadErr } = await supabase
@@ -269,6 +308,21 @@ Deno.serve(async (req: Request) => {
       .single();
     if (loadErr || !tmpl) {
       return jsonResponse({ error: "Template not found", details: loadErr?.message }, 404);
+    }
+
+    // Contractor path ownership check (runs after template load to avoid extra round-trip)
+    if (!isAdminPath) {
+      const { data: contractorRec, error: contractorErr } = await supabase
+        .from("contractors")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (contractorErr || !contractorRec) {
+        return jsonResponse({ error: "Forbidden: no contractor record for this user" }, 403);
+      }
+      if (tmpl.contractor_id !== contractorRec.id) {
+        return jsonResponse({ error: "Forbidden: you do not own this template" }, 403);
+      }
     }
 
     // Manifest lookup
@@ -291,81 +345,4 @@ Deno.serve(async (req: Request) => {
       const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
       pdfText = await extractPdfText(pdfBytes);
     } catch (parseErr: any) {
-      return jsonResponse({ error: "Failed to parse PDF", details: parseErr.message }, 422);
-    }
-
-    // Scan required anchors (case-sensitive substring match per manifest)
-    // manualOverrides values may be:
-    //   true         — contractor confirms the anchor exists (legacy binary; counts as found)
-    //   "alt label"  — contractor's actual PDF text for this anchor; re-scan PDF for this string
-    //   anything else — not overridden
-    const anchorResults = tradeManifest.required.map((req: any) => {
-      const literalMatch = pdfText.includes(req.anchor);
-      const override = manualOverrides ? manualOverrides[req.anchor] : undefined;
-      const stringOverride = (typeof override === "string" && override.trim().length > 0)
-        ? override.trim()
-        : null;
-      const stringOverrideMatch = stringOverride !== null && pdfText.includes(stringOverride);
-      const overridden = override === true || stringOverrideMatch;
-      return {
-        anchor: req.anchor,
-        field: req.field,
-        tabType: req.tabType,
-        source: req.source,
-        found: literalMatch || overridden,
-        manualOverride: overridden && !literalMatch,
-        manualOverrideValue: stringOverride,
-      };
-    });
-
-    const optionalResults = tradeManifest.optional.map((anchor: string) => ({
-      anchor,
-      found: pdfText.includes(anchor),
-    }));
-
-    const requiredFoundCount = anchorResults.filter((a: any) => a.found).length;
-    const allRequiredFound = requiredFoundCount === tradeManifest.required.length;
-
-    const validationResult = {
-      manifestVersion: MANIFEST.version,
-      trade: tmpl.trade,
-      funding_type: tmpl.funding_type,
-      requiredCount: tradeManifest.requiredCount,
-      requiredFoundCount,
-      allRequiredFound,
-      anchors: anchorResults,
-      optional: optionalResults,
-      validatedAt: new Date().toISOString(),
-    };
-
-    // Determine new status per D-199 state machine
-    let newStatus: string;
-    if (allRequiredFound) {
-      newStatus = manualOverrides ? "manual_validated" : "auto_validated";
-    } else {
-      newStatus = "manual_mapping_pending";
-    }
-
-    const { error: updateErr } = await supabase
-      .from("contractor_templates")
-      .update({
-        validation_result: validationResult,
-        manual_overrides: manualOverrides ?? null,
-        status: newStatus,
-      })
-      .eq("id", contractor_template_id);
-
-    if (updateErr) {
-      return jsonResponse({ error: "Failed to update template", details: updateErr.message }, 500);
-    }
-
-    return jsonResponse({
-      ok: true,
-      status: newStatus,
-      validation_result: validationResult,
-    });
-  } catch (e: any) {
-    console.error("validate-contract-template error:", e);
-    return jsonResponse({ error: "Server error", message: e.message }, 500);
-  }
-});
+      return jsonResponse({ error: "Failed to parse PDF", details: parseErr.message }, 422
