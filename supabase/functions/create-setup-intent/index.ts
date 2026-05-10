@@ -11,7 +11,8 @@
  * Environment variables:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   STRIPE_SECRET_KEY
+ *   STRIPE_SECRET_KEY          — live-mode secret key (production)
+ *   STRIPE_SECRET_KEY_TEST     — test-mode secret key (staging, optional; falls back to STRIPE_SECRET_KEY if unset)
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -28,6 +29,16 @@ const ALLOWED_ORIGINS = [
   "https://jade-alpaca-b82b5e.netlify.app",
   "https://staging--jade-alpaca-b82b5e.netlify.app",
 ];
+// Staging origins — requests from these use STRIPE_SECRET_KEY_TEST.
+const STAGING_ORIGINS = new Set([
+  "https://staging--jade-alpaca-b82b5e.netlify.app",
+  "https://app-staging.otterquote.com",
+]);
+
+function isStaging(req: Request): boolean {
+  return STAGING_ORIGINS.has(req.headers.get("Origin") || "");
+}
+
 
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("Origin") || "";
@@ -90,10 +101,15 @@ serve(async (req) => {
       );
     }
 
-    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    // Staging origin → use test-mode key; fall back to live key if TEST var unset.
+    const staging = isStaging(req);
+    const stripeSecretKey = staging
+      ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") ?? Deno.env.get("STRIPE_SECRET_KEY"))
+      : Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeSecretKey) {
       throw new Error("Stripe secret key not configured.");
     }
+    if (staging) console.log("[STAGING] Using test-mode Stripe key for create-setup-intent");
 
     const basicAuth = btoa(`${stripeSecretKey}:`);
 

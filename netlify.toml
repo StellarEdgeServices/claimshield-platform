@@ -6,8 +6,12 @@
   publish = "."
 
 # Staging context — deploys to staging--jade-alpaca-b82b5e.netlify.app
+# The build command substitutes the live Stripe publishable key with the test-mode
+# key before Netlify publishes the files. STRIPE_PK_TEST must be set as a
+# Netlify environment variable scoped to the staging deploy context.
 [context.staging]
   publish = "."
+  command = "sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js"
 
 # Branch deploy previews (feature branches)
 [context.deploy-preview]
