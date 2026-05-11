@@ -15,15 +15,16 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthReady } from '../hooks/use-auth-ready';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requireAdmin?: boolean;
   redirectTo?: string;
   adminRedirect?: string;
-  fallback?: React.ReactNode;
+  fallback?: ReactNode;
 }
 
 export function ProtectedRoute({

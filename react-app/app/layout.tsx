@@ -8,6 +8,7 @@
  */
 
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
 import { SentryInitializer } from './components/SentryInitializer';
 import { AuthProvider } from './providers/auth-provider';
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <html lang="en">

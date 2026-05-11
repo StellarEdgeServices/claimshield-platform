@@ -15,6 +15,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { AuthContextValue, AuthState, AuthUser, OtterRole } from '../types/auth';
@@ -99,7 +100,7 @@ export function useAuth(): AuthContextValue {
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
     role: null,
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               loading: false,
             });
           } else {
-            // INITIAL_SESSION with no user → unauthenticated
+            // INITIAL_SESSION with no user — unauthenticated
             setSbAtCookie(null);
             setState({ user: null, role: null, isAdmin: false, loading: false });
           }
