@@ -181,7 +181,12 @@ serve(async (req) => {
 
   const supabaseUrl   = Deno.env.get("SUPABASE_URL")!;
   const serviceKey    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const stripeKey     = Deno.env.get("STRIPE_SECRET_KEY") || "";
+  // Staging detection — use test-mode key when origin is staging (fix #86e19wk6z)
+  const _reqOrigin = req.headers.get("Origin") || "";
+  const isStaging = _reqOrigin.includes("staging--") || _reqOrigin.includes("app-staging.");
+  const stripeKey = isStaging
+    ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY") || "")
+    : (Deno.env.get("STRIPE_SECRET_KEY") || "");
   const mailgunKey    = Deno.env.get("MAILGUN_API_KEY") || "";
   const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN") || "";
 

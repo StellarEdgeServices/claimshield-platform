@@ -191,7 +191,12 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+  // Staging detection — use test-mode key when origin is staging (fix #86e19wk6z)
+  const _reqOrigin = req.headers.get("Origin") || "";
+  const isStaging = _reqOrigin.includes("staging--") || _reqOrigin.includes("app-staging.");
+  const stripeSecretKey = isStaging
+    ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY"))
+    : Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeSecretKey) {
     return new Response(JSON.stringify({ error: "Stripe secret key not configured." }), {
       status: 500,

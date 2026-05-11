@@ -767,7 +767,12 @@ serve(async (req) => {
 
       // ── MULTI-METHOD RETRY: Try ALL payment methods before initiating dunning ──
       // This ensures dunning only triggers when every method on file has failed.
-      const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+      // Staging detection — use test-mode key when origin is staging (fix #86e19wk6z)
+      const _reqOrigin = req.headers.get("Origin") || "";
+      const isStaging = _reqOrigin.includes("staging--") || _reqOrigin.includes("app-staging.");
+      const stripeSecretKey = isStaging
+        ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY"))
+        : Deno.env.get("STRIPE_SECRET_KEY");
       if (stripeSecretKey) {
         const basicAuth = btoa(`${stripeSecretKey}:`);
 
