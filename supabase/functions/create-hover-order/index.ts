@@ -102,9 +102,10 @@ async function verifyHoverPayment(
   supabase: any,
   paymentIntentId: string,
   claimId: string | null,
+  requestOrigin: string,
 ): Promise<{ ok: true; amount: number } | { ok: false; status: number; error: string }> {
   // Staging detection — use test-mode key when origin is staging (fix #86e19wk6z)
-  const _reqOrigin = req.headers.get("Origin") || "";
+  const _reqOrigin = requestOrigin;
   const isStaging = _reqOrigin.includes("staging--") || _reqOrigin.includes("app-staging.");
   const stripeSecretKey = isStaging
     ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY"))
@@ -273,7 +274,7 @@ serve(async (req) => {
     }
 
     // ===== D-181 PAYMENT VERIFICATION GUARD =====
-    const paymentCheck = await verifyHoverPayment(supabase, payment_intent_id, claim_id || null);
+    const paymentCheck = await verifyHoverPayment(supabase, payment_intent_id, claim_id || null, req.headers.get("Origin") || "");
     if (!paymentCheck.ok) {
       console.warn("[D-181] Payment verification failed for order", order_id, ":", paymentCheck.error);
       return new Response(JSON.stringify({ error: paymentCheck.error }), {
