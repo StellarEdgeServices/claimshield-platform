@@ -739,10 +739,12 @@ https://otterquote.com`;
           }
         }
 
-        localStorage.removeItem('cs_contractor_signup');
-        sessionStorage.removeItem('cs_contractor_signup');
       } catch (err) {
         console.error('Error creating contractor profile:', err);
+      } finally {
+        // Always clear the signup flag — even on failure — to prevent infinite retry on every dashboard load.
+        localStorage.removeItem('cs_contractor_signup');
+        sessionStorage.removeItem('cs_contractor_signup');
       }
     }
 
@@ -900,8 +902,4 @@ if (typeof window !== 'undefined' && window.Auth && typeof sb !== 'undefined') {
       if (event === 'TOKEN_REFRESHED' && session?.access_token) {
         window.Auth._setSingleAuthCookie(session);
       } else if (event === 'SIGNED_OUT') {
-        document.cookie = 'sb_at=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      }
-    });
-  } catch (e) { /* non-fatal */ }
-}
+        document
