@@ -2,6 +2,7 @@
 /**
  * OtterQuote — Global Configuration
  * All environment-specific values in one place.
+ * STRIPE_PK is injected at build time by Netlify (netlify.toml [build] command).
  */
 
 var CONFIG = {
@@ -23,7 +24,9 @@ var CONFIG = {
   // NOTE: TWILIO_SID and TWILIO_TOKEN are server-side only (Edge Functions)
 
   // ── Stripe (payments: Hover fees, deductible escrow, contractor platform fees) ──
-  STRIPE_PK:     'pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk',
+  // Key injected at Netlify build time from STRIPE_PK env var (per-context in netlify.toml).
+  // pk_live_ for production, pk_test_ for staging — no hardcoded keys in source.
+  STRIPE_PK:     '%%STRIPE_PK%%',
   // NOTE: STRIPE_SECRET_KEY is server-side only (Edge Functions)
 
   // ── DocuSign (e-signatures) ──
