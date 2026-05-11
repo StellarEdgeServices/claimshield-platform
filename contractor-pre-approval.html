@@ -681,7 +681,7 @@
         const advBtn = document.getElementById('step2-advance-btn');
         if (advBtn && advBtn.dataset.submitting === 'true') return;  // duplicate-submit guard
         if (!docState.coi.file) { alert('Please upload your CGL certificate.'); return; }
-        if (!docState.wc.satisfied) { alert('Please provide workers' compensation info or exemption.'); return; }
+        if (!docState.wc.satisfied) { alert("Please provide workers' compensation info or exemption."); return; }
         if (licenseState.entries.length === 0 && !licenseState.noLicense) { alert('Please add a contractor license or check "I don\'t have a license for this work".'); return; }
 
         if (advBtn) { advBtn.dataset.submitting = 'true'; advBtn.disabled = true; advBtn.style.opacity = '0.5'; advBtn.textContent = 'Saving…'; }
@@ -1062,7 +1062,29 @@
             });
         }
         if (wcExpiry) {
-            wcExpiry.addEventListener('change', updateStep2Button);
+            wcExpiry.addEventListener('change', updateWCCardState);
+        }
+
+        // WCE-1 exemption document upload listeners (D-213)
+        const wce1Upload = document.getElementById('wce1-upload');
+        const wce1Expiry = document.getElementById('wce1-expiry');
+        if (wce1Upload) {
+            wce1Upload.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file && file.size > 10 * 1024 * 1024) {
+                    alert('WCE-1 certificate must be 10MB or less.');
+                    this.value = '';
+                    docState.wc.wce1File = null;
+                } else {
+                    docState.wc.wce1File = file || null;
+                }
+                document.getElementById('wce1-filename').style.display = file ? 'block' : 'none';
+                document.getElementById('wce1-name').textContent = file ? file.name : '';
+                updateWCCardState();
+            });
+        }
+        if (wce1Expiry) {
+            wce1Expiry.addEventListener('change', updateWCCardState);
         }
 
         // Initialize multi-license card (D-218)
