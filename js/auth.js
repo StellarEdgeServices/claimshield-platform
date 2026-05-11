@@ -437,13 +437,34 @@ window.Auth = {
       try {
         const data = JSON.parse(contractorSignupData);
 
-        // Create or update profile for contractor
-        await this.updateProfile({
-          full_name: data.contact_name,
-          phone: data.phone || null,
-          address_line1: data.address_line1 || null,
-          role: 'contractor',
-        });
+        // Update profile for contractor (non-blocking).
+        // Fix #86e1b39u1: two bugs patched here:
+        //   1. address_line1 is not a profiles column — correct column is address_street.
+        //      The wrong name caused PostgREST to return 400, which previously aborted
+        //      this entire try block before the contractors INSERT could run.
+        //   2. Profile update now wrapped in its own try-catch so a failure here never
+        //      blocks contractor record creation (the critical artifact).
+        // Uses UPDATE (not upsert) — handle_new_user() trigger guarantees the profiles
+        // row exists on every new signup via ON CONFLICT DO NOTHING insert.
+        try {
+          if (sb) {
+            const { error: profileUpdateErr } = await sb
+              .from('profiles')
+              .update({
+                full_name: data.contact_name || null,
+                phone: data.phone || null,
+                address_street: data.address_line1 || null,
+                role: 'contractor',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', user.id);
+            if (profileUpdateErr) {
+              console.warn('[handleAuthCallback] contractor profile update failed (non-fatal):', profileUpdateErr);
+            }
+          }
+        } catch (profileUpdateEx) {
+          console.warn('[handleAuthCallback] contractor profile update threw (non-fatal):', profileUpdateEx);
+        }
 
         // Create contractor record if it doesn't exist
         if (sb) {
@@ -881,29 +902,3 @@ https://otterquote.com`;
 
 // Auto-wire ONLY the cookie sync on every page that loads auth.js. Fixes the
 // sq_at cookie going stale on every page other than get-started.html and
-// partner-dashboard.html. Without this, TOKEN_REFRESHED events on most pages
-// never reached _syncAdminCookie and admins were eventually bounced from
-// /admin-*.html with reason=admin_required despite holding a valid session.
-//
-// IMPORTANT: We deliberately do NOT auto-wire onAuthStateChangeListener here.
-// That listener also fires handleAuthCallback() on SIGNED_IN, which redirects
-// the user — racing with the per-page post-auth routing in auth-callback.html
-// and producing the contractor-dashboard / sign-in bounce loop. Pages that
-// need full post-auth handling (get-started.html, partner-dashboard.html)
-// continue to call onAuthStateChangeListener() explicitly.
-}
-
-// D-211: Auto-wire sb_at cookie refresh on TOKEN_REFRESHED.
-// Auth.ready() sets it on initial session. This keeps it fresh across token rotations.
-// Replaces the _initCookieSync listener removed in D-211 Phase 0.
-if (typeof window !== 'undefined' && window.Auth && typeof sb !== 'undefined') {
-  try {
-    sb.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED' && session?.access_token) {
-        window.Auth._setSingleAuthCookie(session);
-      } else if (event === 'SIGNED_OUT') {
-        document.cookie = 'sb_at=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      }
-    });
-  } catch (e) { /* non-fatal */ }
-}
