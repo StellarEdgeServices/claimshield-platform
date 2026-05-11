@@ -1,28 +1,35 @@
 # Netlify configuration — OtterQuote (D-182)
 # Production deploys from: main branch
 # Staging deploys from: staging branch
+#
+# The base [build] command is a no-op ("true") — this is required so Netlify
+# enters a build step at all. Without a base command, Netlify treats the site
+# as a static file upload and context-specific commands (like the staging
+# Stripe key substitution below) never execute.
 
 [build]
   publish = "."
+  command = "true"
 
 # Staging context — deploys to staging--jade-alpaca-b82b5e.netlify.app
-# The build command substitutes the live Stripe publishable key with the test-mode
-# key before Netlify publishes the files. STRIPE_PK_TEST must be set as a
-# Netlify environment variable scoped to the staging deploy context.
-# Guard: if STRIPE_PK_TEST is unset, logs a warning and leaves pk_live_ in place
-# rather than substituting with an empty string (which would break the frontend).
+# Substitutes pk_live_ with $STRIPE_PK_TEST before Netlify publishes files.
+# Guard: if STRIPE_PK_TEST is unset, logs a warning and leaves pk_live_ intact
+# rather than substituting with an empty string.
 [context.staging]
   publish = "."
-  command = "if [ -n \"$STRIPE_PK_TEST\" ]; then sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js && echo '[staging] Stripe publishable key substituted to test-mode'; else echo '[WARNING] STRIPE_PK_TEST not set — staging will use live publishable key until env var is added'; fi"
+  command = "if [ -n \"$STRIPE_PK_TEST\" ]; then sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js && echo '[staging] Stripe publishable key substituted to test-mode'; else echo '[WARNING] STRIPE_PK_TEST not set — staging will use live publishable key'; fi"
+
+# Production — explicit no-op so the base command does not accidentally run
+# any staging logic on the main branch.
+[context.production]
+  publish = "."
+  command = "true"
 
 # Branch deploy previews (feature branches)
 [context.deploy-preview]
   publish = "."
 
 # Force UTF-8 charset on all HTML responses.
-# Without this explicit header, some browsers fall back to Windows-1252 encoding
-# which garbles UTF-8 multi-byte characters (em dashes render as "â??", etc.).
-# This is the root-cause fix. HTML entities in source files are belt-and-suspenders.
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -37,9 +44,6 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Admin auth gate — W4-P1 (May 1, 2026)
-# Intercepts /admin-*.html before static HTML is served.
-# Unauthenticated or non-admin sessions redirect to /login.html?reason=admin_required.
-# Source: netlify/edge-functions/admin-auth-gate.ts
 [[edge_functions]]
   path = "/admin-*.html"
   function = "admin-auth-gate"
