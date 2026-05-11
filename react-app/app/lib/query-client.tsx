@@ -4,7 +4,7 @@ import {
   QueryClient,
   QueryClientProvider as TanstackQueryClientProvider,
 } from '@tanstack/react-query';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * React Query client singleton with documented defaults for OtterQuote.
