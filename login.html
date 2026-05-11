@@ -384,6 +384,18 @@
         await Auth.redirectToDashboard();
       }
     });
+  } else {
+    // Came from admin gate. If the user already has a valid admin session but
+    // sb_at is stale, Auth.ready() refreshes the cookie as a side effect and
+    // we silently redirect back to the admin panel (no re-login needed).
+    Auth.ready().then(function(authState) {
+      if (authState && authState.isAdmin) {
+        window.location.href = '/admin-contractors.html';
+      }
+      // Non-admin or no session: stay on page so "admin required" banner shows.
+    }).catch(function() {
+      // No session or timeout: stay on page (existing behavior).
+    });
   }
 })();
 </script>
