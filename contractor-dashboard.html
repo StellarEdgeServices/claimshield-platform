@@ -1975,7 +1975,7 @@
     // Load claims where contractor has quotes
     const { data: quotes } = await sb
       .from("quotes")
-      .select("claim_id, claims:claim_id(id, homeowner_id, property_address)")
+      .select("claim_id, claims:claim_id(id, user_id, property_address)")
       .eq("contractor_id", contractorData.id);
 
     if (!quotes || quotes.length === 0) {
@@ -2286,4 +2286,4 @@
 })();
 </script>
 </body>
-</html>
+</html>     
