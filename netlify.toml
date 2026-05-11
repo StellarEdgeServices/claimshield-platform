@@ -2,18 +2,12 @@
 # Production deploys from: main branch
 # Staging deploys from: staging branch
 #
-# Build command: runs on every deploy. Uses Netlify's built-in $BRANCH env var
-# to detect staging and substitute the Stripe publishable key with the test-mode
-# key. Netlify sets $BRANCH before running the command so this is reliable
-# regardless of deploy context type.
-#
-# Why not [context.staging] or [context.branch-deploy]: Netlify's context block
-# overrides are not applied when the base command is a no-op for a static site.
-# Using $BRANCH in the base command is the definitive pattern for static sites.
+# No build command needed — this is a static HTML site. Stripe publishable keys
+# are committed directly per branch: pk_test_ on staging, pk_live_ on main.
+# (Publishable keys are not secrets — they are visible in every browser request.)
 
 [build]
   publish = "."
-  command = "if [ \"$BRANCH\" = 'staging' ] && [ -n \"$STRIPE_PK_TEST\" ]; then sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js && echo '[staging] Stripe publishable key substituted to test-mode'; elif [ \"$BRANCH\" = 'staging' ]; then echo '[WARNING] STRIPE_PK_TEST not set — staging will use live publishable key'; fi"
 
 # Force UTF-8 charset on all HTML responses.
 [[headers]]
