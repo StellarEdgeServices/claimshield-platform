@@ -902,4 +902,8 @@ if (typeof window !== 'undefined' && window.Auth && typeof sb !== 'undefined') {
       if (event === 'TOKEN_REFRESHED' && session?.access_token) {
         window.Auth._setSingleAuthCookie(session);
       } else if (event === 'SIGNED_OUT') {
-        document
+        document.cookie = 'sb_at=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
+    });
+  } catch (e) { /* non-fatal */ }
+}
