@@ -2,14 +2,24 @@
 # Production deploys from: main branch
 # Staging deploys from: staging branch
 #
-# No build command needed — this is a static HTML site. Stripe publishable keys
-# are committed directly per branch: pk_test_ on staging, pk_live_ on main.
-# (Publishable keys are not secrets — they are visible in every browser request.)
+# Build command: injects context-specific Stripe publishable key from STRIPE_PK
+# env var into js/config.js (replaces %%STRIPE_PK%% placeholder) at build time.
+# Keys are set per context below — no hardcoded Stripe keys in source files.
 
 [build]
   publish = "."
+  command = "sed -i \"s|%%STRIPE_PK%%|${STRIPE_PK}|g\" js/config.js && echo 'STRIPE_PK injected into js/config.js'"
+
+# Stripe publishable key per deploy context (not secrets — publishable keys are client-safe)
+[context.production.environment]
+  STRIPE_PK = "pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk"
+
+[context.staging.environment]
+  STRIPE_PK = "pk_test_51TCI2O0AJRnqIYPUgKku8lRifucMiKIBTdu8hkmBLjjXVR73eggMnqVuPPtlZF8thfGypv8UShBoLsoIgY4ELfRP009TrgSIxo"
 
 # Force UTF-8 charset on all HTML responses.
+# Without this explicit header, some browsers fall back to Windows-1252 encoding
+# which garbles UTF-8 multi-byte characters (em dashes render as "â??", etc.).
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -24,6 +34,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Admin auth gate — W4-P1 (May 1, 2026)
+# Intercepts /admin-*.html before static HTML is served.
 [[edge_functions]]
   path = "/admin-*.html"
   function = "admin-auth-gate"
