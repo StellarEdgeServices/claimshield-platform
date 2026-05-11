@@ -4,28 +4,30 @@
 #
 # The base [build] command is a no-op ("true") — this is required so Netlify
 # enters a build step at all. Without a base command, Netlify treats the site
-# as a static file upload and context-specific commands (like the staging
-# Stripe key substitution below) never execute.
+# as a static file upload and context-specific commands never execute.
+#
+# NOTE: [context.branch-deploy] is used (not [context.staging]) because Netlify
+# assigns context=branch-deploy to all non-production branch deploys at the API
+# level. The branch-name context [context.staging] is documented but not matched
+# in practice. The STRIPE_PK_TEST guard prevents this command from having any
+# effect on branches that don't have the env var set.
 
 [build]
   publish = "."
   command = "true"
 
-# Staging context — deploys to staging--jade-alpaca-b82b5e.netlify.app
-# Substitutes pk_live_ with $STRIPE_PK_TEST before Netlify publishes files.
-# Guard: if STRIPE_PK_TEST is unset, logs a warning and leaves pk_live_ intact
-# rather than substituting with an empty string.
-[context.staging]
+# Branch deploys — substitutes pk_live_ with $STRIPE_PK_TEST before publishing.
+# Guard: if STRIPE_PK_TEST is unset, logs a warning and leaves pk_live_ intact.
+[context.branch-deploy]
   publish = "."
   command = "if [ -n \"$STRIPE_PK_TEST\" ]; then sed -i 's|pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk|'\"$STRIPE_PK_TEST\"'|g' js/config.js && echo '[staging] Stripe publishable key substituted to test-mode'; else echo '[WARNING] STRIPE_PK_TEST not set — staging will use live publishable key'; fi"
 
-# Production — explicit no-op so the base command does not accidentally run
-# any staging logic on the main branch.
+# Production — explicit no-op so branch-deploy logic never runs on main.
 [context.production]
   publish = "."
   command = "true"
 
-# Branch deploy previews (feature branches)
+# Deploy previews (pull requests)
 [context.deploy-preview]
   publish = "."
 
