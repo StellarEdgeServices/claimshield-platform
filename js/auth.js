@@ -902,3 +902,29 @@ https://otterquote.com`;
 
 // Auto-wire ONLY the cookie sync on every page that loads auth.js. Fixes the
 // sq_at cookie going stale on every page other than get-started.html and
+// partner-dashboard.html. Without this, TOKEN_REFRESHED events on most pages
+// never reached _syncAdminCookie and admins were eventually bounced from
+// /admin-*.html with reason=admin_required despite holding a valid session.
+//
+// IMPORTANT: We deliberately do NOT auto-wire onAuthStateChangeListener here.
+// That listener also fires handleAuthCallback() on SIGNED_IN, which redirects
+// the user — racing with the per-page post-auth routing in auth-callback.html
+// and producing the contractor-dashboard / sign-in bounce loop. Pages that
+// need full post-auth handling (get-started.html, partner-dashboard.html)
+// continue to call onAuthStateChangeListener() explicitly.
+}
+
+// D-211: Auto-wire sb_at cookie refresh on TOKEN_REFRESHED.
+// Auth.ready() sets it on initial session. This keeps it fresh across token rotations.
+// Replaces the _initCookieSync listener removed in D-211 Phase 0.
+if (typeof window !== 'undefined' && window.Auth && typeof sb !== 'undefined') {
+  try {
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+        window.Auth._setSingleAuthCookie(session);
+      } else if (event === 'SIGNED_OUT') {
+        document.cookie = 'sb_at=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
+    });
+  } catch (e) { /* non-fatal */ }
+}
