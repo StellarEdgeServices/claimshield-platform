@@ -47,7 +47,21 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
     state.homeownerEmail,
     `${state.baseUrl}/dashboard.html`
   );
-  await page.goto(magicLink);
+  // Register the PKCE token-exchange listener BEFORE navigating so it cannot be missed.
+  // Supabase PKCE flow: magic-link URL → redirect to dashboard.html?code= → supabase-js
+  // POSTs /auth/v1/token?grant_type=pkce → tokens persisted to cookie storage.
+  // waitForURL(/dashboard/) and waitForLoadState('load') both resolve before that async
+  // exchange completes, so a bare storageState() call captures a token-less snapshot.
+  // Awaiting the token endpoint response inside Promise.all guarantees the session is
+  // fully in cookie storage before B2 calls storageState().
+  // Bug: 86e1bemev — PKCE race condition (May 12, 2026)
+  await Promise.all([
+    page.goto(magicLink),
+    page.waitForResponse(
+      (resp) => resp.url().includes('/auth/v1/token') && resp.status() === 200,
+      { timeout: 20_000 }
+    ),
+  ]);
   await page.waitForURL(/dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
 }
@@ -210,4 +224,3 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // Assert trade-specific form fields render (roofing: shingle color, drip edge, etc.)
   // Verify project_confirmation JSONB persists on submit.
 });
-
