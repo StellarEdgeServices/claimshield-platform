@@ -47,23 +47,25 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
     state.homeownerEmail,
     `${state.baseUrl}/dashboard.html`
   );
-  // Register the PKCE token-exchange listener BEFORE navigating so it cannot be missed.
-  // Supabase PKCE flow: magic-link URL → redirect to dashboard.html?code= → supabase-js
-  // POSTs /auth/v1/token?grant_type=pkce → tokens persisted to cookie storage.
-  // waitForURL(/dashboard/) and waitForLoadState('load') both resolve before that async
-  // exchange completes, so a bare storageState() call captures a token-less snapshot.
-  // Awaiting the token endpoint response inside Promise.all guarantees the session is
-  // fully in cookie storage before B2 calls storageState().
-  // Bug: 86e1bemev — PKCE race condition (May 12, 2026)
-  await Promise.all([
-    page.goto(magicLink),
-    page.waitForResponse(
-      (resp) => resp.url().includes('/auth/v1/token') && resp.status() === 200,
-      { timeout: 20_000 }
-    ),
-  ]);
+  await page.goto(magicLink);
   await page.waitForURL(/dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
+  // Wait for the Supabase session to be written to cookie storage before returning.
+  // The magic link uses the OTP flow (/auth/v1/verify): Supabase redirects to
+  // dashboard.html with session tokens in the URL hash, which supabase-js processes
+  // asynchronously via OtterQuoteCookieStorage. waitForLoadState('load') resolves
+  // before that async write completes — so a bare storageState() call captures an
+  // empty-session snapshot. Polling window.sb.auth.getSession() directly confirms
+  // the session is in storage before B2 saves it.
+  // Bug: 86e1bemev
+  await page.waitForFunction(
+    async () => {
+      if (!(window as any).sb) return false;
+      const { data } = await (window as any).sb.auth.getSession();
+      return data.session !== null;
+    },
+    { timeout: 15_000 }
+  );
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
