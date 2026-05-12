@@ -345,4 +345,81 @@ Deno.serve(async (req: Request) => {
       const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
       pdfText = await extractPdfText(pdfBytes);
     } catch (parseErr: any) {
-      return jsonResponse({ error: "Failed to parse PDF", details: parseErr.message }, 422
+      return jsonResponse({ error: "Failed to parse PDF", details: parseErr.message }, 422);
+    }
+
+    // Scan required anchors (case-sensitive substring match per manifest)
+    // manualOverrides values may be:
+    //   true         — contractor confirms the anchor exists (legacy binary; counts as found)
+    //   "alt label"  — contractor's actual PDF text for this anchor; re-scan PDF for this string
+    //   anything else — not overridden
+    const anchorResults = tradeManifest.required.map((req: any) => {
+      const literalMatch = pdfText.includes(req.anchor);
+      const override = manualOverrides ? manualOverrides[req.anchor] : undefined;
+      const stringOverride = (typeof override === "string" && override.trim().length > 0)
+        ? override.trim()
+        : null;
+      const stringOverrideMatch = stringOverride !== null && pdfText.includes(stringOverride);
+      const overridden = override === true || stringOverrideMatch;
+      return {
+        anchor: req.anchor,
+        field: req.field,
+        tabType: req.tabType,
+        source: req.source,
+        found: literalMatch || overridden,
+        manualOverride: overridden && !literalMatch,
+        manualOverrideValue: stringOverride,
+      };
+    });
+
+    const optionalResults = tradeManifest.optional.map((anchor: string) => ({
+      anchor,
+      found: pdfText.includes(anchor),
+    }));
+
+    const requiredFoundCount = anchorResults.filter((a: any) => a.found).length;
+    const allRequiredFound = requiredFoundCount === tradeManifest.required.length;
+
+    const validationResult = {
+      manifestVersion: MANIFEST.version,
+      trade: tmpl.trade,
+      funding_type: tmpl.funding_type,
+      requiredCount: tradeManifest.requiredCount,
+      requiredFoundCount,
+      allRequiredFound,
+      anchors: anchorResults,
+      optional: optionalResults,
+      validatedAt: new Date().toISOString(),
+    };
+
+    // Determine new status per D-199 state machine
+    let newStatus: string;
+    if (allRequiredFound) {
+      newStatus = manualOverrides ? "manual_validated" : "auto_validated";
+    } else {
+      newStatus = "manual_mapping_pending";
+    }
+
+    const { error: updateErr } = await supabase
+      .from("contractor_templates")
+      .update({
+        validation_result: validationResult,
+        manual_overrides: manualOverrides ?? null,
+        status: newStatus,
+      })
+      .eq("id", contractor_template_id);
+
+    if (updateErr) {
+      return jsonResponse({ error: "Failed to update template", details: updateErr.message }, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      status: newStatus,
+      validation_result: validationResult,
+    });
+  } catch (e: any) {
+    console.error("validate-contract-template error:", e);
+    return jsonResponse({ error: "Server error", message: e.message }, 500);
+  }
+});
