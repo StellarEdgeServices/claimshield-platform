@@ -49,12 +49,13 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
     `${state.baseUrl}/dashboard.html`
   );
   await page.goto(magicLink);
-  // Pin to the static homeowner dashboard on BASE_URL origin. The loose /dashboard/
-  // regex also matches app.otterquote.com/dashboard (React); under D-212 cross-
-  // subdomain cookie storage, the auth callback can land on app.otterquote.com,
-  // letting B2 pass with cookies on the wrong origin — B3/B4 then open a fresh
-  // context against BASE_URL and the session isn't there. Anchor to the exact URL.
-  await page.waitForURL(`${state.baseUrl}/dashboard.html`, { timeout: 30_000 });
+  // Use a loose regex so fragments/query-strings on the redirect URL don't cause
+  // a timeout (the magic link callback appends ?code= or #access_token= before
+  // the final navigation settles on dashboard.html). The waitForFunction below
+  // then confirms the Supabase token is in localStorage for the correct origin
+  // before storageState is saved, which is the real guard against D-212
+  // cross-subdomain cookie mismatch.
+  await page.waitForURL(/dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
   // Wait for Supabase client to persist the session token to localStorage before
   // saving storageState. Without this, storageState is written before the auth
