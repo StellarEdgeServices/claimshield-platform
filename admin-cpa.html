@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPA Version Management — Otter Quotes Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #001f3f 0%, #003d7a 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { font-size: 1.5rem; font-weight: 600; }
+
+        .header-nav { display: flex; gap: 1rem; align-items: center; }
+
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: background 0.15s;
+        }
+        .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        .logout-btn {
+            background: #fbbf24;
+            color: #001f3f;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: background 0.15s;
+        }
+        .logout-btn:hover { background: #f59e0b; }
+
+        main { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #001f3f;
+            margin-bottom: 0.5rem;
+        }
+        .page-subtitle { color: #64748b; margin-bottom: 2rem; font-size: 0.95rem; }
+
+        /* ── Status banner ── */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem 1.5rem;
+        }
+        .stat-card .label { font-size: 0.8rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .stat-card .value { font-size: 1.75rem; font-weight: 700; color: #001f3f; }
+        .stat-card .value.warning { color: #d97706; }
+        .stat-card .value.ok { color: #059669; }
+
+        /* ── Section card ── */
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* ── Version table ── */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th {
+            text-align: left;
+            padding: 0.625rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        td {
+            padding: 0.875rem 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafbfc; }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-current { background: #d1fae5; color: #065f46; }
+        .badge-old { background: #f1f5f9; color: #64748b; }
+
+        /* ── Publish form ── */
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.375rem;
+        }
+        .form-group .hint {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            color: #1e293b;
+            background: white;
+            transition: border-color 0.15s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #001f3f;
+            box-shadow: 0 0 0 3px rgba(0,31,63,0.08);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .publish-btn {
+            background: #001f3f;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .publish-btn:hover:not(:disabled) { background: #003d7a; }
+        .publish-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .warning-box {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 0.5rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+            color: #92400e;
+            line-height: 1.5;
+        }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            display: none;
+            z-index: 9999;
+            max-width: 360px;
+        }
+        #toast.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        #toast.error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+
+        .loading { color: #94a3b8; font-style: italic; font-size: 0.9rem; }
+        .error-msg { color: #dc2626; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚖️ CPA Version Management</h1>
+    <div class="header-nav">
+        <a href="/admin-contractors.html" class="nav-link">Contractors</a>
+        <a href="/admin-fee-config.html" class="nav-link">Fee Config</a>
+        <a href="/admin-payouts.html" class="nav-link">Payouts</a>
+        <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+    </div>
+</header>
+
+<main>
+    <h2 class="page-title">Contractor Partner Agreement</h2>
+    <p class="page-subtitle">
+        Manage CPA versions and trigger re-attestation for contractors on older versions.
+        When you publish a new version, all active contractors with a prior version will be
+        flagged and prompted to re-accept on their next login.
+    </p>
+
+    <!-- Status Cards -->
+    <div class="status-grid" id="statusGrid">
+        <div class="stat-card">
+            <div class="label">Current Version</div>
+            <div class="value" id="statCurrentVersion">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Need Re-Attestation</div>
+            <div class="value" id="statNeedReattest">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Current on CPA</div>
+            <div class="value ok" id="statCurrent">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total Versions</div>
+            <div class="value" id="statVersionCount">—</div>
+        </div>
+    </div>
+
+    <!-- Version History -->
+    <div class="card">
+        <div class="card-title">Version History</div>
+        <div id="versionTableWrap">
+            <p class="loading">Loading versions…</p>
+        </div>
+    </div>
+
+    <!-- Publish New Version -->
+    <div class="card">
+        <div class="card-title">Publish New CPA Version</div>
+
+        <div class="warning-box">
+            ⚠️ <strong>This action flags all active contractors on an older version for re-attestation.</strong>
+            They will be intercepted at login and cannot use the platform until they accept the updated agreement.
+            Ensure the new CPA is live at <a href="/contractor-agreement.html" target="_blank">/contractor-agreement.html</a> before publishing.
+        </div>
+
+        <form id="publishForm" onsubmit="handlePublish(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="versionLabel">Version Label</label>
+                    <input type="text" id="versionLabel" placeholder="e.g. v2-2026-06" required
+                           pattern="^v\d+-\d{4}-\d{2}$"
+                           title="Format: v{number}-{YYYY}-{MM}, e.g. v2-2026-06">
+                    <div class="hint">Format: v{n}-{YYYY}-{MM}</div>
+                </div>
+                <div class="form-group">
+                    <label for="effectiveDate">Effective Date</label>
+                    <input type="date" id="effectiveDate" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="changeSummary">Change Summary</label>
+                <textarea id="changeSummary" placeholder="Describe what changed in this version (visible in admin history)…" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="confirmCheck" onchange="document.getElementById('publishBtn').disabled = !this.checked">
+                    I confirm the updated agreement is live at /contractor-agreement.html and this version is ready to publish.
+                </label>
+            </div>
+
+            <button type="submit" class="publish-btn" id="publishBtn" disabled>
+                Publish New Version & Trigger Re-Attestation
+            </button>
+        </form>
+    </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// =============================================================================
+// CONFIG
+// =============================================================================
+const SUPABASE_URL     = 'https://yeszghaspzwwstvsrioa.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc3pnaGFzcHp3d3N0dnNyaW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzczOTQsImV4cCI6MjA4ODkxMzM5NH0.rJylLGDUOP25xms5OLDa_tkUyj_ESHT9yzwVynZgiVI';
+const ADMIN_EMAIL      = 'dustinstohler1@gmail.com';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// =============================================================================
+// AUTH
+// =============================================================================
+async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/login.html?reason=admin_required'; return false; }
+    if (session.user.email !== ADMIN_EMAIL) {
+        await sb.auth.signOut();
+        window.location.href = '/login.html?reason=admin_required';
+        return false;
+    }
+    return true;
+}
+
+async function handleLogout() {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+}
+
+// =============================================================================
+// TOAST
+// =============================================================================
+function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = type;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// =============================================================================
+// DATA LOADING
+// =============================================================================
+async function loadData() {
+    // 1. Load all CPA versions
+    const { data: versions, error: vErr } = await sb
+        .from('cpa_versions')
+        .select('*')
+        .order('effective_date', { ascending: false });
+
+    if (vErr) {
+        document.getElementById('versionTableWrap').innerHTML =
+            `<p class="error-msg">Error loading versions: ${vErr.message}</p>`;
+        return;
+    }
+
+    // 2. Count contractors needing re-attestation
+    const { count: needCount, error: nErr } = await sb
+        .from('contractors')
+        .select('id', { count: 'exact', head: true })
+        .eq('needs_cpa_reattestation', true);
+
+    // 3. Count contractors who are current
+    const currentVersion = versions.find(v => v.is_current);
+    let currentCount = null;
+    if (currentVersion) {
+        const { count, error: cErr } = await sb
+            .from('contractors')
+            .select('id', { count: 'exact', head: true })
+            .eq('cpa_version', currentVersion.version_label)
+            .eq('needs_cpa_reattestation', false);
+        if (!cErr) currentCount = count;
+    }
+
+    // ── Update stat cards ──
+    document.getElementById('statCurrentVersion').textContent =
+        currentVersion ? currentVersion.version_label : 'None';
+    document.getElementById('statNeedReattest').textContent =
+        nErr ? '?' : (needCount ?? 0);
+    document.getElementById('statNeedReattest').className =
+        'value' + ((needCount ?? 0) > 0 ? ' warning' : ' ok');
+    document.getElementById('statCurrent').textContent =
+        currentCount !== null ? currentCount : '?';
+    document.getElementById('statVersionCount').textContent = versions.length;
+
+    // ── Render version table ──
+    if (versions.length === 0) {
+        document.getElementById('versionTableWrap').innerHTML =
+            '<p class="loading">No versions found. Run the v79 SQL migration first.</p>';
+        return;
+    }
+
+    const rows = versions.map(v => `
+        <tr>
+            <td>
+                <strong>${escHtml(v.version_label)}</strong>
+                ${v.is_current ? ' <span class="badge badge-current">Current</span>' : '<span class="badge badge-old">Prior</span>'}
+            </td>
+            <td>${escHtml(v.effective_date)}</td>
+            <td>${escHtml(v.change_summary)}</td>
+            <td style="color:#94a3b8;font-size:0.8rem">${new Date(v.created_at).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('versionTableWrap').innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Effective</th>
+                    <th>Change Summary</th>
+                    <th>Published</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+// =============================================================================
+// PUBLISH
+// =============================================================================
+async function handlePublish(e) {
+    e.preventDefault();
+
+    const label       = document.getElementById('versionLabel').value.trim();
+    const effDate     = document.getElementById('effectiveDate').value;
+    const summary     = document.getElementById('changeSummary').value.trim();
+    const btn         = document.getElementById('publishBtn');
+
+    if (!label || !effDate || !summary) return;
+
+    // Confirm
+    const confirmed = window.confirm(
+        `Publish CPA ${label} (effective ${effDate})?\n\n` +
+        `All active contractors NOT on ${label} will be flagged for re-attestation. ` +
+        `They cannot use the platform until they accept.\n\n` +
+        `This cannot be undone automatically — continue?`
+    );
+    if (!confirmed) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+
+    try {
+        // Step 1: Deactivate all current versions
+        const { error: deactivateErr } = await sb
+            .from('cpa_versions')
+            .update({ is_current: false })
+            .eq('is_current', true);
+
+        if (deactivateErr) throw new Error(`Deactivate failed: ${deactivateErr.message}`);
+
+        // Step 2: Insert new version (or reactivate existing label)
+        const { error: insertErr } = await sb
+            .from('cpa_versions')
+            .upsert({
+                version_label:  label,
+                effective_date: effDate,
+                change_summary: summary,
+                is_current:     true,
+            }, { onConflict: 'version_label' });
+
+        if (insertErr) throw new Error(`Insert failed: ${insertErr.message}`);
+
+        // Step 3: Bulk-flag contractors NOT on the new version
+        const { error: flagErr } = await sb
+            .from('contractors')
+            .update({ needs_cpa_reattestation: true })
+            .neq('cpa_version', label)
+            .in('status', ['active', 'pending_approval']);
+
+        if (flagErr) throw new Error(`Flag update failed: ${flagErr.message}`);
+
+        showToast(`✅ CPA ${label} published. Contractors on prior versions have been flagged.`);
+        document.getElementById('publishForm').reset();
+        document.getElementById('publishBtn').disabled = true;
+        await loadData(); // refresh stats
+    } catch (err) {
+        console.error('Publish error:', err);
+        showToast(`Error: ${err.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Publish New Version & Trigger Re-Attestation';
+    }
+}
+
+// =============================================================================
+// UTILS
+// =============================================================================
+function escHtml(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =============================================================================
+// INIT
+// =============================================================================
+(async () => {
+    const ok = await checkAuth();
+    if (!ok) return;
+    await loadData();
+})();
+</script>
+
+</body>
+</html>

@@ -1367,7 +1367,7 @@
                     contractorRecord = data;
 
                     // CPA version guard — redirect to dashboard to show re-acceptance modal
-                    if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION) {
+                    if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION || contractorRecord.needs_cpa_reattestation === true) {
                         if (!localStorage.getItem('oq_cpa_redirect_guard')) {
                             localStorage.setItem('oq_cpa_redirect_guard', '1');
                             window.location.href = '/contractor-dashboard.html';
