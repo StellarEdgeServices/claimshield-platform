@@ -463,7 +463,7 @@
               }
 
               // CPA version guard — redirect to dashboard to show re-acceptance modal
-              if (currentContractor && currentContractor.cpa_version !== CURRENT_CPA_VERSION) {
+              if (currentContractor && (currentContractor.cpa_version !== CURRENT_CPA_VERSION || currentContractor.needs_cpa_reattestation === true)) {
                 if (!localStorage.getItem('oq_cpa_redirect_guard')) {
                   localStorage.setItem('oq_cpa_redirect_guard', '1');
                   window.location.href = '/contractor-dashboard.html';
@@ -1103,7 +1103,4 @@
             if (el) el.addEventListener('change', applyFilters);
         });
 
-document.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
+document.addEventListener('

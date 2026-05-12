@@ -575,6 +575,7 @@
 
   <script>
     // ── Globals ──
+    let sb = null;
     let currentUser = null;
     let contractorRecord = null;
 
@@ -622,7 +623,7 @@
           contractorRecord = data;
 
           // CPA version guard
-          if (contractorRecord.cpa_version !== (typeof CURRENT_CPA_VERSION !== 'undefined' ? CURRENT_CPA_VERSION : contractorRecord.cpa_version)) {
+          if (contractorRecord.cpa_version !== CURRENT_CPA_VERSION || contractorRecord.needs_cpa_reattestation === true) {
             if (!localStorage.getItem('oq_cpa_redirect_guard')) {
               localStorage.setItem('oq_cpa_redirect_guard', '1');
               window.location.href = '/contractor-dashboard.html';
@@ -900,3 +901,4 @@
   </script>
 </body>
 </html>
+                         
