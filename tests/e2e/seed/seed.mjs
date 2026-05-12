@@ -16,7 +16,7 @@
  *   - Fresh test claim in bidding status with pre-populated mock data
  *
  * Idempotent: auth users and profiles are upserted (not re-created on repeat runs).
- * Claims are deleted and re-created fresh each run.
+ * Claims and quotes are deleted and re-created fresh each run.
  *
  * Output: writes .test-state.json with UUIDs needed by test specs.
  */
@@ -200,6 +200,21 @@ async function seed() {
   if (tmplErr) throw new Error(`Contractor templates insert failed: ${tmplErr.message}`);
   console.log(`  ✅ Contractor templates seeded (roofing/insurance, roofing/retail, siding/retail, siding/insurance)`);
 
+  // ── 5c. Quotes cleanup (prior test runs) ─────────────────────────────────
+  // Must run BEFORE claims delete. quotes.claim_id has a FK to claims — if
+  // quotes rows exist, the claims DELETE silently fails (no error thrown by the
+  // JS client when .select() is omitted), leaving the old claim in the DB.
+  // A8 then sees the prior bid and enters "Change Bid mode", which has a
+  // different success path the test doesn't handle, causing A8 to fail on
+  // every CI run after the first. Discovered in wm-86e1bemev-f22a session.
+  console.log('5c. Quotes cleanup (prior test runs)...');
+  const { error: qDelErr } = await supabase
+    .from('quotes')
+    .delete()
+    .eq('contractor_id', contractorId);
+  if (qDelErr) throw new Error(`Quotes cleanup failed: ${qDelErr.message}`);
+  console.log('  ✅ Prior test quotes deleted');
+
   // ── 6. Fresh test claim ──────────────────────────────────────────────────
   console.log('6. Test claim (delete old, create fresh)...');
   // Delete previous test claims to ensure a clean state each run
@@ -377,23 +392,4 @@ async function seed() {
   };
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  ✅ Seed complete');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`  Homeowner:  ${HOMEOWNER_EMAIL}`);
-  console.log(`  Contractor: ${CONTRACTOR_EMAIL} → contractors.id ${contractorId}`);
-  console.log(`  Test claim (insurance): ${testClaimId}`);
-  console.log(`  Test claim (retail siding): ${testRetailClaimId}`);
-  console.log(`  State file: .test-state.json\n`);
-}
-
-// Allow use as Playwright globalSetup (default export) AND direct invocation
-export default seed;
-
-// Direct invocation: `node seed/seed.mjs`
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  seed().catch((e) => {
-    console.error('\n❌ Seed failed:', e.message);
-    process.exit(1);
-  });
-}
+  console.log('\n━━━━━━━━━━━�
