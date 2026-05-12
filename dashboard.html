@@ -9,7 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
-  <title>Submit for Bid &mdash; Otter Quotes</title>
+  <title>My Project Dashboard &mdash; Otter Quotes</title>
   <meta name="description" content="Review and submit your project details for competitive bids from qualified contractors.">
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
@@ -1143,7 +1143,6 @@
 
   <!-- Hidden file input -->
   <input type="file" id="file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-  <input type="file" id="video-file-input" accept="video/mp4,video/quicktime,video/webm" style="display:none">
 
   <!-- Modal for help text -->
   <div id="help-modal" class="modal-overlay">
@@ -1939,16 +1938,6 @@
                 : []),
             icon: currentClaim.project_confirmation ? '✅' : '📋',
             disabled: !currentClaim.project_confirmation && currentClaim.status !== 'contract_signed'
-          },
-          {
-            id: 'video',
-            title: 'Walkthrough Video',
-            required: false,
-            status: currentClaim.video_url ? 'uploaded' : 'pending',
-            filename: currentClaim.video_url ? 'Video on file' : null,
-            description: 'Optional: Upload a short video walkthrough of the damage (max 60 sec, 250 MB).',
-            buttons: currentClaim.video_url ? [] : [{ label: 'Upload Video', action: 'video_upload', data: 'video' }],
-            icon: '🎥'
           }
         ];
 
@@ -1981,8 +1970,6 @@
                 ${item.buttons.map(btn => {
                   if (btn.action === 'upload') {
                     return `<button type="button" class="btn btn-sm btn-secondary" onclick="handleUpload('${btn.data}')">Upload</button>`;
-                  } else if (btn.action === 'video_upload') {
-                    return `<button type="button" class="btn btn-sm btn-secondary" onclick="handleVideoUpload()">Upload Video</button>`;
                   } else if (btn.action === 'help') {
                     return `<button type="button" class="btn btn-sm btn-ghost" onclick="showHelpModal('${btn.data}')">Help Me</button>`;
                   } else if (btn.action === 'navigate') {
@@ -2573,71 +2560,6 @@
         input.click();
       };
 
-      // ── Video Upload ──
-      window.handleVideoUpload = function() {
-        document.getElementById('video-file-input').click();
-      };
-
-      document.getElementById('video-file-input').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        e.target.value = '';
-
-        const validTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
-        if (!validTypes.includes(file.type)) {
-          showError('Invalid video format. Supported: MP4, MOV, WebM');
-          return;
-        }
-        if (file.size > 250 * 1024 * 1024) {
-          showError('Video exceeds 250 MB limit.');
-          return;
-        }
-
-        // Validate duration (max 60 seconds)
-        const objectUrl = URL.createObjectURL(file);
-        const videoEl = document.createElement('video');
-        const duration = await new Promise((resolve) => {
-          videoEl.onloadedmetadata = () => resolve(videoEl.duration);
-          videoEl.onerror = () => resolve(0);
-          videoEl.src = objectUrl;
-        });
-        URL.revokeObjectURL(objectUrl);
-        if (duration > 60) {
-          showError(`Video exceeds 60-second limit (${Math.round(duration)}s). Please trim and try again.`);
-          return;
-        }
-
-        if (!currentClaim?.id || !currentUser?.id || !sb || CONFIG.DEMO_MODE) {
-          showError('Cannot upload: no active session.');
-          return;
-        }
-
-        const ext = file.name.split('.').pop() || 'mp4';
-        const filePath = `videos/${currentUser.id}/${currentClaim.id}/${Date.now()}.${ext}`;
-
-        showSuccess('Uploading video…');
-
-        const { error: upErr } = await sb.storage
-          .from('claim-documents')
-          .upload(filePath, file, { contentType: file.type });
-        if (upErr) {
-          showError('Upload failed: ' + upErr.message);
-          return;
-        }
-
-        const { error: dbErr } = await sb.from('claims')
-          .update({ video_url: filePath })
-          .eq('id', currentClaim.id);
-        if (dbErr) {
-          showError('Failed to save video reference: ' + dbErr.message);
-          return;
-        }
-
-        currentClaim.video_url = filePath;
-        renderChecklist();
-        showSuccess('Video uploaded successfully!');
-      });
-
       // ── Resend Hover Capture Link ──
       window.resendHoverLink = async function(btn) {
         if (!currentClaim?.id || CONFIG.DEMO_MODE) return;
@@ -3027,54 +2949,6 @@
         }
     </script>
 
-<!-- Messaging Thread UI Section for dashboard.html -->
-<!-- Insert this after the "Claims" or "Bids" card section, before closing main -->
-
-<div class="card messages-section" style="margin-top: 32px;">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--navy);">Messages</h3>
-  </div>
-
-  <!-- Claim Selector -->
-  <div style="margin-bottom: 20px;">
-    <label style="display: block; font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 8px;">Select a project:</label>
-    <select id="messagingClaimSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit;">
-      <option value="">-- No projects with messages yet --</option>
-    </select>
-  </div>
-
-  <!-- Message Thread Container -->
-  <div id="messagingThreadContainer" style="display: none;">
-    <!-- Contractor Info -->
-    <div id="contractorInfo" style="background: #F0F9FF; border-left: 4px solid var(--navy); padding: 12px; margin-bottom: 16px; border-radius: 4px;">
-      <div style="font-weight: 600; font-size: 14px; color: var(--navy);">Talking with <span id="contractorName">--</span></div>
-    </div>
-
-    <!-- Messages List -->
-    <div id="messagesList" style="border: 1px solid #E2E8F0; border-radius: 6px; padding: 16px; height: 300px; overflow-y: auto; margin-bottom: 16px; background: #FAFBFC;">
-      <p style="color: #94A3B8; text-align: center; margin: 0;">No messages yet.</p>
-    </div>
-
-    <!-- Message Input -->
-    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-      <textarea
-        id="messageBody"
-        placeholder="Type your message..."
-        style="flex: 1; padding: 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px;"
-      ></textarea>
-      <button
-        id="messageSendBtn"
-        style="align-self: flex-end; padding: 12px 24px; background: var(--navy); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;"
-      >
-        Send
-      </button>
-    </div>
-
-    <!-- Status Message -->
-    <div id="messageStatus" style="font-size: 12px; color: #64748B; text-align: center;"></div>
-  </div>
-</div>
-
 <script>
 // Messaging functionality for dashboard.html
 (function() {
@@ -3432,5 +3306,6 @@
     }
   });
 })();
+</script>
 </body>
 </html>
