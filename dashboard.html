@@ -9,7 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
-  <title>Submit for Bid &mdash; Otter Quotes</title>
+  <title>My Project Dashboard &mdash; Otter Quotes</title>
   <meta name="description" content="Review and submit your project details for competitive bids from qualified contractors.">
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
@@ -3023,7 +3023,7 @@
     const { data: claims } = await sb
       .from("claims")
       .select("id, property_address, selected_contractor_id, quotes(contractor_id, contractors(id, profiles:profiles(full_name, email)))")
-      .eq("user_id", homeownerId);
+      .eq("homeowner_id", homeownerId);
 
     if (!claims || claims.length === 0) {
       claimSelect.innerHTML = '<option value="">-- No projects available --</option>';
