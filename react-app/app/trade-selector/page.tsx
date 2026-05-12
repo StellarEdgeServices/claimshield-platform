@@ -534,6 +534,14 @@ export default function TradeSelectorPage() {
         has_repair: hasRepair,
       });
 
+      // Write oq_trade_selections for repair-intake.html cross-page handoff (feature parity D-211)
+      // repair-intake.html reads sessionStorage('oq_trade_selections') as { [tradeName]: boolean }
+      if (typeof sessionStorage !== 'undefined' && hasRepair) {
+        const tradeSelectionsMap: Record<string, boolean> = {};
+        trades.forEach(t => { tradeSelectionsMap[t] = true; });
+        sessionStorage.setItem('oq_trade_selections', JSON.stringify(tradeSelectionsMap));
+      }
+
       // Redirect
       const redirectUrl = hasRepair ? REPAIR_INTAKE_URL : DASHBOARD_URL;
       setTimeout(() => {
