@@ -85,25 +85,15 @@ function base64urlDecode(str: string): Uint8Array {
 }
 
 async function importRsaPrivateKey(pemBase64: string): Promise<CryptoKey> {
-  // The secret may be stored as:
-  //   (a) a raw base64-encoded DER key (no PEM headers), or
-  //   (b) a full PEM string with -----BEGIN/END PRIVATE KEY----- headers
-  //       (possibly as a single line with no real newlines, or with \n newlines).
-  // Strategy: use a regex to extract the base64 body between PEM delimiters.
-  // If no PEM delimiters exist, treat the whole value as raw base64 DER.
   let b64 = pemBase64.trim();
   if (b64.includes("-----BEGIN")) {
-    // Regex captures everything between the header and footer, regardless of
-    // whether newlines are real \n or whether the whole thing is on one line.
     const match = b64.match(/-----BEGIN[^-]+-----([A-Za-z0-9+/=\s]+)-----END[^-]+-----/);
     if (match) {
       b64 = match[1];
     } else {
-      // Fallback: strip any -----...------ blocks and take what's left.
       b64 = b64.replace(/-----[^-]+-----/g, "");
     }
   }
-  // Strip all remaining whitespace (newlines, spaces, carriage returns).
   b64 = b64.replace(/\s+/g, "");
 
   const pemBinary = atob(b64);
@@ -123,9 +113,8 @@ async function createJwtAssertion(
   baseUrl: string
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + 3600; // 1 hour
+  const exp = now + 3600;
 
-  // Determine audience based on baseUrl (sandbox vs production)
   const aud = baseUrl.includes("demo") || baseUrl.includes("account-d")
     ? "account-d.docusign.com"
     : "account.docusign.com";
@@ -166,7 +155,6 @@ async function createJwtAssertion(
 async function getAccessToken(baseUrl: string): Promise<CachedToken> {
   const now = Date.now();
 
-  // Return cached token if valid (with 5-minute buffer)
   if (cachedToken && cachedToken.expiresAt > now + 300000) {
     console.log("Using cached DocuSign access token");
     return cachedToken;
@@ -185,7 +173,6 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
 
   const jwtAssertion = await createJwtAssertion(integrationKey, userId, baseUrl);
 
-  // Determine OAuth endpoint based on baseUrl
   const oauthHost = baseUrl.includes("demo") || baseUrl.includes("account-d")
     ? "https://account-d.docusign.com"
     : "https://account.docusign.com";
@@ -209,7 +196,6 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
     throw new Error("No access_token in DocuSign response");
   }
 
-  // Fetch account info from /oauth/userinfo to get the correct account ID and base URI.
   console.log("Fetching DocuSign account info via /oauth/userinfo");
   const userInfoResponse = await fetch(`${oauthHost}/oauth/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -227,11 +213,9 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
     throw new Error(`Could not determine DocuSign account ID from userinfo: ${JSON.stringify(userInfo)}`);
   }
 
-  // base_uri from userinfo is the REST API base (e.g. https://demo.docusign.net)
   const resolvedBaseUri = account.base_uri || baseUrl;
   console.log(`DocuSign account ID: ${account.account_id}, base_uri: ${resolvedBaseUri}`);
 
-  // Cache token (valid for 1 hour, cache with 5-minute buffer)
   cachedToken = {
     accessToken,
     accountId: account.account_id,
@@ -264,7 +248,6 @@ async function getTemplateFromStorage(
       throw new Error("No data returned from storage");
     }
 
-    // Convert blob to base64
     const arrayBuffer = await data.arrayBuffer();
     const base64 = base64EncodeBinary(new Uint8Array(arrayBuffer));
     return base64;
@@ -275,11 +258,6 @@ async function getTemplateFromStorage(
   }
 }
 
-/**
- * Fetch a PDF template from a public Supabase Storage URL.
- * Used for project_confirmation templates whose paths include timestamps
- * (e.g. {contractorId}/project_confirmation_template_{timestamp}.pdf).
- */
 async function fetchTemplateFromUrl(url: string): Promise<string> {
   console.log(`Fetching template PDF from URL: ${url}`);
   const response = await fetch(url);
@@ -292,22 +270,12 @@ async function fetchTemplateFromUrl(url: string): Promise<string> {
   return base64EncodeBinary(new Uint8Array(arrayBuffer));
 }
 
-/**
- * Fetch a PC template from Supabase Storage using a bare path.
- * Handles both bare paths (stored post-D-161) and full public URLs
- * (stored pre-migration — extracts path via regex for backward compat).
- *
- * D-161: contractor-templates bucket is private; public URLs 404.
- * All new uploads store only the path.
- */
 async function getPcTemplateFromStorage(supabase: any, fileUrl: string): Promise<string> {
-  // Resolve bare path vs full URL (backward compat for pre-migration data)
   let storagePath: string;
   const pathMatch = fileUrl.match(/contractor-templates\/(.+?)(\?|$)/);
   if (pathMatch) {
     storagePath = decodeURIComponent(pathMatch[1]);
   } else {
-    // Assume it's already a bare path (post-migration uploads)
     storagePath = fileUrl;
   }
 
@@ -327,15 +295,6 @@ async function getPcTemplateFromStorage(supabase: any, fileUrl: string): Promise
   return base64EncodeBinary(new Uint8Array(arrayBuffer));
 }
 
-/**
- * Select the best PC template slot from the contractor's color_confirmation_template JSONB.
- * D-161 slot key format: "{trade}/{funding_type}" (lowercase, e.g. "roofing/insurance").
- *
- * Selection order:
- *   1. Exact match on trade + funding_type
- *   2. Fallback to roofing/insurance
- *   3. If neither exists, returns null (caller must handle gracefully)
- */
 function selectPcTemplateSlot(
   pcTemplateJsonb: Record<string, any> | null | undefined,
   trade: string,
@@ -371,28 +330,14 @@ function base64EncodeBinary(bytes: Uint8Array): string {
 }
 
 // ========== IC 24-5-11 COMPLIANCE ADDENDUM PDF ==========
-/**
- * Generates a PDF addendum containing Indiana Home Improvement Contract Act
- * compliance language. This addendum is attached as the LAST document in every
- * contract envelope.
- *
- * Contents:
- * 1. Statement of Right to Cancel (IC 24-5-11-10.6 — verbatim)
- * 2. Notice of Cancellation form (IC 24-5-11-10.6(b) — 10pt boldface)
- * 3. Homeowner acknowledgment that OtterQuote is not a party (D-123)
- *
- * Uses a minimal PDF generator (no external libraries) to produce a valid PDF
- * with the required legal text.
- */
 function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string): string {
-  // Minimal PDF generator — builds a valid PDF 1.4 document with text content
   const lines: string[] = [];
   const objects: { offset: number }[] = [];
   let currentOffset = 0;
 
   function write(s: string) {
     lines.push(s);
-    currentOffset += s.length + 1; // +1 for newline
+    currentOffset += s.length + 1;
   }
 
   function startObject(num: number) {
@@ -400,7 +345,6 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
     write(`${num} 0 obj`);
   }
 
-  // Calculate cancellation deadline (3rd business day after signing)
   const signDate = new Date(contractDate || new Date().toISOString());
   let businessDays = 0;
   const cancelDate = new Date(signDate);
@@ -411,18 +355,14 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   }
   const cancelDateStr = cancelDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-  // Build PDF content stream with compliance text
-  // Using standard PDF text operators: BT (begin text), ET (end text), Tf (font), Td (move), Tj (show text)
   const contentLines: string[] = [];
 
   function addText(x: number, y: number, fontSize: number, font: string, text: string) {
-    // Escape special PDF characters
     const escaped = text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
     contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${escaped}) Tj ET`);
   }
 
   function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
-    // Approximate character width: fontSize * 0.5 for Helvetica
     const charWidth = fontSize * 0.5;
     const maxChars = Math.floor(maxWidth / charWidth);
     const words = text.split(" ");
@@ -446,20 +386,16 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
     return y;
   }
 
-  // Page 1: Statement of Right to Cancel + Notice of Cancellation
   let y = 750;
 
-  // Title
   addText(50, y, 14, "F2", "INDIANA HOME IMPROVEMENT CONTRACT ACT ADDENDUM");
   y -= 20;
   addText(50, y, 10, "F1", `IC 24-5-11 Compliance Addendum — Contract Date: ${contractDate || new Date().toLocaleDateString("en-US")}`);
   y -= 10;
 
-  // Horizontal rule
   contentLines.push(`50 ${y} m 562 ${y} l S`);
   y -= 20;
 
-  // Section 1: Statement of Right to Cancel
   addText(50, y, 12, "F2", "STATEMENT OF RIGHT TO CANCEL");
   y -= 20;
 
@@ -468,11 +404,9 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   y = addWrappedText(50, y, 10, "F2", statementText, 512);
   y -= 15;
 
-  // Horizontal rule
   contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
   y -= 15;
 
-  // Section 2: Notice of Cancellation
   addText(50, y, 12, "F2", "NOTICE OF CANCELLATION");
   y -= 20;
 
@@ -512,11 +446,9 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   addText(50, y, 10, "F1", `Homeowner Name (printed): ${homeownerName}`);
   y -= 30;
 
-  // Horizontal rule
   contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
   y -= 15;
 
-  // Section 3: OtterQuote Disclaimer (D-123)
   addText(50, y, 12, "F2", "PLATFORM DISCLOSURE");
   y -= 20;
 
@@ -532,11 +464,9 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   y -= 12;
   addText(50, y, 8, "F1", `Generated: ${new Date().toISOString()}`);
 
-  // Assemble PDF content stream
   const contentStream = contentLines.join("\n");
   const contentBytes = new TextEncoder().encode(contentStream);
 
-  // Build the PDF structure
   const pdfLines: string[] = [];
   const pdfObjects: number[] = [];
   let byteOffset = 0;
@@ -553,22 +483,18 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
 
   pdfWrite("%PDF-1.4");
 
-  // Object 1: Catalog
   pdfStartObj(1);
   pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
   pdfWrite("endobj");
 
-  // Object 2: Pages
   pdfStartObj(2);
   pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
   pdfWrite("endobj");
 
-  // Object 3: Page
   pdfStartObj(3);
   pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
   pdfWrite("endobj");
 
-  // Object 4: Content stream
   pdfStartObj(4);
   pdfWrite(`<< /Length ${contentStream.length} >>`);
   pdfWrite("stream");
@@ -576,17 +502,14 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
   pdfWrite("endstream");
   pdfWrite("endobj");
 
-  // Object 5: Font (Helvetica — regular)
   pdfStartObj(5);
   pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   pdfWrite("endobj");
 
-  // Object 6: Font (Helvetica-Bold — for required boldface sections)
   pdfStartObj(6);
   pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
   pdfWrite("endobj");
 
-  // Cross-reference table
   const xrefOffset = byteOffset;
   pdfWrite("xref");
   pdfWrite(`0 7`);
@@ -595,25 +518,18 @@ function generateComplianceAddendumPdf(contractorName: string, homeownerName: st
     pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
   }
 
-  // Trailer
   pdfWrite("trailer");
   pdfWrite(`<< /Size 7 /Root 1 0 R >>`);
   pdfWrite("startxref");
   pdfWrite(String(xrefOffset));
   pdfWrite("%%EOF");
 
-  // Encode to base64
   const pdfContent = pdfLines.join("\n");
   const pdfBytes = new TextEncoder().encode(pdfContent);
   return base64EncodeBinary(pdfBytes);
 }
 
 // ========== HOVER MEASUREMENTS FETCH ==========
-/**
- * Fetches key measurement data from hover_orders for use in the Scope of Work PDF.
- * Returns a normalized measurement object with common fields, or null if unavailable.
- * Never throws — any error produces null so the SOW still generates without measurements.
- */
 async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
   roofSqFt: number | null;
   wallSqFt: number | null;
@@ -634,7 +550,6 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
 
     const mj = order.measurements_json;
 
-    // Roof area — try multiple Hover API response shapes
     const roofSqFtRaw =
       mj?.structures?.[0]?.areas?.roof ??
       mj?.total_sq_ft ??
@@ -643,14 +558,12 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
       mj?.measurements?.total_area ??
       null;
 
-    // Wall area (for siding)
     const wallSqFtRaw =
       mj?.structures?.[0]?.areas?.wall ??
       mj?.wall_area_sq_ft ??
       mj?.measurements?.wall_area ??
       null;
 
-    // Perimeter / eaves linear footage (for gutters)
     const perimeterFtRaw =
       mj?.structures?.[0]?.eaves ??
       mj?.eaves_length ??
@@ -658,7 +571,6 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
       mj?.measurements?.perimeter ??
       null;
 
-    // Primary pitch
     const pitchRaw =
       mj?.structures?.[0]?.pitch ??
       mj?.primary_pitch ??
@@ -680,23 +592,6 @@ async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
 }
 
 // ========== RETAIL SCOPE OF WORK PDF ==========
-/**
- * Generates a Scope of Work PDF for retail (non-insurance) jobs.
- * Attached as document 2 in the DocuSign envelope when fundingType !== 'insurance'.
- * For insurance jobs, the loss sheet serves as the scope reference instead.
- *
- * Content:
- *   1. Project header (address, parties, date)
- *   2. Contract summary (trades, price, start date)
- *   3. Hover aerial measurements (if available — graceful fallback if not)
- *   4. Trade-specific scope details (from value_adds JSONB on the winning quote)
- *   5. Warranty details (from value_adds.warranties)
- *   6. Project confirmation answers (if claim.project_confirmation is populated)
- *   7. Notes and platform disclosure
- *
- * Uses the same raw PDF 1.4 operator pattern as generateComplianceAddendumPdf —
- * no external libraries, no Deno.read, no filesystem access.
- */
 function generateRetailScopeOfWorkPdf(params: {
   homeownerName: string;
   contractorName: string;
@@ -726,7 +621,6 @@ function generateRetailScopeOfWorkPdf(params: {
   const va = valueAdds || {};
   const pc = projectConfirmation || null;
 
-  // ── PDF builder state ────────────────────────────────────────────
   const pdfLines: string[] = [];
   const pdfObjects: number[] = [];
   let byteOffset = 0;
@@ -741,7 +635,6 @@ function generateRetailScopeOfWorkPdf(params: {
     pdfWrite(`${n} 0 obj`);
   }
 
-  // ── Content stream builder ───────────────────────────────────────
   const contentLines: string[] = [];
 
   function esc(text: string): string {
@@ -781,17 +674,14 @@ function generateRetailScopeOfWorkPdf(params: {
     return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  // ── Page content ─────────────────────────────────────────────────
   let y = 750;
 
-  // Header
   addText(50, y, 16, "F2", "SCOPE OF WORK");
   y -= 18;
-  addText(50, y, 9, "F1", `Prepared by OtterQuote on behalf of ${esc(contractorName)}`);
+  addText(50, y, 9, "F1", `Prepared by Otter Quotes on behalf of ${esc(contractorName)}`);
   y -= 10;
   hLine(y); y -= 16;
 
-  // Project info
   addText(50, y, 10, "F2", "PROJECT:");   addText(160, y, 10, "F1", esc(propertyAddress)); y -= 14;
   addText(50, y, 10, "F2", "HOMEOWNER:"); addText(160, y, 10, "F1", esc(homeownerName)); y -= 14;
   addText(50, y, 10, "F2", "CONTRACTOR:"); addText(160, y, 10, "F1", esc(contractorName)); y -= 14;
@@ -799,7 +689,6 @@ function generateRetailScopeOfWorkPdf(params: {
   addText(50, y, 10, "F2", "JOB REF:");   addText(160, y, 10, "F1", claimId.slice(0, 8).toUpperCase()); y -= 20;
   hLine(y); y -= 16;
 
-  // Contract summary
   addText(50, y, 12, "F2", "CONTRACT SUMMARY"); y -= 16;
   const tradeLabel = (trades || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(", ") || "See below";
   addText(50, y, 10, "F2", "Trade(s):"); addText(160, y, 10, "F1", esc(tradeLabel)); y -= 14;
@@ -808,7 +697,13 @@ function generateRetailScopeOfWorkPdf(params: {
   addText(50, y, 10, "F2", "Est. Start:"); addText(160, y, 10, "F1", esc(estimatedStartDate || "To be scheduled")); y -= 20;
   hLine(y); y -= 16;
 
-  // Hover measurements (if available)
+  // D-186/D-203 — Verbatim measurement disclaimer (required at top of every retail Exhibit A)
+  addText(50, y, 10, "F2", "MEASUREMENT DISCLAIMER"); y -= 14;
+  y = addWrappedText(50, y, 9, "F1",
+    "The measurements contained in this Statement of Work were provided to Contractor on behalf of Customer. Both parties have relied upon the accuracy of this information in negotiating the terms of this Agreement. Prior to starting the work set forth in this agreement, either party shall have the right to perform his or her own measurements to verify the measurements contained herein. If any measurement in this statement of work is off by more than 10%, either party shall have the right to: (1) negotiate a change order to adjust the compensation due under the Agreement; (2) cancel the Agreement; or (3) proceed under the terms set forth in the Agreement.",
+    512);
+  y -= 12; hLine(y); y -= 16;
+
   if (measurements && (measurements.roofSqFt || measurements.wallSqFt || measurements.perimeterFt)) {
     addText(50, y, 12, "F2", "HOVER AERIAL MEASUREMENTS"); y -= 16;
     if (measurements.roofSqFt) {
@@ -834,7 +729,6 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 6; hLine(y); y -= 16;
   }
 
-  // Scope of work details by trade
   addText(50, y, 12, "F2", "SCOPE OF WORK DETAILS"); y -= 16;
 
   const hasRoofing = (trades || []).some(t => t.toLowerCase().includes("roof"));
@@ -842,7 +736,6 @@ function generateRetailScopeOfWorkPdf(params: {
   const hasGutters = (trades || []).some(t => t.toLowerCase().includes("gutter"));
   const hasWindows = (trades || []).some(t => t.toLowerCase().includes("window"));
 
-  // ── Roofing section ──────────────────────────────────────────────
   if (hasRoofing) {
     addText(50, y, 11, "F2", "ROOFING"); y -= 14;
 
@@ -900,8 +793,6 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 8;
   }
 
-  // ── Second-Layer Tear-Off Contingency ────────────────────────────
-  // Only rendered when bid includes secondLayerContingency pricing (retail roofing).
   const slc = va?.secondLayerContingency;
   if (hasRoofing && slc) {
     const slcAmount = (slc.method === "flat_fee" && slc.flatFeeAlternative != null)
@@ -918,7 +809,6 @@ function generateRetailScopeOfWorkPdf(params: {
     }
   }
 
-  // ── Gutters section ──────────────────────────────────────────────
   if (hasGutters) {
     addText(50, y, 11, "F2", "GUTTERS"); y -= 14;
 
@@ -947,7 +837,6 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 8;
   }
 
-  // ── Siding section ───────────────────────────────────────────────
   if (hasSiding) {
     addText(50, y, 11, "F2", "SIDING"); y -= 14;
     addText(60, y, 10, "F1", "Scope per contractor bid and Hover design specifications."); y -= 14;
@@ -957,14 +846,12 @@ function generateRetailScopeOfWorkPdf(params: {
     y -= 8;
   }
 
-  // ── Windows section ──────────────────────────────────────────────
   if (hasWindows) {
     addText(50, y, 11, "F2", "WINDOWS"); y -= 14;
     addText(60, y, 10, "F1", "Scope per contractor bid."); y -= 14;
     y -= 8;
   }
 
-  // ── Warranties ───────────────────────────────────────────────────
   if (Array.isArray(va.warranties) && va.warranties.length > 0) {
     hLine(y + 4); y -= 12;
     addText(50, y, 12, "F2", "WARRANTIES"); y -= 14;
@@ -979,7 +866,6 @@ function generateRetailScopeOfWorkPdf(params: {
     }
   }
 
-  // ── Notes ────────────────────────────────────────────────────────
   const hasNotes = homeownerNotes || messageToHomeowner || va.other_offers ||
                    (pc?.workNotBeingDone) || (pc?.homeownerNotes);
   if (hasNotes) {
@@ -1007,14 +893,12 @@ function generateRetailScopeOfWorkPdf(params: {
     }
   }
 
-  // ── Footer disclosure ─────────────────────────────────────────────
   y -= 12; hLine(y + 4); y -= 12;
   y = addWrappedText(50, y, 8, "F1",
-    "This Scope of Work is a reference document generated by OtterQuote. The contractor's signed agreement is the binding contract. Scope details are based on the contractor's bid submission and may be supplemented by on-site assessment.",
+    "This Scope of Work is a reference document generated by Otter Quotes. The contractor's signed agreement is the binding contract. Scope details are based on the contractor's bid submission and may be supplemented by on-site assessment.",
     512);
-  addText(50, y, 8, "F1", `Generated by OtterQuote on ${esc(contractDate)} — Job Ref ${claimId.slice(0, 8).toUpperCase()}`);
+  addText(50, y, 8, "F1", `Generated by Otter Quotes on ${esc(contractDate)} — Job Ref ${claimId.slice(0, 8).toUpperCase()}`);
 
-  // ── Assemble PDF ─────────────────────────────────────────────────
   const contentStream = contentLines.join("\n");
 
   pdfWrite("%PDF-1.4");
@@ -1100,19 +984,15 @@ function buildTextTabs(
   documentId: string,
   documentType: string
 ): TextTab[] {
-  // Mapping of field names to anchor strings found in contractor PDFs
   const fieldAnchors: { [key: string]: string } = {
-    // Homeowner / property fields
     customer_name: "Name",
     customer_address: "Address:",
     customer_city_zip: "City/Zip:",
     customer_phone: "Phone",
     customer_email: "Email:",
-    // Insurance fields
     insurance_company: "Insurance Co",
     claim_number: "Claim #",
     deductible: "DEDUCTIBLE:",
-    // Contract / job fields
     contract_date: "Date:",
     job_description: "Description:",
     material_type: "Material:",
@@ -1121,13 +1001,11 @@ function buildTextTabs(
     estimated_start: "Start Date:",
     decking_per_sheet: "Decking/Sheet:",
     full_redeck_price: "Full Redeck:",
-    // Contractor fields
     contractor_name: "Contractor:",
     contractor_phone: "Contractor Phone:",
     contractor_email: "Contractor Email:",
     contractor_address: "Contractor Address:",
     contractor_license: "License #:",
-    // Color / project confirmation fields
     shingle_manufacturer: "Single Manufacture",
     shingle_type: "Shingle Type:",
     shingle_color: "Shingle Color:",
@@ -1135,7 +1013,6 @@ function buildTextTabs(
     vents: "Vents",
     satellite: "Satellite",
     skylights: "Skylights",
-    // Project confirmation extended fields
     num_structures: "Structures:",
     structure_names: "Structure Names:",
     valley_type: "Valley Type:",
@@ -1151,7 +1028,6 @@ function buildTextTabs(
   for (const [fieldName, fieldValue] of Object.entries(fields)) {
     const anchor = fieldAnchors[fieldName];
     if (!anchor) {
-      // Skip unmapped fields
       continue;
     }
 
@@ -1198,11 +1074,8 @@ function buildSignerTabs(documentId: string, signerType: "homeowner" | "contract
 }
 
 // ========== ADDENDUM SIGNER TABS ==========
-// These are positioned on the compliance addendum (document 2) for the homeowner's
-// acknowledgment checkbox and signature on the cancellation notice
 function buildAddendumTabs(documentId: string) {
   return {
-    // Checkbox for D-123 acknowledgment
     checkboxTabs: [
       {
         anchorString: "PLATFORM DISCLOSURE",
@@ -1215,7 +1088,6 @@ function buildAddendumTabs(documentId: string) {
         documentId,
       },
     ],
-    // Sign on the Notice of Cancellation (homeowner only — this signature is on the addendum)
     signHereTabs: [
       {
         anchorString: "I HEREBY CANCEL THIS TRANSACTION",
@@ -1274,17 +1146,14 @@ async function autoPopulateFields(
   const fields: TextTabFields = {};
 
   if (claimData) {
-    // Homeowner info
     fields.customer_name = signerName || "";
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
     fields.customer_email = signerEmail || "";
-    // Insurance info
     fields.insurance_company = claimData.insurance_carrier || "";
     fields.claim_number = claimData.claim_number || "";
     fields.deductible = claimData.deductible_amount ? `$${Number(claimData.deductible_amount).toLocaleString()}` : "";
-    // Job info
     fields.contract_date = new Date().toLocaleDateString("en-US");
     fields.job_description = claimData.damage_type ? `Roof ${claimData.damage_type}` : "Roof Replacement";
     fields.material_type = claimData.material_product || bidData?.brand || "";
@@ -1307,7 +1176,6 @@ async function autoPopulateFields(
       : "";
     fields.contractor_license = "";
 
-    // Get contractor license info
     const { data: licenseData } = await supabase
       .from("contractor_licenses")
       .select("license_number, municipality")
@@ -1318,7 +1186,6 @@ async function autoPopulateFields(
     }
   }
 
-  // Project Confirmation: merge scope/material fields from project_confirmation JSONB
   if (documentType === "project_confirmation" && claimData?.project_confirmation) {
     const pc = claimData.project_confirmation;
     Object.assign(fields, {
@@ -1351,7 +1218,6 @@ async function handleContractorSign(
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, fields: providedFields, return_url, quote_id } = requestBody;
 
-  // Auto-populate fields if not provided
   let autoFields = providedFields || {};
   let claimData: any = null;
   let contractorData: any = null;
@@ -1368,7 +1234,6 @@ async function handleContractorSign(
     contractorData = c;
     const { data: cl } = await supabase.from("claims").select("*").eq("id", claim_id).single();
     claimData = cl;
-    // Fetch bid data for SOW generation — needed even when caller provides their own fields
     const { data: bd } = await supabase
       .from("quotes")
       .select("*")
@@ -1378,8 +1243,6 @@ async function handleContractorSign(
     bidData = bd;
   }
 
-  // Fetch contractor's contract template from storage
-  // Determine trade + funding type to select the right template
   const trades = claimData?.selected_trades || [];
   const trade = trades.length ? trades[0].toLowerCase() : "roofing";
   let fundingType = "insurance";
@@ -1389,7 +1252,6 @@ async function handleContractorSign(
     fundingType = "retail";
   }
 
-  // Look up template from contractor's contract_templates JSONB
   const templates = contractorData?.contract_templates || [];
   let matchingTemplate = templates.find((t: any) =>
     t.trade && t.trade.toLowerCase() === trade &&
@@ -1404,7 +1266,6 @@ async function handleContractorSign(
 
   let templateBase64: string;
   if (matchingTemplate?.file_url && matchingTemplate.file_url.includes("contractor-templates")) {
-    // Extract storage path from URL and download
     const pathMatch = matchingTemplate.file_url.match(/contractor-templates\/(.+)$/);
     if (pathMatch) {
       const storagePath = decodeURIComponent(pathMatch[1]);
@@ -1418,19 +1279,14 @@ async function handleContractorSign(
   } else if (matchingTemplate?.file_url) {
     templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
   } else {
-    // Fallback: try standard path convention
     templateBase64 = await getTemplateFromStorage(supabase, contractor_id, "contract");
   }
 
-  // Generate IC 24-5-11 compliance addendum
   const contractDate = new Date().toLocaleDateString("en-US");
   const contractorName = contractorData?.company_name || signer.name || "Contractor";
   const homeownerName = autoFields.customer_name || "Homeowner";
   const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
 
-  // For retail (non-insurance) jobs: generate a Scope of Work PDF and attach it as
-  // document 2. The IC 24-5-11 compliance addendum shifts to document 3.
-  // For insurance jobs the loss sheet serves as the scope reference — no SOW generated.
   const isRetail = fundingType !== "insurance";
   let scopeOfWorkBase64: string | null = null;
   if (isRetail) {
@@ -1456,7 +1312,6 @@ async function handleContractorSign(
       });
       console.log(`Retail Scope of Work PDF generated for claim ${claim_id}`);
     } catch (sowErr) {
-      // Non-fatal: proceed without SOW if generation fails for any reason
       console.error("Retail SOW PDF generation failed (non-fatal, continuing without SOW):", sowErr);
       scopeOfWorkBase64 = null;
     }
@@ -1464,16 +1319,12 @@ async function handleContractorSign(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Document IDs:
-  //   Insurance:  doc 1 = contractor agreement, doc 2 = IC 24-5-11 addendum
-  //   Retail:     doc 1 = contractor agreement, doc 2 = Scope of Work, doc 3 = IC 24-5-11 addendum
   const documentId = "1";
-  const sowDocId    = "2"; // retail only
+  const sowDocId    = "2";
   const addendumDocId = isRetail && scopeOfWorkBase64 ? "3" : "2";
   const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
   const contractorTabs = buildSignerTabs(documentId, "contractor");
 
-  // Resolve homeowner email for placeholder recipient (from profiles table)
   let homeownerEmail = "homeowner@placeholder.otterquote.com";
   let homeownerFullName = homeownerName;
   if (claimData?.user_id) {
@@ -1491,7 +1342,7 @@ async function handleContractorSign(
   const docLabel = getDocumentLabel("contractor_sign");
 
   const envelopeDefinition: any = {
-    emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
+    emailSubject: `${docLabel} — Otter Quotes (Job #${claim_id.slice(0, 8).toUpperCase()})`,
     documents: [
       {
         documentBase64: templateBase64,
@@ -1499,7 +1350,6 @@ async function handleContractorSign(
         fileExtension: "pdf",
         documentId,
       },
-      // Scope of Work — retail jobs only (doc 2). Shifts addendum to doc 3.
       ...(scopeOfWorkBase64 ? [{
         documentBase64: scopeOfWorkBase64,
         name: "Scope of Work",
@@ -1526,8 +1376,6 @@ async function handleContractorSign(
             ...contractorTabs,
           },
         },
-        // Homeowner is signer 2 — not yet active (will use createRecipient later)
-        // Placeholder with routingOrder 2 so DocuSign knows the signing order
         {
           email: homeownerEmail,
           name: homeownerFullName,
@@ -1541,7 +1389,7 @@ async function handleContractorSign(
         },
       ],
     },
-    status: "sent", // "sent" starts the signing workflow
+    status: "sent",
   };
 
   console.log("Creating DocuSign envelope (contractor_sign)");
@@ -1569,7 +1417,6 @@ async function handleContractorSign(
 
   console.log(`Envelope created (contractor_sign): ${envelopeId}`);
 
-  // Generate embedded signing URL for contractor
   const defaultReturnUrl = return_url || `https://otterquote.com/contractor-bid-form.html?claim_id=${claim_id}&signed=contractor`;
   const recipientViewResponse = await fetch(
     `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
@@ -1598,7 +1445,6 @@ async function handleContractorSign(
   const signingUrl = recipientViewData.url;
   if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
 
-  // Store envelope ID on the quote record
   const quoteUpdateFilter = quote_id
     ? supabase.from("quotes").update({ docusign_envelope_id: envelopeId }).eq("id", quote_id)
     : supabase.from("quotes").update({ docusign_envelope_id: envelopeId })
@@ -1610,7 +1456,6 @@ async function handleContractorSign(
     console.error("Failed to update quote with envelope ID:", quoteUpdateError);
   }
 
-  // Also update claim with the latest envelope
   await supabase.from("claims").update({
     contract_sent_at: new Date().toISOString(),
     docusign_envelope_id: envelopeId,
@@ -1638,7 +1483,6 @@ async function handleHomeownerSign(
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, return_url, quote_id } = requestBody;
 
-  // Look up existing envelope from the quote
   let envelopeId: string | null = null;
 
   if (quote_id) {
@@ -1651,7 +1495,6 @@ async function handleHomeownerSign(
   }
 
   if (!envelopeId) {
-    // Fallback: look up by claim_id + contractor_id
     const { data: quoteData } = await supabase
       .from("quotes")
       .select("docusign_envelope_id, contractor_signed_at")
@@ -1671,7 +1514,6 @@ async function handleHomeownerSign(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Generate embedded signing URL for the homeowner (recipient 2, already in the envelope)
   const defaultReturnUrl = return_url || `https://otterquote.com/contract-signing.html?claim_id=${claim_id}&signed=true`;
 
   console.log(`Generating homeowner signing URL for envelope ${envelopeId}`);
@@ -1735,7 +1577,6 @@ async function handleLegacyFlow(
     return_url,
   } = requestBody;
 
-  // Auto-populate fields if not provided
   let autoFields = providedFields || {};
   let claimData: any = null;
   let contractorData: any = null;
@@ -1763,11 +1604,9 @@ async function handleLegacyFlow(
     }
   }
 
-  // Fetch template PDF
   let templateBase64: string;
 
   if (document_type === "project_confirmation") {
-    // Ensure contractor data with JSONB PC template column is loaded
     const templateContractor = contractorData || await (async () => {
       const { data } = await supabase
         .from("contractors")
@@ -1777,7 +1616,6 @@ async function handleLegacyFlow(
       return data;
     })();
 
-    // Resolve trade + funding type from claim data
     const trade: string = (
       claimData?.selected_trades?.[0] ||
       (autoFields?.trade_type as string | undefined)
@@ -1789,10 +1627,8 @@ async function handleLegacyFlow(
       (autoFields?.funding_type as string | undefined) ||
       ""
     ).toLowerCase();
-    // Normalize: anything containing "insurance" → "insurance", else "retail"
     const fundingType: string = rawFunding.includes("insurance") ? "insurance" : "retail";
 
-    // Select the best-matching PC template slot
     const slot = selectPcTemplateSlot(
       templateContractor?.color_confirmation_template,
       trade,
@@ -1800,8 +1636,6 @@ async function handleLegacyFlow(
     );
 
     if (!slot) {
-      // No PC template available — log a warning and omit the PC document.
-      // The envelope still generates (non-fatal per D-161 spec).
       console.warn(
         `[D-161] No project confirmation template found for contractor ${contractor_id} ` +
         `(trade=${trade}, fundingType=${fundingType}). Omitting PC document from envelope.`
@@ -1819,7 +1653,6 @@ async function handleLegacyFlow(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Build envelope definition
   const documentId = "1";
   const textTabs = buildTextTabs(autoFields, documentId, document_type);
   const homeownerTabs = buildSignerTabs(documentId, "homeowner");
@@ -1830,7 +1663,6 @@ async function handleLegacyFlow(
 
   const docLabel = getDocumentLabel(document_type);
 
-  // For contract type, also generate the compliance addendum
   const documents: any[] = [
     {
       documentBase64: templateBase64,
@@ -1856,7 +1688,7 @@ async function handleLegacyFlow(
   }
 
   const envelopeDefinition = {
-    emailSubject: `${docLabel} — OtterQuote (Claim ${claim_id.slice(0, 8)})`,
+    emailSubject: `${docLabel} — Otter Quotes (Job #${claim_id.slice(0, 8).toUpperCase()})`,
     documents,
     recipients: {
       signers: [
@@ -1912,7 +1744,6 @@ async function handleLegacyFlow(
 
   console.log(`Envelope created (${document_type}): ${envelopeId}`);
 
-  // Generate embedded signing URL
   const defaultReturnUrl = document_type === "project_confirmation"
     ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
     : "https://otterquote.com/contract-signing.html?signed=true";
@@ -1945,7 +1776,6 @@ async function handleLegacyFlow(
   const signingUrl = recipientViewData.url;
   if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
 
-  // Update claim in Supabase
   const updateData: any = {
     contract_sent_at: new Date().toISOString(),
   };
@@ -2000,7 +1830,6 @@ serve(async (req) => {
       signer,
     } = requestBody;
 
-    // ========== INPUT VALIDATION ==========
     if (!claim_id || !document_type || !contractor_id || !signer?.email || !signer?.name) {
       return new Response(
         JSON.stringify({
@@ -2021,8 +1850,6 @@ serve(async (req) => {
       );
     }
 
-    // ========== RATE LIMIT CHECK ==========
-    // Skip rate limit for homeowner_sign (no new envelope created)
     if (document_type !== "homeowner_sign") {
       const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
         p_function_name: FUNCTION_NAME,
@@ -2053,7 +1880,6 @@ serve(async (req) => {
       }
     }
 
-    // ========== DOCUSIGN CONFIG ==========
     const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
 
     const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
@@ -2061,11 +1887,9 @@ serve(async (req) => {
       throw new Error("DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY.");
     }
 
-    // ========== GET ACCESS TOKEN + ACCOUNT INFO ==========
     console.log("Acquiring DocuSign access token");
     const tokenInfo = await getAccessToken(REST_API_BASE);
 
-    // ========== ROUTE BY DOCUMENT TYPE ==========
     switch (document_type) {
       case "contractor_sign":
         return await handleContractorSign(supabase, requestBody, tokenInfo, corsHeaders);
