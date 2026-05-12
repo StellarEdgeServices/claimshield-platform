@@ -1,10 +1,23 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import {
+  otterquoteCookieStorage,
+  OTTERQUOTE_AUTH_STORAGE_KEY,
+} from './cookie-storage';
 
 /**
  * Singleton Supabase client for the browser.
  *
  * Environment-aware: throws at module load time if required env vars are missing.
- * Configured with sb_at storage key (per D-211 spec — sq_at is deprecated).
+ *
+ * Uses the OtterQuote cookie storage adapter (D-212 / ClickUp 86e1bpk7b — May 12,
+ * 2026). Token-only cookies scoped to .otterquote.com so sessions cross from
+ * otterquote.com to app.otterquote.com without exceeding the per-cookie size
+ * limit. Both stacks (static js/ + this React app) must wire the same adapter
+ * and the same storageKey for SSO to work — that contract is enforced by
+ * importing OTTERQUOTE_AUTH_STORAGE_KEY from the shared adapter file.
+ *
+ * See react-app/app/lib/cookie-storage.ts and js/cookie-storage.js for design.
+ * Regression spec: tests/e2e/flows/cross-subdomain-sso.spec.ts.
  *
  * Uses anon key (NEXT_PUBLIC_SUPABASE_ANON_KEY) — always safe to ship to browser.
  * Never use SUPABASE_SERVICE_ROLE_KEY in browser context.
@@ -23,7 +36,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
-    storageKey: 'sb_at', // D-211: sb_at only (not sq_at, which is deprecated)
+    storageKey: OTTERQUOTE_AUTH_STORAGE_KEY,
+    storage: otterquoteCookieStorage,
   },
 });
 

@@ -35,20 +35,26 @@ window.Auth = {
 
     var hasStoredSession = false;
     try {
-      var refMatch = (CONFIG && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
-      var ref = refMatch ? refMatch[1] : null;
-      if (ref) {
-        var raw = localStorage.getItem('sb-' + ref + '-auth-token');
-        if (raw) {
-          try {
-            var parsed = JSON.parse(raw);
-            if (parsed && (parsed.access_token || parsed.refresh_token)) {
-              hasStoredSession = true;
-            }
-          } catch (e) { /* malformed - ignore */ }
-        }
+      // D-212 — read via storage adapter so we hit the cross-subdomain cookie path
+      // on app.otterquote.com and the localStorage path on otterquote.com.
+      // Defensive fallback to legacy key if the adapter isn't loaded yet.
+      var raw = null;
+      if (window.OtterQuoteCookieStorage) {
+        raw = window.OtterQuoteCookieStorage.getItem(window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth');
+      } else {
+        var refMatch = (CONFIG && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
+        var ref = refMatch ? refMatch[1] : null;
+        if (ref) raw = localStorage.getItem('sb-' + ref + '-auth-token');
       }
-    } catch (e) { /* localStorage blocked - fall through */ }
+      if (raw) {
+        try {
+          var parsed = JSON.parse(raw);
+          if (parsed && (parsed.access_token || parsed.refresh_token)) {
+            hasStoredSession = true;
+          }
+        } catch (e) { /* malformed - ignore */ }
+      }
+    } catch (e) { /* storage blocked - fall through */ }
 
     var hasAuthInUrl = (typeof window !== 'undefined') && (
       window.location.hash.includes('access_token') ||
@@ -185,9 +191,15 @@ window.Auth = {
     // Poll up to 4 times at 500ms intervals (max 2s) before giving up.
     if (!user) {
       try {
-        var refMatch = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
-        var ref = refMatch ? refMatch[1] : null;
-        var raw = ref ? localStorage.getItem('sb-' + ref + '-auth-token') : null;
+        // D-212 — same adapter-aware read pattern as getSession().
+        var raw = null;
+        if (window.OtterQuoteCookieStorage) {
+          raw = window.OtterQuoteCookieStorage.getItem(window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth');
+        } else {
+          var refMatch = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
+          var ref = refMatch ? refMatch[1] : null;
+          if (ref) raw = localStorage.getItem('sb-' + ref + '-auth-token');
+        }
         var hasStored = false;
         if (raw) {
           try {
@@ -437,13 +449,34 @@ window.Auth = {
       try {
         const data = JSON.parse(contractorSignupData);
 
-        // Create or update profile for contractor
-        await this.updateProfile({
-          full_name: data.contact_name,
-          phone: data.phone || null,
-          address_line1: data.address_line1 || null,
-          role: 'contractor',
-        });
+        // Update profile for contractor (non-blocking).
+        // Fix #86e1b39u1: two bugs patched here:
+        //   1. address_line1 is not a profiles column — correct column is address_street.
+        //      The wrong name caused PostgREST to return 400, which previously aborted
+        //      this entire try block before the contractors INSERT could run.
+        //   2. Profile update now wrapped in its own try-catch so a failure here never
+        //      blocks contractor record creation (the critical artifact).
+        // Uses UPDATE (not upsert) — handle_new_user() trigger guarantees the profiles
+        // row exists on every new signup via ON CONFLICT DO NOTHING insert.
+        try {
+          if (sb) {
+            const { error: profileUpdateErr } = await sb
+              .from('profiles')
+              .update({
+                full_name: data.contact_name || null,
+                phone: data.phone || null,
+                address_street: data.address_line1 || null,
+                role: 'contractor',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', user.id);
+            if (profileUpdateErr) {
+              console.warn('[handleAuthCallback] contractor profile update failed (non-fatal):', profileUpdateErr);
+            }
+          }
+        } catch (profileUpdateEx) {
+          console.warn('[handleAuthCallback] contractor profile update threw (non-fatal):', profileUpdateEx);
+        }
 
         // Create contractor record if it doesn't exist
         if (sb) {
