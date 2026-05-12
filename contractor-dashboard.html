@@ -1071,6 +1071,7 @@
                                 // never see the re-acceptance modal for the current version.
                                 cpa_version:     CURRENT_CPA_VERSION,
                                 cpa_accepted_at: now,
+                                needs_cpa_reattestation: false,
                             })
                             .eq('id', currentContractor.id);
 
@@ -1117,7 +1118,7 @@
                         // 1. Write cpa_version + cpa_accepted_at (covered by existing RLS UPDATE policy)
                         const { error: updateErr } = await sb
                             .from('contractors')
-                            .update({ cpa_version: CURRENT_CPA_VERSION, cpa_accepted_at: now })
+                            .update({ cpa_version: CURRENT_CPA_VERSION, cpa_accepted_at: now, needs_cpa_reattestation: false })
                             .eq('id', currentContractor.id);
 
                         if (updateErr) {
@@ -1150,6 +1151,7 @@
                         // 4. Update in-memory state
                         currentContractor.cpa_version     = CURRENT_CPA_VERSION;
                         currentContractor.cpa_accepted_at = now;
+                        currentContractor.needs_cpa_reattestation = false;
 
                         // 5. Clear redirect guard so guard pages stop bouncing
                         localStorage.removeItem('oq_cpa_redirect_guard');
@@ -1418,7 +1420,8 @@
           // version is behind CURRENT_CPA_VERSION.  Only runs after the initial
           // agreement_accepted_at check so the two modals never stack.
           if (currentContractor && currentContractor.agreement_accepted_at &&
-              currentContractor.cpa_version !== CURRENT_CPA_VERSION) {
+              (currentContractor.cpa_version !== CURRENT_CPA_VERSION ||
+               currentContractor.needs_cpa_reattestation === true)) {
             document.getElementById('cpaReacceptModalOverlay').classList.add('show');
             initCpaReacceptModal();
           } else {
