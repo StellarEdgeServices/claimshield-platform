@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta http-equiv="refresh" content="0; url=https://app.otterquote.com/trade-selector">
 <!-- Sentry Error Monitoring -->
 <script
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
@@ -1310,7 +1309,12 @@
         };
 
         // Save to sessionStorage
-        sessionStorage.setItem('oq_trade_selections', JSON.stringify(selections));
+        // Build flat trade map matching repair-intake.html expected format { trade: true }
+        // repair-intake.html uses Object.keys(map).find(k => map[k]) to get selected trade.
+        // React trade-selector/page.tsx (commit c188c0be276c) already writes this format.
+        const tradeSelectionsMap = {};
+        selections.trades.forEach(t => { tradeSelectionsMap[t.trade] = true; });
+        sessionStorage.setItem('oq_trade_selections', JSON.stringify(tradeSelectionsMap));
 
         // Try to save to Supabase if authenticated
         const user = await Auth.getUser();
