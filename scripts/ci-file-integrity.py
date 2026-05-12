@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-CI File Integrity Check — null-byte and size sanity gate.
+CI File Integrity Check — null-byte, size sanity, and JS syntax gate.
 
 Catches FUSE/bindfs mount truncation before corrupt files reach production.
 Root cause: May 3, 2026 production outage — login.html and contractor-join.html
 were silently truncated by bindfs write corruption, causing a 9.5-hour outage.
 
-Detects two truncation signatures:
+Detects four violation classes:
   1. Null-byte padding  — file is full-size but filled with \x00 after real content
   2. Size-floor failure — file is shorter than any legitimate page could be
   3. Canary minimums   — critical pages must exceed known-good thresholds
+  4. JS parse error    — node --check catches syntax errors including clean truncation
 
 Canary matching rules:
   - Keys with no '/' are ROOT-ANCHORED: only match at repo root (e.g. 'index.html'
@@ -18,6 +19,7 @@ Canary matching rules:
     (e.g. 'js/auth.js' matches js/auth.js and also vendor/js/auth.js)
 """
 import os
+import subprocess
 import sys
 
 # Extensions to scan
@@ -113,6 +115,45 @@ for root, dirs, files in os.walk('.'):
                     )
                 break  # Each file matches at most one canary key
 
+        # Check 4: JS syntax parse — node --check (catches clean truncation that
+        # has no null bytes, e.g. a file that ends mid-expression after truncation).
+        # Added May 2026 (bug-killer 86e1b422x): js/auth.js was cleanly truncated
+        # with no null bytes; size-floor and canary checks both passed, but the file
+        # was syntactically invalid. node --check catches this class of failure.
+        if ext == '.js':
+            try:
+                result = subprocess.run(
+                    ['node', '--check', fpath],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    stderr = result.stderr.strip()
+                    lines = stderr.splitlines()
+                    # Extract line number from first stderr line: "<path>:<linenum>"
+                    line_num = '?'
+                    if lines:
+                        first = lines[0]
+                        colon_idx = first.rfind(':')
+                        if colon_idx != -1:
+                            candidate = first[colon_idx + 1:]
+                            if candidate.isdigit():
+                                line_num = candidate
+                    # Find the SyntaxError description line
+                    syntax_msg = 'SyntaxError (see stderr)'
+                    for ln in lines:
+                        if ln.strip().startswith('SyntaxError:'):
+                            syntax_msg = ln.strip()
+                            break
+                    failures.append(
+                        f"FAIL [parse-error] {rel_path}: line {line_num} — {syntax_msg}"
+                    )
+            except FileNotFoundError:
+                failures.append(
+                    f"FAIL [parse-error] {rel_path}: node not found on PATH — "
+                    f"cannot syntax-check JS files"
+                )
+
 # ── Summary ─────────────────────────────────────────────────────────────────
 print(f"Scanned {checked} files ({', '.join(sorted(EXTENSIONS))})")
 print()
@@ -126,5 +167,5 @@ if failures:
     print("Check the commit source — do not deploy until all violations are resolved.")
     sys.exit(1)
 else:
-    print(f"✅ All {checked} files passed null-byte and size integrity checks.")
+    print(f"✅ All {checked} files passed null-byte, size integrity, and JS syntax checks.")
     sys.exit(0)
