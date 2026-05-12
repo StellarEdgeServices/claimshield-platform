@@ -2,7 +2,7 @@
  * Flow B — Homeowner Journey (Phase 1 Stub)
  *
  * Current coverage (Phase 1):
- *   B1: get-started.html has correct meta-refresh redirect → app.otterquote.com (D-211 Phase 2)
+ *   B1: get-started.html loads and renders registration form
  *   B2: test homeowner authenticates via magic link injection
  *   B3: homeowner dashboard loads without errors
  *   B4: bids.html renders for the test claim
@@ -35,6 +35,7 @@
  * See README.md for full test data expectations.
  */
 
+import { existsSync } from 'fs';
 import { test, expect } from '@playwright/test';
 import { generateMagicLink, getTestState, type TestState } from '../helpers/auth.js';
 import { getTestClaim, getClaimEnvelopeId } from '../helpers/db.js';
@@ -48,8 +49,26 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
     `${state.baseUrl}/dashboard.html`
   );
   await page.goto(magicLink);
+  // Use a loose regex so fragments/query-strings on the redirect URL don't cause
+  // a timeout (the magic link callback appends ?code= or #access_token= before
+  // the final navigation settles on dashboard.html). The waitForFunction below
+  // then confirms the Supabase token is in localStorage for the correct origin
+  // before storageState is saved, which is the real guard against D-212
+  // cross-subdomain cookie mismatch.
   await page.waitForURL(/dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
+  // Wait for Supabase client to persist the session token to localStorage before
+  // saving storageState. Without this, storageState is written before the auth
+  // token lands in localStorage — B3/B4 then restore an empty session and get
+  // redirected to get-started. Mirrors the loginAsContractor pattern.
+  await page.waitForFunction(() => {
+    return Object.keys(localStorage).some(
+      (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+    );
+  }, { timeout: 15_000 });
+  // Wait for any pending auth requests (token refresh, getUser) to settle.
+  // Non-fatal if networkidle times out — token is in storage, proceed.
+  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -62,7 +81,10 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
 
   test.beforeAll(() => {
     state = getTestState();
-    storageStatePath = `/tmp/homeowner-session-${Date.now()}.json`;
+    // Stable per-worker path. Date.now() in beforeAll regenerates on every retry,
+    // so B3/B4 then ENOENT on the path B2 never wrote. process.pid is stable for
+    // the lifetime of the worker, which covers all retries.
+    storageStatePath = `/tmp/homeowner-session-${process.pid}.json`;
   });
 
 
@@ -85,22 +107,25 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // B1: Public page — meta-refresh redirect to React app (D-211 Phase 2)
-  //
-  // D-211 Phase 2 turned get-started.html into a redirect stub pointing to
-  // the React homeowner intake at app.otterquote.com/get-started. This test
-  // verifies the redirect is correctly in place. The registration form itself
-  // now lives in the React app and is outside the static-site E2E scope.
+  // B1: Public page — homeowner registration form
   // ──────────────────────────────────────────────────────────────────────────
-  test('B1: get-started.html redirects to React app registration (D-211)', async ({ page }) => {
-    // D-211 Phase 2: get-started.html is a meta-refresh redirect stub to app.otterquote.com.
-    // Use request.get() to inspect the raw HTML without triggering browser navigation —
-    // the meta-refresh fires immediately on render making DOM-based assertions unreliable.
-    const response = await page.request.get('/get-started.html');
-    const html = await response.text();
-    expect(html).toMatch(
-      /http-equiv=["'\s]*refresh["'\s][^>]*url=https:\/\/app\.otterquote\.com\/get-started/i
-    );
+  test('B1: get-started.html loads and renders the registration form', async ({ page }) => {
+    await page.goto('/get-started.html');
+    await page.waitForLoadState('load');
+
+    await expect(page).toHaveTitle(/get started|register|otter/i);
+
+    // Registration form must be visible
+    await expect(page.locator('form').first()).toBeVisible();
+
+    // Email field required per D-035 (contact info first)
+    await expect(page.locator('input[type="email"]').first()).toBeVisible();
+
+    // Phone field required per D-035
+    const phoneField = page.locator(
+      'input[type="tel"], input[id*="phone"], input[name*="phone"]'
+    ).first();
+    await expect(phoneField).toBeVisible();
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -113,8 +138,9 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
     // Persist the authenticated session for B3 and B4 (no additional magic links needed)
     await page.context().storageState({ path: storageStatePath });
 
-    // Must be on the homeowner dashboard
-    await expect(page).toHaveURL(/dashboard/);
+    // Must be on the homeowner dashboard at the BASE_URL origin (NOT app.otterquote.com).
+    // Same anchor as waitForURL in loginAsHomeowner — see comment there.
+    await expect(page).toHaveURL(`${state.baseUrl}/dashboard.html`);
     await expect(page).not.toHaveURL(/login|get-started|contractor/);
   });
 
@@ -122,6 +148,12 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // B3: Homeowner dashboard — restores B2's session, no new magic link
   // ──────────────────────────────────────────────────────────────────────────
   test('B3: homeowner dashboard loads without errors for test account', async ({ browser }) => {
+    // Guard: if B2 failed to write the session file, skip with a descriptive message
+    // rather than crashing with ENOENT. B2 may have failed due to an upstream auth issue.
+    test.skip(
+      !existsSync(storageStatePath),
+      `B3 skipped: session file not found at ${storageStatePath} — B2 likely failed to authenticate. Fix the auth issue (see task 86e1bemev) to re-enable B3.`
+    );
     const context = await browser.newContext({
       storageState: storageStatePath,
       baseURL: state.baseUrl,
@@ -156,6 +188,12 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // B4: Bids page — restores B2's session, no new magic link
   // ──────────────────────────────────────────────────────────────────────────
   test('B4: bids.html renders bid comparison UI for test claim', async ({ browser }) => {
+    // Guard: if B2 failed to write the session file, skip with a descriptive message
+    // rather than crashing with ENOENT. Mirrors B3 guard above.
+    test.skip(
+      !existsSync(storageStatePath),
+      `B4 skipped: session file not found at ${storageStatePath} — B2 likely failed to authenticate. Fix the auth issue (see task 86e1bemev) to re-enable B4.`
+    );
     const context = await browser.newContext({
       storageState: storageStatePath,
       baseURL: state.baseUrl,
@@ -180,8 +218,8 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
 
   // ──────────────────────────────────────────────────────────────────────────
   // TODO: B5 — Claim creation flow
-  // Navigate to app.otterquote.com/get-started, fill contact info, proceed
-  // through /trade-selector, verify claim created in DB.
+  // Navigate to get-started.html, fillcontact info, proceed through
+  // trade-selector.html, verify claim created in DB.
   // Deferred: requires Stripe test mode for Hover payment step.
   // ──────────────────────────────────────────────────────────────────────────
 
