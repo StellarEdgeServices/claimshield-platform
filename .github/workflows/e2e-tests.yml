@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - staging
+      - main
   pull_request:
     branches:
       - main
@@ -18,6 +19,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Lint vanilla JS for syntax errors
+        run: |
+          echo "Running node --check on js/**/*.js ..."
+          failed=0
+          while IFS= read -r -d '' file; do
+            if node --check "$file" 2>/tmp/node_check_err; then
+              echo "PASS: $file"
+            else
+              echo "FAIL [parse-error]: $file"
+              head -1 /tmp/node_check_err
+              failed=1
+            fi
+          done < <(find js/ -name "*.js" -print0 2>/dev/null)
+          if [ "$failed" -eq 1 ]; then
+            echo "One or more JS files failed syntax check."
+            exit 1
+          fi
+          echo "All js/ files passed syntax check."
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,10 +48,6 @@ jobs:
       - name: Install E2E test dependencies
         working-directory: tests/e2e
         run: npm ci
-
-
-      - name: Lint vanilla JS for syntax errors
-        run: bash scripts/pre-push-check.sh
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
