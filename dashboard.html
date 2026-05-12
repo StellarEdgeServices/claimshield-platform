@@ -2949,54 +2949,6 @@
         }
     </script>
 
-<!-- Messaging Thread UI Section for dashboard.html -->
-<!-- Insert this after the "Claims" or "Bids" card section, before closing main -->
-
-<div class="card messages-section" style="margin-top: 32px;">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--navy);">Messages</h3>
-  </div>
-
-  <!-- Claim Selector -->
-  <div style="margin-bottom: 20px;">
-    <label style="display: block; font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 8px;">Select a project:</label>
-    <select id="messagingClaimSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit;">
-      <option value="">-- No projects with messages yet --</option>
-    </select>
-  </div>
-
-  <!-- Message Thread Container -->
-  <div id="messagingThreadContainer" style="display: none;">
-    <!-- Contractor Info -->
-    <div id="contractorInfo" style="background: #F0F9FF; border-left: 4px solid var(--navy); padding: 12px; margin-bottom: 16px; border-radius: 4px;">
-      <div style="font-weight: 600; font-size: 14px; color: var(--navy);">Talking with <span id="contractorName">--</span></div>
-    </div>
-
-    <!-- Messages List -->
-    <div id="messagesList" style="border: 1px solid #E2E8F0; border-radius: 6px; padding: 16px; height: 300px; overflow-y: auto; margin-bottom: 16px; background: #FAFBFC;">
-      <p style="color: #94A3B8; text-align: center; margin: 0;">No messages yet.</p>
-    </div>
-
-    <!-- Message Input -->
-    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-      <textarea
-        id="messageBody"
-        placeholder="Type your message..."
-        style="flex: 1; padding: 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px;"
-      ></textarea>
-      <button
-        id="messageSendBtn"
-        style="align-self: flex-end; padding: 12px 24px; background: var(--navy); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;"
-      >
-        Send
-      </button>
-    </div>
-
-    <!-- Status Message -->
-    <div id="messageStatus" style="font-size: 12px; color: #64748B; text-align: center;"></div>
-  </div>
-</div>
-
 <script>
 // Messaging functionality for dashboard.html
 (function() {
@@ -3354,5 +3306,6 @@
     }
   });
 })();
+</script>
 </body>
 </html>
