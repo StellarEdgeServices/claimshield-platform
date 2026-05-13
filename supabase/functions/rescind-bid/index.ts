@@ -43,7 +43,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // Verify JWT by extracting user from token
-  const token = authHeader.replace("Bearer ", "");
+  // [D-225 Phase 2C C4] Case-insensitive Bearer prefix strip.
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   const {
     data: { user },
     error: authError,
@@ -112,10 +113,30 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Verify ownership
+  // Verify ownership: quote → contractor_id matches body
   if (quote.contractor_id !== body.contractor_id) {
     return new Response(
       JSON.stringify({ error: "You do not own this bid" }),
+      {
+        status: 403,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "https://otterquote.com",
+        },
+      }
+    );
+  }
+
+  // [D-225 Phase 2C C4] Verify ownership: authed user → contractor record.
+  // Closes the vuln where contractor A could rescind contractor B's bid by passing B's id.
+  const { data: contractorOwner } = await supabase
+    .from("contractors")
+    .select("user_id")
+    .eq("id", body.contractor_id)
+    .maybeSingle();
+  if (!contractorOwner || contractorOwner.user_id !== user.id) {
+    return new Response(
+      JSON.stringify({ error: "Authed user does not own this contractor record" }),
       {
         status: 403,
         headers: {

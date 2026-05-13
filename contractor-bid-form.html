@@ -5327,6 +5327,38 @@
                   });
                 }
               }
+
+              // ── D-215 Layer 2 / D-225 Phase 2C C1: fire send-bid-confirmation EF ──
+              // UETA evidence email (Layer 2 of D-215). Fire-and-forget: quote + fee_acceptance
+              // are already committed; email send failure is non-fatal. Logs to Sentry.
+              try {
+                const tradeStr = Array.isArray(quoteData.trades)
+                  ? quoteData.trades.join(', ')
+                  : (quoteData.trade || (Array.isArray(currentClaim?.trades) ? currentClaim.trades.join(', ') : ''));
+                const { error: sbcError } = await sb.functions.invoke('send-bid-confirmation', {
+                  body: {
+                    quote_id: insertedQuote.id,
+                    contractor_id: currentContractor.id,
+                    bid_amount: Number(quoteData.total_price),
+                    platform_fee_pct: _feePct,
+                    platform_fee_amount: _feeAmount,
+                    net_amount: Number(quoteData.total_price) - Number(_feeAmount),
+                    property_address: currentClaim?.property_address || '',
+                    trade: tradeStr,
+                  }
+                });
+                if (sbcError) {
+                  console.error('[D-215] send-bid-confirmation invoke returned error (non-fatal):', sbcError);
+                  if (typeof Sentry !== 'undefined') {
+                    Sentry.captureException(sbcError, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
+                  }
+                }
+              } catch (sbcErr) {
+                console.error('[D-215] send-bid-confirmation threw (non-fatal):', sbcErr);
+                if (typeof Sentry !== 'undefined') {
+                  Sentry.captureException(sbcErr, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
+                }
+              }
             }
 
             // GA4 conversion event — bid funnel

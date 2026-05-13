@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin":
     "https://otterquote.com, https://app.otterquote.com, http://localhost:*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 interface SendBidConfirmationRequest {
@@ -150,6 +150,34 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // ── D-225 Phase 2C C3: JWT verification (pattern: rescind-bid lines 31-58) ──
+  // Accept either a service-role bearer (for server-to-server calls) or a valid
+  // end-user JWT (for browser-fired calls). End-user calls also verify ownership.
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: "Missing Authorization header" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const isServiceRole = serviceRoleKey && token === serviceRoleKey;
+
+  let authedUserId: string | null = null;
+  if (!isServiceRole) {
+    const supabaseUrlForAuth = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseAuth = createClient(supabaseUrlForAuth, serviceRoleKey);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    authedUserId = user.id;
+  }
+
   try {
     const body = (await req.json()) as SendBidConfirmationRequest;
 
@@ -223,7 +251,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // Verify ownership
+    // Verify ownership: quote → contractor
     if (quoteData.contractor_id !== contractor_id) {
       return new Response(
         JSON.stringify({
@@ -234,6 +262,21 @@ serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // [D-225 Phase 2C C3] Verify ownership: authed user → contractor (end-user calls only).
+    if (authedUserId) {
+      const { data: contractorOwner } = await supabase
+        .from("contractors")
+        .select("user_id")
+        .eq("id", contractor_id)
+        .maybeSingle();
+      if (!contractorOwner || contractorOwner.user_id !== authedUserId) {
+        return new Response(
+          JSON.stringify({ error: "Authed user does not own this contractor record" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // D-216: derive job number from claim_id (last 8 chars, uppercase)

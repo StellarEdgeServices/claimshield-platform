@@ -111,7 +111,7 @@ serve(async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": "https://otterquote.com, https://app.otterquote.com",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
@@ -121,6 +121,32 @@ serve(async (req: Request) => {
       JSON.stringify({ error: "Method not allowed" }),
       { status: 405, headers: { "Content-Type": "application/json" } }
     );
+  }
+
+  // ── D-225 Phase 2C C3: JWT verification ──
+  // Accepts service-role bearer (typical: docusign-webhook server-to-server)
+  // or a valid end-user JWT (defense-in-depth if invoked from a client).
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: "Missing Authorization header" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const isServiceRole = serviceRoleKey && token === serviceRoleKey;
+  let authedUserId: string | null = null;
+  if (!isServiceRole) {
+    const supabaseAuth = createClient(supabaseUrl, serviceRoleKey);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    authedUserId = user.id;
   }
 
   try {
@@ -164,6 +190,21 @@ serve(async (req: Request) => {
         JSON.stringify({ error: "Ownership mismatch" }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // [D-225 Phase 2C C3] End-user calls: verify authed user owns the contractor record.
+    if (authedUserId) {
+      const { data: contractorOwner } = await sb
+        .from("contractors")
+        .select("user_id")
+        .eq("id", contractor_id)
+        .maybeSingle();
+      if (!contractorOwner || contractorOwner.user_id !== authedUserId) {
+        return new Response(
+          JSON.stringify({ error: "Authed user does not own this contractor record" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Calculate amounts
