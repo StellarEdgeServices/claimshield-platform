@@ -598,6 +598,79 @@ serve(async (req) => {
         } catch (homeownerEmailErr) {
           console.error("[D-225 C5] Homeowner email fan-out failed (non-fatal):", homeownerEmailErr);
         }
+
+        // ── [D-215 Layer 3] create-invoice fan-out ──
+        // After payment success on contract-signed, fire create-invoice to:
+        //   (1) email contractor a platform-fee invoice via Mailgun
+        //   (2) write activity_log row 'invoice_created' (UETA Layer 3 evidence)
+        // Service-role bearer matches the notify-contractors call pattern above.
+        // Non-fatal on failure — webhook still returns 200 so DocuSign does not retry.
+        // Idempotency: outer guard `if (!claim.contract_signed_at)` already ensures
+        // this path runs at most once per envelope completion.
+        try {
+          // Resolve the quote that just got paid for this claim
+          const { data: paidQuote } = await supabase
+            .from("quotes")
+            .select("id, contractor_id")
+            .eq("claim_id", claim.id)
+            .eq("payment_status", "paid")
+            .maybeSingle();
+
+          if (!paidQuote || !paidQuote.contractor_id) {
+            console.warn(
+              `[D-215 L3] No paid quote found for claim ${claim.id} — invoice skipped`
+            );
+          } else {
+            // Resolve homeowner name + property address from claim + profile
+            const { data: claimRow } = await supabase
+              .from("claims")
+              .select("user_id, property_address")
+              .eq("id", claim.id)
+              .single();
+            let invoiceHomeownerName = "Homeowner";
+            if (claimRow?.user_id) {
+              const { data: prof } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", claimRow.user_id)
+                .single();
+              if (prof?.full_name) invoiceHomeownerName = prof.full_name;
+            }
+            const invoicePropertyAddress =
+              claimRow?.property_address || "Property address on file";
+            const invoiceContractSignedAt =
+              (updateData.contract_signed_at as string | undefined) ||
+              completedDateTime ||
+              new Date().toISOString();
+
+            const invoiceResponse = await fetch(
+              `${supabaseUrl}/functions/v1/create-invoice`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  quote_id: paidQuote.id,
+                  contractor_id: paidQuote.contractor_id,
+                  homeowner_name: invoiceHomeownerName,
+                  property_address: invoicePropertyAddress,
+                  contract_signed_at: invoiceContractSignedAt,
+                }),
+              }
+            );
+            console.log(
+              `[D-215 L3] create-invoice status=${invoiceResponse.status} quote=${paidQuote.id}`
+            );
+          }
+        } catch (invoiceErr) {
+          // Non-critical — don't fail the webhook
+          console.error(
+            "[D-215 L3] Invoice fan-out failed (non-fatal):",
+            invoiceErr
+          );
+        }
       }
     }
 
