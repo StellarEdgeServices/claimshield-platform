@@ -101,7 +101,7 @@
   <div class="error-icon">🔒</div>
   <h1>Sign-in failed</h1>
   <p class="subtitle">Your sign-in link may have expired or already been used. Please request a new one.</p>
-  <a href="/get-started.html" class="btn-retry">Try again</a>
+  <a class='btn-retry' href='/get-started'>Try again</a>
 </div>
 
 <script>
@@ -172,9 +172,14 @@
     // dashboard — that's how the contractor->homeowner-dashboard loop
     // started. Route them to the join page so they can apply.
     if (intent === 'contractor') {
-      _oqLog('routing -> /contractor-join.html?from=oauth_no_account (intent=contractor, no contractor record)');
+      // D-225 fix May 13: route to /contractor-pre-approval.html, not back to
+      // contractor-join.html. The pre-approval page reads cs_contractor_signup
+      // from localStorage and creates the contractors row, then drops into the
+      // onboarding wizard. Bouncing back to contractor-join was the magic-link
+      // bounce loop ("create account, get link, back to start, repeat").
+      _oqLog('routing -> /contractor-pre-approval.html (intent=contractor, no record yet)');
       localStorage.removeItem('cs_auth_role');
-      window.location.href = '/contractor-join.html?from=oauth_no_account';
+      window.location.href = '/contractor-pre-approval.html';
       return;
     }
 

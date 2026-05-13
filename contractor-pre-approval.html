@@ -269,10 +269,12 @@
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem;">License Document <span style="font-weight:400; color:var(--slate)">(optional, max 10MB)</span></label>
-                                    <input type="file" id="lic-file" accept=".pdf,.png,.jpg,.jpeg" style="width: 100%; font-size: 0.9rem;">
+                                    <input type="file" id="lic-file" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+                                    <button type="button" onclick="document.getElementById('lic-file').click()" style="width: 100%; padding: 0.5rem; background: var(--amber); color: var(--navy); border: none; border-radius: 0.375rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; font-family: var(--font-body); margin-bottom: 0.25rem;">Choose File</button>
+                                    <div id="lic-file-name" style="font-size: 0.85rem; color: var(--navy); display: none; margin-bottom: 0.25rem;">📎 <span id="lic-file-label"></span></div>
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem;">Verification URL <span style="font-weight:400; color:var(--slate)">(optional)</span></label>
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem;">Verification URL <span style="font-weight:400; color:var(--slate)">(optional)</span> <span title="Give homeowners a link to the local municipality website where they can verify your license." style="display: inline-flex; align-items: center; justify-content: center; width: 1rem; height: 1rem; border-radius: 50%; border: 1px solid var(--slate); color: var(--slate); font-size: 0.7rem; font-weight: 700; cursor: help; vertical-align: middle;">?</span></label>
                                     <input type="url" id="lic-verification-url" placeholder="https://..." style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; font-size: 0.9rem; color: var(--navy);">
                                 </div>
                             </div>
@@ -1093,6 +1095,24 @@
     }
 
     document.addEventListener('DOMContentLoaded', init);
+    
+    // D-225 May 13 — License Document filename display (D-218 multi-license inline form)
+    document.addEventListener('DOMContentLoaded', function() {
+        var licFile = document.getElementById('lic-file');
+        if (licFile) {
+            licFile.addEventListener('change', function() {
+                var nameEl = document.getElementById('lic-file-name');
+                var labelEl = document.getElementById('lic-file-label');
+                if (this.files && this.files[0] && nameEl && labelEl) {
+                    labelEl.textContent = this.files[0].name;
+                    nameEl.style.display = 'block';
+                } else if (nameEl) {
+                    nameEl.style.display = 'none';
+                }
+            });
+        }
+    });
+
     </script>
 </body>
 </html>
