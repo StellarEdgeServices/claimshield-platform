@@ -1080,7 +1080,14 @@
                                 </div>
                                 <div class="info-row">
                                     <div class="info-label">States</div>
-                                    <div class="info-value">${(c.service_states || []).join(', ') || '—'}</div>
+                                    <div class="info-value">${(function(){
+                                        // service_states column does not exist; derive from service_counties suffix.
+                                        const counties = c.service_counties || [];
+                                        const states = Array.from(new Set(counties
+                                            .map(s => (typeof s === 'string' && s.includes('-')) ? s.split('-').pop() : null)
+                                            .filter(Boolean)));
+                                        return states.join(', ') || '—';
+                                    })()}</div>
                                 </div>
                             </div>
 
@@ -1133,7 +1140,14 @@
                                 ` : '<p style="color: var(--slate);">No license records submitted</p>'}
 
                                 <div class="button-row">
-                                    <button class="btn-sm" onclick="openLicenseBoard('${c.service_states?.[0] || 'IN'}', '${c.contact_name}')">Search State License Board</button>
+                                    <button class="btn-sm" onclick="openLicenseBoard('${(function(){
+                                        // Derive primary state from first service_counties entry suffix (Marion-IN → IN).
+                                        const counties = c.service_counties || [];
+                                        for (const s of counties) {
+                                            if (typeof s === 'string' && s.includes('-')) return s.split('-').pop();
+                                        }
+                                        return 'IN';
+                                    })()}', '${c.contact_name}')">Search State License Board</button>
                                     ${!c.license_verified ? `<button class="btn-sm btn-sm-primary" onclick="markLicenseVerified('${c.id}')">Mark as Verified ✓</button>` : ''}
                                 </div>
                             </div>

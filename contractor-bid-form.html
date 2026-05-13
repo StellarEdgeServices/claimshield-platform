@@ -1198,7 +1198,7 @@
 
     <div class="page-header">
       <h1 id="pageHeading">Submit Your Bid</h1>
-      <div class="project-id">Project ID: <strong id="projectIdDisplay">CS-2026-0001</strong></div>
+      <div class="project-id">Job #<strong id="projectIdDisplay">—</strong></div>
     </div>
 
     <!-- Project Summary -->
@@ -3802,6 +3802,12 @@
     // ── Update Project Summary (Bug Fix #1 + #2) ──
     function updateClaimSummary() {
       if (!currentClaim) return;
+
+      // D-216: Job #[last 8 of claim_id, uppercase]
+      const jobIdEl = document.getElementById('projectIdDisplay');
+      if (jobIdEl && currentClaim.id) {
+        jobIdEl.textContent = String(currentClaim.id).slice(-8).toUpperCase();
+      }
 
       // Location: D-074 — city + zip only (never full street address to contractors before bid)
       const addressParts = (currentClaim.property_address || '').split(',');

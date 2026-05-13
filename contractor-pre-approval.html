@@ -171,8 +171,46 @@
 
                 <!-- Step 2: License & Insurance -->
                 <div id="step2" style="display:none;" class="wizard-card">
-                    <h2>Insurance & Documentation</h2>
-                    <p class="subtitle">Upload your required documents. All three must be satisfied before you can continue.</p>
+                    <h2>Profile & Documentation</h2>
+                    <p class="subtitle">Provide a few profile details and upload your required documents. All sections must be complete before you can continue.</p>
+
+                    <!-- Card 0: Profile Basics (D-190 fields captured in pre-approval, not after) -->
+                    <div class="doc-card" id="card-profile" style="border: 2px solid var(--slate); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; background: #f8fafc;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0; font-size: 1.125rem; color: var(--navy);">Your Profile</h3>
+                            <span class="card-status" id="status-profile" style="font-weight: 600; color: var(--slate);">Required</span>
+                        </div>
+                        <p style="font-size: 0.9rem; color: var(--slate); margin: 0 0 1rem 0;">Tells us where to send opportunities and how to reach you. You can refine your service area and add more counties later from your profile.</p>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label for="profile-phone" style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem;">Phone Number <span style="color:#ef4444;">*</span></label>
+                            <input type="tel" id="profile-phone" placeholder="317-555-1234" autocomplete="tel" style="width: 100%; max-width: 280px; padding: 0.5rem 0.75rem; background:#fff; color:#1e293b; border:1px solid #cbd5e1; border-radius:0.375rem; font-size:0.95rem;">
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 0.5rem;">Trades You Serve <span style="color:#ef4444;">*</span></label>
+                            <div id="profile-trades" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem;">
+                                <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#fff; border:1px solid #cbd5e1; border-radius:0.375rem; cursor:pointer; font-size:0.9rem; color:#1e293b;">
+                                    <input type="checkbox" name="profile-trade" value="roofing" style="accent-color: var(--amber);"> Roofing
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#fff; border:1px solid #cbd5e1; border-radius:0.375rem; cursor:pointer; font-size:0.9rem; color:#1e293b;">
+                                    <input type="checkbox" name="profile-trade" value="siding" style="accent-color: var(--amber);"> Siding
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#fff; border:1px solid #cbd5e1; border-radius:0.375rem; cursor:pointer; font-size:0.9rem; color:#1e293b;">
+                                    <input type="checkbox" name="profile-trade" value="gutters" style="accent-color: var(--amber);"> Gutters
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#fff; border:1px solid #cbd5e1; border-radius:0.375rem; cursor:pointer; font-size:0.9rem; color:#1e293b;">
+                                    <input type="checkbox" name="profile-trade" value="windows" style="accent-color: var(--amber);"> Windows
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 0;">
+                            <label for="profile-counties" style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem;">Counties You Serve <span style="color:#ef4444;">*</span></label>
+                            <input type="text" id="profile-counties" placeholder="Marion-IN, Hamilton-IN, Boone-IN" autocomplete="off" style="width: 100%; padding: 0.5rem 0.75rem; background:#fff; color:#1e293b; border:1px solid #cbd5e1; border-radius:0.375rem; font-size:0.95rem;">
+                            <p style="margin: 0.4rem 0 0 0; font-size: 0.8rem; color: var(--slate);">Format: <em>CountyName-StateCode</em>, separated by commas. You can edit this later in your profile to pick from a full county list.</p>
+                        </div>
+                    </div>
 
                     <!-- Card 1: CGL Certificate -->
                     <div class="doc-card" id="card-coi" style="border: 2px solid var(--slate); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; background: #f8fafc;">
@@ -184,6 +222,10 @@
                         <input type="file" id="coi-upload" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
                         <button type="button" onclick="document.getElementById('coi-upload').click()" class="btn-secondary" style="width: 100%; margin-bottom: 0.75rem;">Choose File</button>
                         <div id="coi-filename" style="font-size: 0.85rem; color: var(--slate); display: none;">📎 <span id="coi-name"></span></div>
+                        <div style="margin-top: 0.75rem;">
+                            <label for="coi-expiry" style="font-size: 0.9rem; color: #1e293b; display: block; margin-bottom: 0.5rem;">Expiry Date <span style="color:#ef4444;">*</span></label>
+                            <input type="date" id="coi-expiry" class="form-input" style="width: 100%; max-width: 200px; background:#fff; color:#1e293b; border:1px solid #cbd5e1;">
+                        </div>
                     </div>
 
                     <!-- Card 2: Workers' Comp -->
@@ -664,15 +706,47 @@
         renderLicenseEntries();
     }
 
+    // ── Profile basics card state (B3/B4/B5 — captured in step 2, not deferred) ──
+    function readProfileBasics() {
+        const phone = (document.getElementById('profile-phone')?.value || '').trim();
+        const trades = Array.from(document.querySelectorAll('input[name="profile-trade"]:checked'))
+            .map(cb => cb.value);
+        const countiesRaw = (document.getElementById('profile-counties')?.value || '').trim();
+        const counties = countiesRaw
+            ? countiesRaw.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        // Lightweight phone validation: at least 10 digits
+        const digits = phone.replace(/\D/g, '');
+        const phoneOk = digits.length >= 10;
+        // County format: each entry must look like "Word-XX"
+        const countyOk = counties.length > 0 && counties.every(c => /^[A-Za-z][A-Za-z .\'-]*-[A-Z]{2}$/.test(c));
+        return { phone, trades, counties, phoneOk, tradesOk: trades.length > 0, countyOk };
+    }
+
+    function updateProfileCardStatus() {
+        const { phoneOk, tradesOk, countyOk } = readProfileBasics();
+        const allOk = phoneOk && tradesOk && countyOk;
+        const status = document.getElementById('status-profile');
+        if (status) {
+            status.textContent = allOk ? '✓ Complete' : 'Required';
+            status.style.color = allOk ? '#10b981' : 'var(--slate)';
+        }
+    }
+
     function updateStep2Button() {
-        // COI is always required with file
-        const coiOk = docState.coi.file !== null;
+        // COI is always required with file + expiry
+        const coiExpiryVal = document.getElementById('coi-expiry')?.value;
+        const coiOk = docState.coi.file !== null && !!coiExpiryVal;
         const wcOk = docState.wc.satisfied;
         const licenseOk = licenseState.entries.length > 0 || licenseState.noLicense;
-        
+        const { phoneOk, tradesOk, countyOk } = readProfileBasics();
+        const profileOk = phoneOk && tradesOk && countyOk;
+
+        updateProfileCardStatus();
+
         const btn = document.getElementById('step2-advance-btn');
-        const allSatisfied = coiOk && wcOk && licenseOk;
-        
+        const allSatisfied = profileOk && coiOk && wcOk && licenseOk;
+
         btn.disabled = !allSatisfied;
         btn.style.opacity = allSatisfied ? '1' : '0.5';
         btn.style.cursor = allSatisfied ? 'pointer' : 'not-allowed';
@@ -682,7 +756,19 @@
     async function submitStep2() {
         const advBtn = document.getElementById('step2-advance-btn');
         if (advBtn && advBtn.dataset.submitting === 'true') return;  // duplicate-submit guard
+
+        // Profile basics (B3/B4/B5)
+        const profile = readProfileBasics();
+        if (!profile.phoneOk) { alert('Please enter a valid phone number (at least 10 digits).'); return; }
+        if (!profile.tradesOk) { alert('Please select at least one trade you serve.'); return; }
+        if (!profile.countyOk) {
+            alert('Please enter at least one county in the format CountyName-StateCode (e.g. Marion-IN, Hamilton-IN).');
+            return;
+        }
+
+        const coiExpiryVal = document.getElementById('coi-expiry')?.value;
         if (!docState.coi.file) { alert('Please upload your CGL certificate.'); return; }
+        if (!coiExpiryVal) { alert('Please enter the CGL certificate expiry date.'); return; }
         if (!docState.wc.satisfied) { alert("Please provide workers' compensation info or exemption."); return; }
         if (licenseState.entries.length === 0 && !licenseState.noLicense) { alert('Please add a contractor license or check "I don\'t have a license for this work".'); return; }
 
@@ -691,17 +777,17 @@
 
         try {
             const user_id = currentUser.id;
-            
+
             // Upload COI
-            let coi_document_url = null;
+            let coi_file_url = null;
             if (docState.coi.file) {
                 const coiFileName = `${user_id}/${Date.now()}-${docState.coi.file.name}`;
                 const { data: coiData, error: coiError } = await sb.storage
                     .from('contractor-documents')
                     .upload(coiFileName, docState.coi.file, { upsert: true });
-                
+
                 if (coiError) throw new Error(`COI upload failed: ${coiError.message}`);
-                coi_document_url = coiFileName;
+                coi_file_url = coiFileName;
             }
 
             // Upload WC certificate or WCE-1 exemption document
@@ -739,9 +825,18 @@
             // License files are uploaded per-entry after contractors update (D-218)
 
             // Build update object with v61 column names
+            // B1 fix: variable name now matches column (coi_file_url). Origin/main already
+            // wrote to the correct column but with a stale variable name.
+            // B2 fix: coi_expires_at captured from date input above.
+            // B3/B4/B5 fix: phone, trades, service_counties written here so the bid form's
+            // profile-completeness gate passes for every newly-approved contractor.
             const updateObj = {
-                coi_file_url: coi_document_url, // D-210 schema fix: column on contractors is coi_file_url not coi_document_url
+                coi_file_url: coi_file_url,
+                coi_expires_at: coiExpiryVal || null,
                 coi_uploaded_at: new Date().toISOString(),
+                phone: profile.phone,
+                trades: profile.trades,
+                service_counties: profile.counties,
                 onboarding_step: 2,
                 updated_at: new Date().toISOString()
             };
@@ -1008,7 +1103,7 @@
                 // Contractor record doesn't exist yet — create from localStorage signup data
                 const signupRaw = localStorage.getItem('cs_contractor_signup');
                 const signup    = signupRaw ? JSON.parse(signupRaw) : {};
-                const insertRes = await sb.from('contractors').insert({
+                const insertObj = {
                     user_id:                 currentUser.id,
                     email:                   currentUser.email,
                     company_name:            signup.company_name || '',
@@ -1016,13 +1111,36 @@
                     attestation_signer_title: signup.signer_title || '',
                     status:                  'pending_approval',
                     onboarding_step:         1,
-                }).select().single();
+                };
+                // Carry phone from signup payload if present; otherwise step 2 collects it.
+                if (signup.phone) insertObj.phone = signup.phone;
+                const insertRes = await sb.from('contractors').insert(insertObj).select().single();
 
                 if (insertRes.error) throw insertRes.error;
                 ct = insertRes.data;
             }
 
             contractor = ct;
+
+            // Pre-populate step 2 profile inputs from any prior signup/contractor data
+            // so a returning contractor sees their existing values instead of a blank form.
+            try {
+                const signupRaw = localStorage.getItem('cs_contractor_signup');
+                const signup    = signupRaw ? JSON.parse(signupRaw) : {};
+                const phoneInput = document.getElementById('profile-phone');
+                if (phoneInput && !phoneInput.value) {
+                    phoneInput.value = ct.phone || signup.phone || '';
+                }
+                if (Array.isArray(ct.trades) && ct.trades.length) {
+                    document.querySelectorAll('input[name="profile-trade"]').forEach(cb => {
+                        cb.checked = ct.trades.includes(cb.value);
+                    });
+                }
+                const countiesInput = document.getElementById('profile-counties');
+                if (countiesInput && !countiesInput.value && Array.isArray(ct.service_counties)) {
+                    countiesInput.value = ct.service_counties.join(', ');
+                }
+            } catch (_) { /* non-fatal pre-population */ }
 
             // If already active, send to dashboard
             if (contractor.status === 'active') {
@@ -1048,6 +1166,7 @@
 
         // Attach file input change listeners for Step 2 document cards
         const coiUpload = document.getElementById('coi-upload');
+        const coiExpiry = document.getElementById('coi-expiry');
         const wcUpload = document.getElementById('wc-upload');
         const wcExpiry = document.getElementById('wc-expiry');
 
@@ -1056,6 +1175,9 @@
                 handleDocumentSelect('coi', this);
                 updateStep2Button();
             });
+        }
+        if (coiExpiry) {
+            coiExpiry.addEventListener('change', updateStep2Button);
         }
         if (wcUpload) {
             wcUpload.addEventListener('change', function(e) {
@@ -1066,6 +1188,17 @@
         if (wcExpiry) {
             wcExpiry.addEventListener('change', updateWCCardState);
         }
+
+        // Profile basics listeners (B3/B4/B5)
+        const profilePhone = document.getElementById('profile-phone');
+        if (profilePhone) profilePhone.addEventListener('input', updateStep2Button);
+        document.querySelectorAll('input[name="profile-trade"]').forEach(cb => {
+            cb.addEventListener('change', updateStep2Button);
+        });
+        const profileCounties = document.getElementById('profile-counties');
+        if (profileCounties) profileCounties.addEventListener('input', updateStep2Button);
+        // Initial validation tick in case the form is pre-populated.
+        updateStep2Button();
 
         // WCE-1 exemption document upload listeners (D-213)
         const wce1Upload = document.getElementById('wce1-upload');
