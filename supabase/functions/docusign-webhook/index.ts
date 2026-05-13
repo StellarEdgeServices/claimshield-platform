@@ -503,6 +503,101 @@ serve(async (req) => {
           // Non-critical — don't fail the webhook
           console.error("Failed to notify contractor:", notifyErr);
         }
+
+        // ── [D-225 Phase 2C C5] Homeowner contract-signed Mailgun fan-out ──
+        // Sends "your project is in motion" email to the homeowner. Direct
+        // Mailgun call (not via notify-contractors) — non-fatal on failure.
+        try {
+          // Resolve homeowner email + name via claim.user_id -> profiles
+          const { data: claimFull } = await supabase
+            .from("claims")
+            .select("id, user_id, property_address")
+            .eq("id", claim.id)
+            .single();
+          let homeownerEmail: string | null = null;
+          let homeownerName: string = "Homeowner";
+          if (claimFull?.user_id) {
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select("email, full_name")
+              .eq("id", claimFull.user_id)
+              .single();
+            homeownerEmail = prof?.email || null;
+            homeownerName = prof?.full_name || homeownerName;
+          }
+          // Resolve contractor company name from the awarded quote
+          let contractorCompany = "your contractor";
+          const { data: awardedQuote } = await supabase
+            .from("quotes")
+            .select("contractor_id")
+            .eq("claim_id", claim.id)
+            .eq("status", "awarded")
+            .maybeSingle();
+          if (awardedQuote?.contractor_id) {
+            const { data: contractorRow } = await supabase
+              .from("contractors")
+              .select("company_name")
+              .eq("id", awardedQuote.contractor_id)
+              .single();
+            if (contractorRow?.company_name) contractorCompany = contractorRow.company_name;
+          }
+          // D-216 Job # identifier
+          const jobNumber = `Job #${(claim.id || "").slice(-8).toUpperCase()}`;
+          const dashboardUrl = "https://otterquote.com/dashboard.html";
+          const propertyAddress = claimFull?.property_address || "your property";
+
+          if (homeownerEmail) {
+            const subject = "Your Otter Quotes contract is signed and your project is in motion";
+            const textBody =
+              `Hi ${homeownerName},\n\n` +
+              `Great news — your contract with ${contractorCompany} for ${propertyAddress} is fully executed.\n\n` +
+              `${jobNumber}\n\n` +
+              `What happens next:\n` +
+              `• ${contractorCompany} will contact you within 48 hours to coordinate next steps.\n` +
+              `• You can track your project status anytime on your dashboard: ${dashboardUrl}\n\n` +
+              `Questions? Reply to this email or contact support@otterquote.com.\n\n` +
+              `— The Otter Quotes Team`;
+            const htmlBody =
+              `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">` +
+              `<p>Hi ${homeownerName},</p>` +
+              `<p>Great news — your contract with <strong>${contractorCompany}</strong> for <strong>${propertyAddress}</strong> is fully executed.</p>` +
+              `<p style="font-size:1.05rem;font-weight:bold;color:#0066cc;">${jobNumber}</p>` +
+              `<p><strong>What happens next:</strong></p>` +
+              `<ul><li>${contractorCompany} will contact you within 48 hours to coordinate next steps.</li>` +
+              `<li>You can track your project status anytime on your <a href="${dashboardUrl}" style="color:#0066cc;">dashboard</a>.</li></ul>` +
+              `<p>Questions? Reply to this email or contact <a href="mailto:support@otterquote.com">support@otterquote.com</a>.</p>` +
+              `<p>— The Otter Quotes Team</p></body></html>`;
+
+            const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY") || "";
+            if (mailgunApiKey) {
+              const fd = new FormData();
+              fd.append("from", "Otter Quotes <noreply@mail.otterquote.com>");
+              fd.append("to", homeownerEmail);
+              fd.append("subject", subject);
+              fd.append("text", textBody);
+              fd.append("html", htmlBody);
+              const mgResp = await fetch(
+                "https://api.mailgun.net/v3/mail.otterquote.com/messages",
+                {
+                  method: "POST",
+                  headers: { Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}` },
+                  body: fd,
+                }
+              );
+              console.log(`Homeowner contract-signed email Mailgun status=${mgResp.status} to=${homeownerEmail}`);
+              await supabase.from("activity_log").insert({
+                event_type: "homeowner_contract_signed_email_sent",
+                metadata: { claim_id: claim.id, job_number: jobNumber, mailgun_status: mgResp.status },
+              });
+            } else {
+              console.warn("MAILGUN_API_KEY not configured — homeowner email skipped");
+            }
+          } else {
+            console.warn(`No homeowner email for claim ${claim.id} — fan-out skipped`);
+          }
+        } catch (homeownerEmailErr) {
+          console.error("[D-225 C5] Homeowner email fan-out failed (non-fatal):", homeownerEmailErr);
+        }
       }
     }
 
