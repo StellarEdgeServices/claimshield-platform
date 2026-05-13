@@ -1,134 +1,278 @@
 /**
- * OtterQuote Cookie Storage Adapter — D-212
- * 
- * Provides Supabase JS v2 with a custom storage adapter that writes sessions
- * to cookies scoped to .otterquote.com, enabling SSO between otterquote.com
- * and app.otterquote.com (D-212).
- * 
- * Migration strategy: getItem reads cookies first, falls back to localStorage.
- * setItem dual-writes to both. This ensures existing localStorage sessions
- * continue to work transparently — no users are logged out on deploy.
- * 
- * IMPORTANT: Load this script BEFORE config.js in all HTML files.
+ * OtterQuote Cookie Storage Adapter v2 — D-212 cross-subdomain SSO fix
+ * ClickUp 86e1bpk7b — Bug fix May 12, 2026
+ *
+ * Token-only cookie pattern. Extracts access_token + refresh_token from the
+ * Supabase session JSON and writes them to two small cookies scoped to
+ * .otterquote.com. The full session is reconstructed on read.
+ *
+ * Why this exists:
+ *   v1 wrote the full session JSON (3796 raw / 4676 URL-encoded bytes) via
+ *   document.cookie. That exceeds Chrome's per-cookie 4096-byte limit and
+ *   the browser silently dropped the write. Only localStorage held the
+ *   session, and localStorage is origin-scoped — so cross-subdomain SSO
+ *   between otterquote.com and app.otterquote.com was broken for any user
+ *   who logged in on one and traversed to the other.
+ *
+ * Architecture:
+ *   - sb-otterquote-at  : access token (~900 URL-encoded bytes)
+ *   - sb-otterquote-rt  : refresh token (~900 URL-encoded bytes)
+ *   - Both at Domain=.otterquote.com; cross all *.otterquote.com hosts
+ *   - localStorage dual-write under canonical key (sb-otterquote-auth) for
+ *     same-origin fast-path reads and as a safety net if cookies are blocked
+ *   - Transparent migration: getItem falls back to legacy keys so existing
+ *     contractor sessions and pre-fix React app sessions are preserved
+ *   - Write verification guard: after writing each cookie, reads it back
+ *     and logs a warning if the browser silently dropped it. This catches
+ *     the entire class of silent-drop failures that hid the v1 bug for months
+ *
+ * Used by:
+ *   - Static stack (js/config.js) — wired via createClient { auth: { storage } }
+ *   - React stack (react-app/app/lib/cookie-storage.ts) — TypeScript port
+ *
+ * Load order: BEFORE config.js in every HTML file that loads the Supabase client.
  */
 
 (function () {
   'use strict';
 
-  // Key used by Supabase JS v2 for auth token storage
-  // Format: sb-{projectRef}-auth-token
-  var SUPABASE_STORAGE_KEY_PREFIX = 'sb-';
+  // Canonical storage key — both stacks agree on this name so SSO works.
+  // Exposed for use by auth.js fast-path existence checks.
+  var STORAGE_KEY = 'sb-otterquote-auth';
+  window.OTTERQUOTE_AUTH_STORAGE_KEY = STORAGE_KEY;
 
-  /**
-   * Parse Max-Age from a Supabase session JSON value.
-   * Extracts the JWT exp claim to set cookie expiry to match token expiry.
-   * Falls back to 1 hour if parsing fails.
-   */
-  function getMaxAgeFromSession(value) {
+  // Cookie names for the token-only cross-subdomain pattern.
+  var COOKIE_ACCESS  = 'sb-otterquote-at';
+  var COOKIE_REFRESH = 'sb-otterquote-rt';
+
+  // Legacy storage keys consulted for transparent migration. Read-only fallbacks
+  // so in-flight contractor sessions and pre-fix React sessions survive deploy.
+  // Order: project-ref key first (static stack v1), then sb_at (React stack pre-fix).
+  var LEGACY_KEYS = (function () {
+    var keys = ['sb_at'];
     try {
-      var parsed = JSON.parse(value);
-      if (parsed && parsed.access_token) {
+      var url = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL) ? CONFIG.SUPABASE_URL : '';
+      var refMatch = url.match(/https:\/\/([^.]+)/);
+      if (refMatch) keys.unshift('sb-' + refMatch[1] + '-auth-token');
+    } catch (e) { /* CONFIG not loaded yet */ }
+    return keys;
+  })();
+
+  /** Parse a Supabase session JSON. Returns null if not a valid session. */
+  function parseSession(jsonStr) {
+    if (typeof jsonStr !== 'string' || !jsonStr) return null;
+    try {
+      var parsed = JSON.parse(jsonStr);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (!parsed.access_token || !parsed.refresh_token) return null;
+      var expSec = parsed.expires_at || null;
+      if (!expSec) {
         var parts = parsed.access_token.split('.');
         if (parts.length === 3) {
-          var payload = JSON.parse(atob(parts[1]));
-          if (payload && payload.exp) {
-            var remaining = payload.exp - Math.floor(Date.now() / 1000);
-            return Math.max(0, remaining);
-          }
+          try {
+            var payload = JSON.parse(atob(parts[1]));
+            if (payload && payload.exp) expSec = payload.exp;
+          } catch (e) { /* invalid JWT */ }
         }
       }
+      return { access: parsed.access_token, refresh: parsed.refresh_token, expSec: expSec };
     } catch (e) {
-      // ignore parse errors
+      return null;
     }
-    return 3600; // default 1 hour
   }
 
   /**
-   * Build the cookie domain attribute.
-   * Uses .otterquote.com for production, no domain for localhost/staging previews.
+   * Reconstruct a Supabase session JSON string from access + refresh tokens.
+   * Supabase JS v2 accepts this minimal shape; user is re-populated via
+   * getUser() / onAuthStateChange after restore.
    */
+  function reconstructSession(accessToken, refreshToken) {
+    var expSec = null;
+    var expiresIn = null;
+    try {
+      var parts = accessToken.split('.');
+      if (parts.length === 3) {
+        var payload = JSON.parse(atob(parts[1]));
+        if (payload && payload.exp) {
+          expSec = payload.exp;
+          expiresIn = Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+        }
+      }
+    } catch (e) { /* invalid JWT — leave nulls */ }
+
+    return JSON.stringify({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: expSec,
+      expires_in: expiresIn,
+      token_type: 'bearer',
+      user: null
+    });
+  }
+
+  /** Cookie Max-Age — outlive the access token so refresh can rotate it. */
+  function getCookieMaxAge(expSec) {
+    var defaultSec = 7 * 24 * 3600; // 7 days, matches Supabase refresh-token default
+    if (!expSec) return defaultSec;
+    var remaining = expSec - Math.floor(Date.now() / 1000);
+    return Math.max(3600, Math.max(remaining, defaultSec));
+  }
+
+  /** Domain attribute — leading dot for cross-subdomain sharing. */
   function getCookieDomain() {
+    if (typeof window === 'undefined') return '';
     var host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return ''; // no domain restriction for local dev
-    }
+    if (host === 'localhost' || host === '127.0.0.1') return '';
     if (host.endsWith('.otterquote.com') || host === 'otterquote.com') {
       return '; Domain=.otterquote.com';
     }
-    return ''; // Netlify preview URLs — no cross-domain needed
+    return ''; // Netlify preview URLs — no cross-domain
   }
 
-  /**
-   * Build Secure flag — only for HTTPS connections.
-   */
   function getSecureFlag() {
+    if (typeof window === 'undefined') return '';
     return window.location.protocol === 'https:' ? '; Secure' : '';
   }
 
-  /**
-   * Read a cookie by name. Returns null if not found.
-   */
   function readCookie(key) {
+    if (typeof document === 'undefined' || !document.cookie) return null;
     var pairs = document.cookie.split('; ');
     for (var i = 0; i < pairs.length; i++) {
       var pair = pairs[i];
       var eqIdx = pair.indexOf('=');
       if (eqIdx === -1) continue;
-      var cookieName = pair.substring(0, eqIdx);
-      if (cookieName === key) {
-        return decodeURIComponent(pair.substring(eqIdx + 1));
+      if (pair.substring(0, eqIdx) === key) {
+        try { return decodeURIComponent(pair.substring(eqIdx + 1)); }
+        catch (e) { return null; }
       }
     }
     return null;
   }
 
+  function writeCookie(key, value, maxAge) {
+    if (typeof document === 'undefined') return;
+    var domain = getCookieDomain();
+    var secure = getSecureFlag();
+    document.cookie = key + '=' + encodeURIComponent(value) +
+      '; Path=/' + domain +
+      '; Max-Age=' + maxAge +
+      '; SameSite=Lax' + secure;
+  }
+
+  function deleteCookie(key) {
+    if (typeof document === 'undefined') return;
+    var domain = getCookieDomain();
+    document.cookie = key + '=; Path=/' + domain + '; Max-Age=0; SameSite=Lax';
+    // Also clear any host-only same-named cookie from a prior version.
+    document.cookie = key + '=; Path=/; Max-Age=0; SameSite=Lax';
+  }
+
   /**
-   * OtterQuote Cookie Storage — implements the localStorage-compatible interface
-   * expected by Supabase JS v2's storage option.
+   * Write-verification guard: after writing a cookie, read it back and log
+   * loudly if the browser dropped it silently. Stage 5 prevention for the
+   * silent-drop class of bug. Does not throw — Supabase doesn't expect
+   * setItem to throw — but surfaces the failure to console + monitoring.
+   */
+  function verifyWrite(key, expected, label) {
+    var actual = readCookie(key);
+    if (actual === null) {
+      try {
+        console.warn('[OtterQuoteCookieStorage] write verification FAILED for ' + key +
+          ' (' + label + '). Cookie was silently dropped by the browser. ' +
+          'Likely cause: size > 4096 bytes, blocked cookie, or browser policy. ' +
+          'Token length: ' + (expected ? expected.length : 0) + ' chars. ' +
+          'Falling back to localStorage; cross-subdomain SSO will fail.');
+      } catch (e) { /* console may be unavailable */ }
+      return false;
+    }
+    return true;
+  }
+
+  function readLegacy(callerKey) {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try {
+      var direct = window.localStorage.getItem(callerKey);
+      if (direct) return direct;
+      for (var i = 0; i < LEGACY_KEYS.length; i++) {
+        var v = window.localStorage.getItem(LEGACY_KEYS[i]);
+        if (v) return v;
+      }
+    } catch (e) { /* localStorage blocked */ }
+    return null;
+  }
+
+  /**
+   * Storage adapter implementing the localStorage-compatible interface
+   * expected by Supabase JS v2's `storage` option.
    */
   window.OtterQuoteCookieStorage = {
     getItem: function (key) {
-      // Read cookie first (canonical source once set), fall back to localStorage
-      var cookieVal = readCookie(key);
-      if (cookieVal !== null) {
-        return cookieVal;
-      }
-      // Fallback: transparent migration from existing localStorage sessions
+      // 1. Try canonical two-cookie format — cross-subdomain mechanism
+      var at = readCookie(COOKIE_ACCESS);
+      var rt = readCookie(COOKIE_REFRESH);
+      if (at && rt) return reconstructSession(at, rt);
+
+      // 2. Try same-key localStorage (recent same-origin write)
       try {
-        return window.localStorage.getItem(key);
-      } catch (e) {
-        return null;
+        var stored = window.localStorage.getItem(key);
+        if (stored) {
+          // Cookies missing but localStorage has the session — proactively
+          // migrate so future cross-subdomain reads work.
+          this.setItem(key, stored);
+          return stored;
+        }
+      } catch (e) { /* localStorage blocked */ }
+
+      // 3. Legacy localStorage keys — transparent migration
+      var legacy = readLegacy(key);
+      if (legacy) {
+        this.setItem(key, legacy);
+        return legacy;
       }
+      return null;
     },
 
     setItem: function (key, value) {
-      // Dual-write: cookie (cross-subdomain) + localStorage (migration safety net)
-      var maxAge = getMaxAgeFromSession(value);
-      var domain = getCookieDomain();
-      var secure = getSecureFlag();
-      document.cookie = key + '=' + encodeURIComponent(value) +
-        '; Path=/' +
-        domain +
-        '; Max-Age=' + maxAge +
-        '; SameSite=Lax' +
-        secure;
-      try {
-        window.localStorage.setItem(key, value);
-      } catch (e) {
-        // localStorage unavailable — cookie is sufficient
+      // Treat empty/null as a clear (Supabase normally uses removeItem,
+      // but defensive against future SDK shifts).
+      if (value === null || value === undefined || value === '') {
+        this.removeItem(key);
+        return;
       }
+      var session = parseSession(value);
+      if (!session) {
+        // Unparseable payload — preserve in localStorage; do not write cookies.
+        try { window.localStorage.setItem(key, value); } catch (e) {}
+        return;
+      }
+      var maxAge = getCookieMaxAge(session.expSec);
+
+      // Cookies (cross-subdomain mechanism)
+      writeCookie(COOKIE_ACCESS,  session.access,  maxAge);
+      writeCookie(COOKIE_REFRESH, session.refresh, maxAge);
+      verifyWrite(COOKIE_ACCESS,  session.access,  'access_token');
+      verifyWrite(COOKIE_REFRESH, session.refresh, 'refresh_token');
+
+      // localStorage (same-origin fast-path + contractor backward-compat)
+      try { window.localStorage.setItem(key, value); } catch (e) {}
     },
 
     removeItem: function (key) {
-      // Expire the cookie
-      var domain = getCookieDomain();
-      document.cookie = key + '=; Path=/' + domain + '; Max-Age=0; SameSite=Lax';
+      deleteCookie(COOKIE_ACCESS);
+      deleteCookie(COOKIE_REFRESH);
+      try { window.localStorage.removeItem(key); } catch (e) {}
+      // Also clear legacy keys so signOut on either subdomain truly logs out.
       try {
-        window.localStorage.removeItem(key);
-      } catch (e) {
-        // ignore
-      }
+        for (var i = 0; i < LEGACY_KEYS.length; i++) {
+          window.localStorage.removeItem(LEGACY_KEYS[i]);
+        }
+      } catch (e) {}
     }
   };
+
+  // Constants exposed for diagnostics + contract tests.
+  window.OtterQuoteCookieStorage._COOKIE_ACCESS  = COOKIE_ACCESS;
+  window.OtterQuoteCookieStorage._COOKIE_REFRESH = COOKIE_REFRESH;
+  window.OtterQuoteCookieStorage._STORAGE_KEY    = STORAGE_KEY;
 
 })();
