@@ -890,11 +890,11 @@
             let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-top:0.75rem;">';
             
             // CGL COI status
-            const hasCoi = contractor.coi_document_url != null;
+            const hasCoi = contractor.coi_file_url != null;
             const coiBadgeColor = hasCoi ? '#dcfce7' : '#fee2e2';
             const coiBadgeText = hasCoi ? '#166534' : '#991b1b';
             const coiIcon = hasCoi ? '✅' : '❌';
-            const coiExpiry = hasCoi && contractor.coi_expiry ? ' • ' + new Date(contractor.coi_expiry).toLocaleDateString() : '';
+            const coiExpiry = hasCoi && contractor.coi_expires_at ? ' • ' + new Date(contractor.coi_expires_at).toLocaleDateString() : '';
             html += `<div style="background:${coiBadgeColor};color:${coiBadgeText};padding:0.5rem;border-radius:0.4rem;font-size:0.8rem;font-weight:600;">
                 ${coiIcon} CGL COI${coiExpiry}
             </div>`;
@@ -922,8 +922,10 @@
             let licBadgeColor = '#fee2e2';
             let licBadgeText = '#991b1b';
             let licDisplay = '❌ License';
-            const hasLicenseDoc = contractor.license_document_url != null;
-            const hasLicenseAttest = contractor.license_attestation_signed_at != null;
+            // D-218: contractor_licenses is a separate table joined via select query.
+            // license_document_url lives on contractor_licenses rows, not on the contractor itself.
+            const hasLicenseDoc = (contractor.contractor_licenses && contractor.contractor_licenses.length > 0) || (contractor.license_path && contractor.license_path !== 'not_provided');
+            const hasLicenseAttest = contractor.license_path === 'not_provided' || contractor.license_attestation_signed_at != null;
             if (hasLicenseDoc || hasLicenseAttest) {
                 if (hasLicenseAttest && !hasLicenseDoc) {
                     licBadgeColor = '#fef3c7';
@@ -1362,7 +1364,7 @@
             try {
                 // D-210: Gate approval on contractor_has_required_docs()
                 const { data: hasRequiredDocs, error: rpcError } = await sb.rpc('contractor_has_required_docs', { 
-                    contractor_id: contractorId 
+                    p_contractor_id: contractorId 
                 });
 
                 if (rpcError) throw rpcError;
