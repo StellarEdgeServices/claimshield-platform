@@ -61,14 +61,19 @@ async function loginAsHomeowner(page: import('@playwright/test').Page, state: Te
   // saving storageState. Without this, storageState is written before the auth
   // token lands in localStorage — B3/B4 then restore an empty session and get
   // redirected to get-started. Mirrors the loginAsContractor pattern.
-  await page.waitForFunction(() => {
-    return Object.keys(localStorage).some(
-      (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
-    );
+  // OtterQuoteCookieStorage (D-212) dual-writes under 'sb-otterquote-auth',
+  // not the legacy Supabase suffix 'sb-*-auth-token'. Check the canonical
+  // key first, then legacy, then poll the Supabase client directly.
+  await page.waitForFunction(async () => {
+    const canonicalKey = (window as any).OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth';
+    if (localStorage.getItem(canonicalKey)) return true;
+    if (Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'))) return true;
+    if ((window as any).sb) {
+      const { data } = await (window as any).sb.auth.getSession();
+      return data.session !== null;
+    }
+    return false;
   }, { timeout: 15_000 });
-  // Wait for any pending auth requests (token refresh, getUser) to settle.
-  // Non-fatal if networkidle times out — token is in storage, proceed.
-  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -241,11 +246,4 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // Navigate to contract-signing.html after contractor selected.
   // Assert DocuSign iframe container renders.
   // Skip signing — requires DocuSign sandbox credentials.
-  // See CI_INTEGRATION.md → DocuSign Sandbox Setup.
-
-  // TODO: B10 — Project confirmation
-  // Navigate to project-confirmation.html (color-selection.html).
-  // Assert trade-specific form fields render (roofing: shingle color, drip edge, etc.)
-  // Verify project_confirmation JSONB persists on submit.
-});
-
+  // See CI_INTEG
