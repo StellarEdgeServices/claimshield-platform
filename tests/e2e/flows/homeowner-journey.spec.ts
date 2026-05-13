@@ -138,9 +138,13 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
     // Persist the authenticated session for B3 and B4 (no additional magic links needed)
     await page.context().storageState({ path: storageStatePath });
 
-    // Must be on the homeowner dashboard at the BASE_URL origin (NOT app.otterquote.com).
-    // Same anchor as waitForURL in loginAsHomeowner — see comment there.
-    await expect(page).toHaveURL(`${state.baseUrl}/dashboard.html`);
+    // D-211/D-212: auth callback lands on app.otterquote.com/dashboard (React app),
+    // not BASE_URL/dashboard.html. The redirectTo hint in generateMagicLink is not
+    // honored — Supabase routes via auth-callback.html to the React app regardless.
+    // Loosening from strict BASE_URL pin to /dashboard/ regex (same as waitForURL
+    // above) is correct; forcing BASE_URL redirect contradicts D-211/D-212.
+    // Fix: task 86e1bua19 | wm-86e1bua19-f22a | 2026-05-12
+    await expect(page).toHaveURL(/dashboard/);
     await expect(page).not.toHaveURL(/login|get-started|contractor/);
   });
 
