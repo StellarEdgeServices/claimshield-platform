@@ -1730,11 +1730,13 @@
                 }
             } else if (section === 'serviceArea') {
                 // D-192: collect from checkbox UI
-                const { service_states, service_counties } = SVC.collect();
+                // D4 fix: `service_states` is NOT a real column on `contractors`. Persist only
+                // `service_counties`; states are derived from the County-StateCode suffix at
+                // read time (see admin-contractors.html States row + bid-form filters).
+                const { service_counties } = SVC.collect();
 
                 const updates = {
                     service_counties: service_counties,
-                    service_states: service_states,
                     updated_at: new Date().toISOString(),
                 };
 
