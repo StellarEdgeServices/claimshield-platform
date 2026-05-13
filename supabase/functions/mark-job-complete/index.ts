@@ -6,7 +6,7 @@
  *
  * Allows a contractor to mark one of their won jobs as complete.
  * Sets claims.completion_date, writes an activity_log entry, and
- * emits a placeholder job_completed webhook event for future listeners.
+ * sends a homeowner notification email via Mailgun (D-228).
  *
  * Authorization:
  *   - Caller must have a valid Supabase JWT (contractor)
@@ -31,7 +31,7 @@
  *   job_completed → process-hover-rebate, warranty-upload prompt, Lodge home-profile
  *
  * Environment variables:
- *   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, MAILGUN_API_KEY
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -74,6 +74,119 @@ function jsonResponse(
 }
 
 // =============================================================================
+// HOMEOWNER NOTIFICATION (D-228)
+// Non-fatal — failure is logged but does not roll back completion_date.
+// =============================================================================
+
+async function sendHomeownerNotification(
+  supabase: ReturnType<typeof createClient>,
+  claimId: string,
+  homeownerId: string,
+  address: string,
+  contractorName: string,
+  completionDate: string,
+  mailgunApiKey: string | undefined
+): Promise<void> {
+  if (!mailgunApiKey) {
+    console.warn(`[${FUNCTION_NAME}] MAILGUN_API_KEY not set — skipping homeowner notification for claim ${claimId}`);
+    return;
+  }
+
+  // ── Look up homeowner email: profiles first, fall back to auth.admin ──────
+  let homeownerEmail: string | null = null;
+  let homeownerName = "Homeowner";
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", homeownerId)
+    .maybeSingle();
+
+  if (profile?.email) {
+    homeownerEmail = profile.email;
+    homeownerName = profile.full_name || "Homeowner";
+  } else {
+    const { data: authUser } = await supabase.auth.admin.getUserById(homeownerId);
+    homeownerEmail = authUser?.user?.email || null;
+    homeownerName = authUser?.user?.user_metadata?.full_name || "Homeowner";
+  }
+
+  if (!homeownerEmail) {
+    console.warn(`[${FUNCTION_NAME}] Could not resolve homeowner email for user ${homeownerId} on claim ${claimId} — skipping notification`);
+    return;
+  }
+
+  const formattedDate = new Date(completionDate).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const subject = `Your contractor has marked your job complete — ${address}`;
+
+  const textBody = [
+    `Hi ${homeownerName},`,
+    "",
+    `${contractorName} has marked the job at ${address} as complete as of ${formattedDate}.`,
+    "",
+    "If the work is finished to your satisfaction, no action is needed. If you have any concerns or believe the job is not yet complete, please log in to your Otter Quotes account and reach out through your project dashboard.",
+    "",
+    "Log in to review: https://app.otterquote.com",
+    "",
+    "Thank you for using Otter Quotes.",
+    "— The Otter Quotes Team",
+  ].join("\n");
+
+  const htmlBody = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:2rem;color:#1F2937;">
+  <div style="text-align:center;margin-bottom:2rem;">
+    <img src="https://otterquote.com/images/otter-logo.png" alt="Otter Quotes" style="height:48px;" onerror="this.style.display='none'">
+  </div>
+  <h2 style="color:#0D1B2E;margin-bottom:1rem;">Job Marked Complete</h2>
+  <p>Hi ${homeownerName},</p>
+  <p><strong>${contractorName}</strong> has marked the job at <strong>${address}</strong> as complete as of <strong>${formattedDate}</strong>.</p>
+  <p>If the work is finished to your satisfaction, no action is needed. If you have any concerns or believe the job is not yet complete, please log in to your Otter Quotes account and reach out through your project dashboard.</p>
+  <div style="text-align:center;margin:2rem 0;">
+    <a href="https://app.otterquote.com" style="background:#E07B00;color:#fff;padding:0.75rem 1.5rem;border-radius:0.5rem;text-decoration:none;font-weight:600;">Review Your Project</a>
+  </div>
+  <p style="color:#6B7280;font-size:0.875rem;">Thank you for using Otter Quotes.</p>
+  <hr style="border:none;border-top:1px solid #E2E8F0;margin:1.5rem 0;">
+  <p style="color:#9CA3AF;font-size:0.75rem;text-align:center;">Otter Quotes · Indianapolis, IN · <a href="https://otterquote.com" style="color:#9CA3AF;">otterquote.com</a></p>
+</body>
+</html>`;
+
+  const mailgunFormData = new FormData();
+  mailgunFormData.append("from", "Otter Quotes <noreply@mail.otterquote.com>");
+  mailgunFormData.append("to", homeownerEmail);
+  mailgunFormData.append("subject", subject);
+  mailgunFormData.append("text", textBody);
+  mailgunFormData.append("html", htmlBody);
+
+  try {
+    const mailgunResponse = await fetch(
+      "https://api.mailgun.net/v3/mail.otterquote.com/messages",
+      {
+        method: "POST",
+        headers: { Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}` },
+        body: mailgunFormData,
+      }
+    );
+
+    if (mailgunResponse.ok) {
+      console.log(`[${FUNCTION_NAME}] Homeowner notification sent to ${homeownerEmail} for claim ${claimId}`);
+    } else {
+      const errText = await mailgunResponse.text().catch(() => "(unreadable)");
+      console.error(`[${FUNCTION_NAME}] Mailgun returned ${mailgunResponse.status} for claim ${claimId}: ${errText}`);
+    }
+  } catch (mailgunErr) {
+    console.error(`[${FUNCTION_NAME}] Mailgun fetch threw (non-fatal) for claim ${claimId}:`, mailgunErr);
+  }
+}
+
+// =============================================================================
 // MAIN HANDLER
 // =============================================================================
 
@@ -92,6 +205,7 @@ serve(async (req: Request) => {
   const supabaseUrl    = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnon   = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const mailgunApiKey  = Deno.env.get("MAILGUN_API_KEY");
 
   if (!supabaseUrl || !serviceRoleKey) {
     console.error(`[${FUNCTION_NAME}] Missing required environment variables`);
@@ -146,119 +260,4 @@ serve(async (req: Request) => {
 
     // ── Resolve contractor record ──────────────────────────────────────────────
     const { data: contractor, error: contractorError } = await supabase
-      .from("contractors")
-      .select("id, status")
-      .eq("user_id", authUserId)
-      .single();
-
-    if (contractorError || !contractor) {
-      console.error(`[${FUNCTION_NAME}] Contractor lookup failed for user ${authUserId}:`, contractorError?.message);
-      return jsonResponse({ ok: false, error: "Contractor account not found" }, 403, corsHeaders);
-    }
-
-    const contractorId = contractor.id;
-
-    // ── Verify ownership: contractor must have a won quote on this claim ───────
-    const { data: quote, error: quoteError } = await supabase
-      .from("quotes")
-      .select("id, status")
-      .eq("claim_id", claimId)
-      .eq("contractor_id", contractorId)
-      .in("status", ["selected", "awarded"])
-      .maybeSingle();
-
-    if (quoteError) {
-      console.error(`[${FUNCTION_NAME}] Quote lookup error:`, quoteError.message);
-      return jsonResponse({ ok: false, error: "Internal error verifying job ownership" }, 500, corsHeaders);
-    }
-
-    if (!quote) {
-      return jsonResponse({
-        ok: false,
-        error: "You do not have a won job on this claim, or the claim ID is invalid",
-      }, 403, corsHeaders);
-    }
-
-    // ── Fetch claim ────────────────────────────────────────────────────────────
-    const { data: claim, error: claimError } = await supabase
-      .from("claims")
-      .select("id, status, completion_date, property_address")
-      .eq("id", claimId)
-      .single();
-
-    if (claimError || !claim) {
-      return jsonResponse({ ok: false, error: "Claim not found" }, 404, corsHeaders);
-    }
-
-    // ── Idempotency: already complete ──────────────────────────────────────────
-    if (claim.completion_date) {
-      console.log(`[${FUNCTION_NAME}] Claim ${claimId} already complete at ${claim.completion_date} — returning existing timestamp`);
-      return jsonResponse({
-        ok: true,
-        completion_date: claim.completion_date,
-        already_complete: true,
-      }, 200, corsHeaders);
-    }
-
-    // ── State guard: reject non-completable claims ─────────────────────────────
-    if (!COMPLETABLE_STATES.includes(claim.status)) {
-      return jsonResponse({
-        ok: false,
-        error: `Claim is in status '${claim.status}' and cannot be marked complete. Expected: ${COMPLETABLE_STATES.join(" or ")}.`,
-      }, 409, corsHeaders);
-    }
-
-    // ── Set completion_date ────────────────────────────────────────────────────
-    const completionDate = new Date().toISOString();
-
-    const { error: updateError } = await supabase
-      .from("claims")
-      .update({ completion_date: completionDate })
-      .eq("id", claimId);
-
-    if (updateError) {
-      console.error(`[${FUNCTION_NAME}] Failed to set completion_date on claim ${claimId}:`, updateError.message);
-      return jsonResponse({ ok: false, error: "Failed to record job completion" }, 500, corsHeaders);
-    }
-
-    // ── Write activity_log ─────────────────────────────────────────────────────
-    const address = claim.property_address || "a project";
-    const { error: logError } = await supabase
-      .from("activity_log")
-      .insert({
-        user_id:    authUserId,
-        event_type: "job_completed",
-        title:      `Job marked complete for ${address}`,
-        metadata: {
-          claim_id:     claimId,
-          quote_id:     quote.id,
-          marked_by:    contractorId,
-          completed_at: completionDate,
-        },
-      });
-
-    if (logError) {
-      // Non-fatal — completion_date is already written. Log and continue.
-      console.error(`[${FUNCTION_NAME}] activity_log insert failed (non-fatal):`, logError.message);
-    }
-
-    // ── Placeholder webhook event (downstream listeners NOT wired in W2-P1) ────
-    console.log(
-      `[${FUNCTION_NAME}] [job_completed] claim_id=${claimId} quote_id=${quote.id} ` +
-      `contractor_id=${contractorId} completed_at=${completionDate} ` +
-      `— downstream listeners not wired (W2-P1 scope). Future: process-hover-rebate, warranty-upload, Lodge home-profile.`
-    );
-
-    console.log(`[${FUNCTION_NAME}] Job marked complete — claim ${claimId} by contractor ${contractorId}`);
-
-    return jsonResponse({
-      ok: true,
-      completion_date: completionDate,
-      already_complete: false,
-    }, 200, corsHeaders);
-
-  } catch (err) {
-    console.error(`[${FUNCTION_NAME}] Unhandled error:`, err);
-    return jsonResponse({ ok: false, error: "Internal server error" }, 500, corsHeaders);
-  }
-});
+      .from("cont

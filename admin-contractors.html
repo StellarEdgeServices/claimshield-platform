@@ -797,7 +797,6 @@
     </div>
 
     <script src="js/cookie-storage.js"></script>
-
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/nav.js"></script>
@@ -811,7 +810,7 @@
         function initSupabase() {
             if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON) {
                 const { createClient } = window.supabase;
-                sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
+                sb = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
             }
         }
 
@@ -890,6 +889,8 @@
             let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-top:0.75rem;">';
             
             // CGL COI status
+            // B1: column is coi_file_url; coi_document_url is a phantom (doesn't exist in schema).
+            // Expiry column is coi_expires_at, not coi_expiry.
             const hasCoi = contractor.coi_file_url != null;
             const coiBadgeColor = hasCoi ? '#dcfce7' : '#fee2e2';
             const coiBadgeText = hasCoi ? '#166534' : '#991b1b';
@@ -922,10 +923,8 @@
             let licBadgeColor = '#fee2e2';
             let licBadgeText = '#991b1b';
             let licDisplay = '❌ License';
-            // D-218: contractor_licenses is a separate table joined via select query.
-            // license_document_url lives on contractor_licenses rows, not on the contractor itself.
-            const hasLicenseDoc = (contractor.contractor_licenses && contractor.contractor_licenses.length > 0) || (contractor.license_path && contractor.license_path !== 'not_provided');
-            const hasLicenseAttest = contractor.license_path === 'not_provided' || contractor.license_attestation_signed_at != null;
+            const hasLicenseDoc = contractor.license_document_url != null;
+            const hasLicenseAttest = contractor.license_attestation_signed_at != null;
             if (hasLicenseDoc || hasLicenseAttest) {
                 if (hasLicenseAttest && !hasLicenseDoc) {
                     licBadgeColor = '#fef3c7';
@@ -1173,6 +1172,15 @@
                                 </div>
                             </div>
 
+                            <!-- Won Jobs / Dispute Evidence (D-228) -->
+                            <div class="card-section">
+                                <div class="card-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+                                    <span>Won Jobs &amp; Completion Dates</span>
+                                    <button class="btn-sm" style="font-size:0.75rem;padding:0.25rem 0.6rem;" onclick="loadWonJobs(event, '${c.id}')">Load</button>
+                                </div>
+                                <div id="won-jobs-${c.id}" style="margin-top:0.5rem;font-size:0.85rem;color:var(--slate);">Click Load to fetch won jobs and completion timestamps (dispute evidence).</div>
+                            </div>
+
                             <!-- Admin Notes -->
                             <div class="admin-notes-section">
                                 <div class="admin-notes-label">Admin Notes</div>
@@ -1199,6 +1207,63 @@
 
             const body = document.getElementById(`body-${contractorId}`);
             body.classList.toggle('expanded');
+        }
+
+        // D-228: Load won jobs with completion dates for dispute evidence.
+        async function loadWonJobs(event, contractorId) {
+            event.stopPropagation();
+            const container = document.getElementById(`won-jobs-${contractorId}`);
+            if (!container || !sb) return;
+
+            container.innerHTML = '<span style="color:#94a3b8">Loading…</span>';
+
+            try {
+                // Fetch won quotes for this contractor, joined to claims
+                const { data: quotes, error } = await sb
+                    .from('quotes')
+                    .select('id, status, claim_id, claims(id, property_address, status, completion_date, created_at)')
+                    .eq('contractor_id', contractorId)
+                    .in('status', ['selected', 'awarded']);
+
+                if (error) throw error;
+
+                if (!quotes || quotes.length === 0) {
+                    container.innerHTML = '<span style="color:#94a3b8">No won jobs found for this contractor.</span>';
+                    return;
+                }
+
+                let html = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:0.25rem;">';
+                html += '<thead><tr style="background:#1e293b;color:#94a3b8;">';
+                html += '<th style="padding:0.4rem 0.6rem;text-align:left;">Property</th>';
+                html += '<th style="padding:0.4rem 0.6rem;text-align:left;">Claim Status</th>';
+                html += '<th style="padding:0.4rem 0.6rem;text-align:left;">Completion Date</th>';
+                html += '</tr></thead><tbody>';
+
+                for (const q of quotes) {
+                    const claim = Array.isArray(q.claims) ? q.claims[0] : q.claims;
+                    if (!claim) continue;
+                    const addr = claim.property_address || '(no address)';
+                    const claimStatus = claim.status || '—';
+                    let completionCell;
+                    if (claim.completion_date) {
+                        const d = new Date(claim.completion_date);
+                        completionCell = `<span style="color:#10B981;font-weight:600;">✅ ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>`;
+                    } else {
+                        completionCell = '<span style="color:#94a3b8;">Not marked complete</span>';
+                    }
+                    html += `<tr style="border-bottom:1px solid #e2e8f0;">`;
+                    html += `<td style="padding:0.4rem 0.6rem;">${addr}</td>`;
+                    html += `<td style="padding:0.4rem 0.6rem;">${claimStatus}</td>`;
+                    html += `<td style="padding:0.4rem 0.6rem;">${completionCell}</td>`;
+                    html += `</tr>`;
+                }
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (err) {
+                console.error('loadWonJobs error:', err);
+                container.innerHTML = `<span style="color:#EF4444;">Error loading jobs: ${err.message}</span>`;
+            }
         }
 
         function openLicenseBoard(state, companyName) {
@@ -1378,7 +1443,7 @@
             try {
                 // D-210: Gate approval on contractor_has_required_docs()
                 const { data: hasRequiredDocs, error: rpcError } = await sb.rpc('contractor_has_required_docs', { 
-                    p_contractor_id: contractorId 
+                    contractor_id: contractorId 
                 });
 
                 if (rpcError) throw rpcError;
@@ -1751,103 +1816,4 @@
 
         async function loadWaitlistStats() {
             if (!sb) return;
-            const content = document.getElementById('waitlistContent');
-            content.innerHTML = '<span style="color:#94a3b8">Loading\u2026</span>';
-
-            try {
-                // Fetch all waitlist rows for grouping
-                const { data, error } = await sb
-                    .from('expansion_waitlist')
-                    .select('state, opted_in, created_at')
-                    .order('state', { ascending: true });
-
-                if (error) throw error;
-
-                // Update summary card
-                const total = (data || []).length;
-                const el = document.getElementById('waitlistCount');
-                if (el) el.textContent = total;
-
-                if (!data || data.length === 0) {
-                               content.innerHTML = '<span style="color:#64748b;font-size:0.875rem;">No waitlist entries yet.</span>';
-                    const tsEl = document.getElementById('waitlistLastRefreshed');
-                    if (tsEl) { tsEl.textContent = 'Last refreshed: ' + new Date().toLocaleTimeString(); }
-                    return;
-                }
-
-                // Group by state
-                const byState = {};
-                for (const row of data) {
-                    const st = row.state || 'Unknown';
-                    if (!byState[st]) byState[st] = { total: 0, optedIn: 0 };
-                    byState[st].total++;
-                    if (row.opted_in) byState[st].optedIn++;
-                }
-
-                // Render table
-                let html = '<table style="width:100%;border-collapse:collapse;font-size:0.875rem;">';
-                html += '<thead><tr style="border-bottom:1px solid #e2e8f0;">';
-                html += '<th style="text-align:left;padding:6px 10px;color:#64748b;font-weight:600;">State</th>';
-                html += '<th style="text-align:right;padding:6px 10px;color:#64748b;font-weight:600;">Total</th>';
-                html += '<th style="text-align:right;padding:6px 10px;color:#64748b;font-weight:600;">Opted In</th>';
-                html += '</tr></thead><tbody>';
-
-                for (const [state, counts] of Object.entries(byState).sort((a,b) => a[0].localeCompare(b[0]))) {
-                    html += `<tr style="border-bottom:1px solid #f1f5f9;">`;
-                    html += `<td style="padding:6px 10px;font-weight:500;">${state}</td>`;
-                    html += `<td style="padding:6px 10px;text-align:right;">${counts.total}</td>`;
-                    html += `<td style="padding:6px 10px;text-align:right;">${counts.optedIn}</td>`;
-                    html += `</tr>`;
-                }
-                html += '</tbody></table>';
-                content.innerHTML = html;
-
-                const tsEl = document.getElementById('waitlistLastRefreshed');
-                if (tsEl) { tsEl.textContent = 'Last refreshed: ' + new Date().toLocaleTimeString(); }
-
-            } catch (err) {
-                console.error('loadWaitlistStats error:', err);
-                const content = document.getElementById('waitlistContent');
-                if (content) content.innerHTML = '<span style="color:#ef4444;">Failed to load waitlist data.</span>';
-            }
-        }
-
-
-        // ── Reject Modal ─────────────────────────────────────────────────────────
-        function openRejectModal(contractorId, companyName) {
-            const modal = document.getElementById('rejectModal');
-            modal.dataset.contractorId = contractorId;
-            document.getElementById('rejectCompanyName').textContent = companyName || contractorId;
-            document.getElementById('rejectReason').value = '';
-            const errEl = document.getElementById('rejectError');
-            if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
-            modal.classList.add('show');
-        }
-
-        function closeRejectModal() {
-            document.getElementById('rejectModal').classList.remove('show');
-            const errEl = document.getElementById('rejectError');
-            if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
-        }
-
-        async function submitReject() {
-            const contractorId = document.getElementById('rejectModal').dataset.contractorId;
-            if (!contractorId) return;
-            await rejectContractor(contractorId);
-        }
-
-        // ── Logout ───────────────────────────────────────────────────────────────
-        function logout() {
-            if (typeof Auth !== 'undefined' && Auth.signOut) {
-                Auth.signOut()
-                    .then(() => { window.location.href = '/login.html'; })
-                    .catch(() => { window.location.href = '/login.html'; });
-            } else {
-                window.location.href = '/login.html';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
+            const cont
