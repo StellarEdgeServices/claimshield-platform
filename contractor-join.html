@@ -312,7 +312,7 @@
                 localStorage.setItem('cs_auth_role', 'contractor');
 
                 // Send magic link — call Supabase directly so we control redirectTo
-                const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
+                const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
                 const redirectTo = `${window.location.origin}/contractor-pre-approval.html`;
 
                 const { error } = await sb.auth.signInWithOtp({
