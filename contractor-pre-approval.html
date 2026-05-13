@@ -126,7 +126,7 @@
                 <div style="font-size:2rem; margin-bottom: var(--sp-4);">⚠️</div>
                 <h2 style="font-family:var(--font-heading); color:var(--white); margin-bottom: var(--sp-4);">Session Not Found</h2>
                 <p style="color:var(--slate); margin-bottom: var(--sp-8);">We couldn't verify your session. Please use the link in your email or start a new application.</p>
-                <a href="contractor-join.html" style="color:var(--amber); font-weight:600;">← Start Application</a>
+                <a href='/contractor-join' style='color:var(--amber); font-weight:600;'>← Start Application</a>
             </div>
 
             <!-- Submitted panel — D-225 verbatim post-apply copy -->
@@ -138,7 +138,7 @@
                 <div style="background:rgba(224,123,0,0.07); border-left:4px solid var(--amber); border-radius:var(--radius-md); padding: var(--sp-6); max-width:480px; margin:0 auto; text-align:left;">
                     <strong style="color:var(--amber); display:block; margin-bottom: var(--sp-3);">While You Wait</strong>
                     <ul style="color:var(--slate); margin-left: var(--sp-5); line-height:2;">
-                        <li>Review the <a href="contractor-faq.html" style="color:var(--amber);">Contractor FAQ</a></li>
+                        <li>Review the <a href='/contractor-faq' style='color:var(--amber);'>Contractor FAQ</a></li>
                         <li>Questions? Email <a href="mailto:support@otterquote.com" style="color:var(--amber);">support@otterquote.com</a></li>
                     </ul>
                 </div>
@@ -306,7 +306,7 @@
                     <!-- Partner Agreement -->
                     <div class="info-box">
                         <strong>Contractor Partner Agreement</strong>
-                        <p style="margin-top: var(--sp-2);">By joining Otter Quotes, you agree to the terms of the <a href="/contractor-agreement.html" target="_blank" style="color:var(--amber); font-weight:600;">Otter Quotes Contractor Partner Agreement</a>. You will also be asked to sign it via DocuSign when your first project is matched. The platform fee is 5% of the insurance estimate (RCV) for insurance jobs and 5% of your bid for retail/cash jobs.</p>
+                        <p style="margin-top: var(--sp-2);">By joining Otter Quotes, you agree to the terms of the <a href='/contractor-agreement' style='color:var(--amber); font-weight:600;' target='_blank'>Otter Quotes Contractor Partner Agreement</a>. You will also be asked to sign it via DocuSign when your first project is matched. The platform fee is 5% of the insurance estimate (RCV) for insurance jobs and 5% of your bid for retail/cash jobs.</p>
                     </div>
                     <div class="check-group" style="margin-bottom: var(--sp-8);">
                         <input type="checkbox" id="agreeToPartnerAgreement" required>
@@ -738,7 +738,7 @@
 
             // Build update object with v61 column names
             const updateObj = {
-                coi_document_url: coi_document_url,
+                coi_file_url: coi_document_url, // D-210 schema fix: column on contractors is coi_file_url not coi_document_url
                 coi_uploaded_at: new Date().toISOString(),
                 onboarding_step: 2,
                 updated_at: new Date().toISOString()
