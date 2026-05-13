@@ -45,9 +45,21 @@ async function loginAsContractor(page: import('@playwright/test').Page, state: T
   await page.goto(magicLink);
   await page.waitForURL(/contractor-dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
-  // Wait for Supabase to persist session
-  await page.waitForFunction(() => {
-    return Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+  // Wait for Supabase to persist session.
+  // OtterQuoteCookieStorage (D-212) writes under 'sb-otterquote-auth',
+  // not the legacy Supabase suffix 'sb-*-auth-token'. Check canonical
+  // key first, then legacy, then poll the Supabase client directly.
+  // Mirrors loginAsHomeowner predicate (commit 94f6aff) + loginAsContractor
+  // predicate (commit dba09da, 86e1cee4y fix).
+  await page.waitForFunction(async () => {
+    const canonicalKey = (window as any).OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth';
+    if (localStorage.getItem(canonicalKey)) return true;
+    if (Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'))) return true;
+    if ((window as any).sb) {
+      const { data } = await (window as any).sb.auth.getSession();
+      return data.session !== null;
+    }
+    return false;
   }, { timeout: 15_000 });
 }
 

@@ -246,4 +246,10 @@ test.describe('Flow B — Homeowner Journey (Phase 1 Stub)', () => {
   // Navigate to contract-signing.html after contractor selected.
   // Assert DocuSign iframe container renders.
   // Skip signing — requires DocuSign sandbox credentials.
-  // See CI_INTEG
+  // See CI_INTEGRATION.md → DocuSign Sandbox Setup.
+
+  // TODO: B10 — Project confirmation
+  // Navigate to project-confirmation.html (color-selection.html).
+  // Assert trade-specific form fields render (roofing: shingle color, drip edge, etc.)
+  // Verify project_confirmation JSONB persists on submit.
+});
