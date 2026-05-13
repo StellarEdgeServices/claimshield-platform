@@ -2,7 +2,8 @@
  * admin-auth-gate.ts — Netlify Edge Function (W4-P1)
  *
  * Intercepts all /admin-*.html requests before the static file is served.
- * Reads the sb_at cookie (set by Auth._syncAdminCookie in js/auth.js),
+ * Reads the sb-otterquote-at cookie (set by OtterQuoteCookieStorage v2,
+ * D-212 fix). Falls back to legacy sb_at cookie for in-flight admin sessions.
  * decodes the Supabase JWT payload, and verifies:
  *   1. Token present and structurally valid
  *   2. Token not expired (exp claim)
@@ -21,10 +22,13 @@
 export default async (req: Request, context: any) => {
   const url = new URL(req.url);
 
-  // Parse sb_at from Cookie header
+  // D-225 fix May 13, 2026: D-212 cookie chunking renamed the access-token cookie
+  // from `sb_at` to `sb-otterquote-at`. Read the new name first, fall back to the
+  // legacy name during migration so any pre-D-212 admin sessions keep working.
   const cookieHeader = req.headers.get('cookie') || '';
-  const match = cookieHeader.match(/(?:^|;\s*)sb_at=([^;]+)/);
-  const token = match?.[1];
+  const newMatch = cookieHeader.match(/(?:^|;\s*)sb-otterquote-at=([^;]+)/);
+  const legacyMatch = cookieHeader.match(/(?:^|;\s*)sb_at=([^;]+)/);
+  const token = newMatch?.[1] || legacyMatch?.[1];
 
   const redirectToLogin = () =>
     Response.redirect(`${url.origin}/login.html?reason=admin_required`, 302);
