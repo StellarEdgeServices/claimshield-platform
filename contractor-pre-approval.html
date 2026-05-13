@@ -738,7 +738,7 @@
 
             // Build update object with v61 column names
             const updateObj = {
-                coi_document_url: coi_document_url,
+                coi_file_url: coi_document_url, // D-210 schema fix: column on contractors is coi_file_url not coi_document_url
                 coi_uploaded_at: new Date().toISOString(),
                 onboarding_step: 2,
                 updated_at: new Date().toISOString()
