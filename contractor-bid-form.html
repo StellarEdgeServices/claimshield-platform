@@ -5006,7 +5006,13 @@
             }
           }
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          const feePercentage = 5.0;
+          // C2 fix: use the dynamic platform fee from window._feePct (set by
+          // updateFeeDisclosure() above). Hardcoded 5.0 made quotes.fee_percentage and
+          // quotes.fee_amount contradict quotes.platform_fee_pct (which uses _feePct)
+          // and fee_acceptances.fee_pct — financial-record integrity issue.
+          const feePercentage = (typeof window._feePct === 'number' && window._feePct > 0)
+            ? window._feePct
+            : (typeof _platformFeePct === 'number' && _platformFeePct > 0 ? _platformFeePct : 5.0);
 
           // Insurance jobs: fee is based on RCV from loss sheet, not bid amount
           let feeBase = totalPrice;
