@@ -612,9 +612,13 @@
       // D-225 May 13 — detect Supabase Auth rate-limit specifically; the generic
       // "Something went wrong" framing was alarming users who had simply clicked
       // Submit twice. Supabase embeds "after N seconds" in the rate-limit msg.
+      // Defense-in-depth detection: top-level message, nested err.error.message, status code, 'rate' or 'security purposes' phrasing all flag rate-limit.
       var rateLimitMatch = err && err.message && err.message.match(/after (\d+) seconds/i);
-      if (rateLimitMatch || (err && (err.status === 429 || (err.message && err.message.toLowerCase().includes('rate'))))) {
-        var seconds = rateLimitMatch ? rateLimitMatch[1] : null;
+      var nestedMsg = err && err.error && err.error.message;
+      var nestedMatch = nestedMsg && nestedMsg.match(/after (\d+) seconds/i);
+      var match = rateLimitMatch || nestedMatch;
+      if (match || (err && (err.status === 429 || (err.message && /rate|limit|security purposes/i.test(err.message))))) {
+        var seconds = match ? match[1] : null;
         errorEl.textContent = 'We already sent you a sign-in link. Check your inbox (and spam folder).'
           + (seconds ? ' You can request another in ' + seconds + ' seconds if needed.' : ' Please wait a moment before requesting another.');
       } else {
