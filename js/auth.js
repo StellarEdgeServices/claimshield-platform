@@ -129,8 +129,13 @@ window.Auth = {
     // New users go to trade-selector (intake). Returning users should pass
     // redirectTo='/dashboard.html' to bypass the intake flow.
     const partnerRoles = ['re_agent', 'insurance_agent', 'home_inspector'];
+    // D-225 fix May 13: new contractors must land on /contractor-pre-approval.html,
+    // not /contractor-dashboard.html. The pre-approval page reads cs_contractor_signup
+    // from localStorage, creates the contractors row, and routes returning/active
+    // contractors onward to the dashboard. Sending NEW signups directly to dashboard
+    // caused a bounce loop (dashboard requireAuth -> no record -> bounce back).
     const defaultRedirectPage = role === 'contractor'
-      ? '/contractor-dashboard.html'
+      ? '/contractor-pre-approval.html'
       : partnerRoles.includes(role)
         ? '/partner-dashboard.html'
         : '/trade-selector.html';

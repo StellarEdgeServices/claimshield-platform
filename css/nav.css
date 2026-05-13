@@ -111,6 +111,11 @@
   margin-top: var(--sp-1);
 }
 
+/* D-225 May 13 — Hide mobile-only nav CTA on desktop (was rendering twice). */
+@media (min-width: 769px) {
+  .nav-mobile-cta-secondary { display: none !important; }
+}
+
 /* ── Footer ── */
 #site-footer {
   background: var(--navy-2);
