@@ -83,19 +83,45 @@
 
   /**
    * Reconstruct a Supabase session JSON string from access + refresh tokens.
-   * Supabase JS v2 accepts this minimal shape; user is re-populated via
-   * getUser() / onAuthStateChange after restore.
+   *
+   * D-212 fix May 13, 2026 — populate the user object from JWT claims at
+   * reconstruction time. Previous version set user:null on the assumption
+   * Supabase would auto-fetch via getUser(); in practice, pages reading
+   * session.user.id directly on init (e.g. contractor-bid-form.html) got
+   * null and redirected to login. Decoding the JWT payload locally fills
+   * the same fields Supabase would have written.
    */
   function reconstructSession(accessToken, refreshToken) {
     var expSec = null;
     var expiresIn = null;
+    var user = null;
     try {
       var parts = accessToken.split('.');
       if (parts.length === 3) {
         var payload = JSON.parse(atob(parts[1]));
-        if (payload && payload.exp) {
-          expSec = payload.exp;
-          expiresIn = Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+        if (payload) {
+          if (payload.exp) {
+            expSec = payload.exp;
+            expiresIn = Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
+          }
+          if (payload.sub) {
+            var iatIso = payload.iat ? new Date(payload.iat * 1000).toISOString() : null;
+            user = {
+              id: payload.sub,
+              email: payload.email || null,
+              aud: payload.aud || 'authenticated',
+              role: payload.role || 'authenticated',
+              app_metadata: payload.app_metadata || {},
+              user_metadata: payload.user_metadata || {},
+              email_confirmed_at: payload.email_verified ? iatIso : null,
+              phone: payload.phone || '',
+              confirmed_at: payload.email_verified ? iatIso : null,
+              last_sign_in_at: iatIso,
+              created_at: iatIso,
+              updated_at: iatIso,
+              identities: payload.user_metadata && payload.user_metadata.identities ? payload.user_metadata.identities : []
+            };
+          }
         }
       }
     } catch (e) { /* invalid JWT — leave nulls */ }
@@ -106,7 +132,7 @@
       expires_at: expSec,
       expires_in: expiresIn,
       token_type: 'bearer',
-      user: null
+      user: user
     });
   }
 
