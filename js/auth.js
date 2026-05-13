@@ -35,20 +35,26 @@ window.Auth = {
 
     var hasStoredSession = false;
     try {
-      var refMatch = (CONFIG && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
-      var ref = refMatch ? refMatch[1] : null;
-      if (ref) {
-        var raw = localStorage.getItem('sb-' + ref + '-auth-token');
-        if (raw) {
-          try {
-            var parsed = JSON.parse(raw);
-            if (parsed && (parsed.access_token || parsed.refresh_token)) {
-              hasStoredSession = true;
-            }
-          } catch (e) { /* malformed - ignore */ }
-        }
+      // D-212 — read via storage adapter so we hit the cross-subdomain cookie path
+      // on app.otterquote.com and the localStorage path on otterquote.com.
+      // Defensive fallback to legacy key if the adapter isn't loaded yet.
+      var raw = null;
+      if (window.OtterQuoteCookieStorage) {
+        raw = window.OtterQuoteCookieStorage.getItem(window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth');
+      } else {
+        var refMatch = (CONFIG && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
+        var ref = refMatch ? refMatch[1] : null;
+        if (ref) raw = localStorage.getItem('sb-' + ref + '-auth-token');
       }
-    } catch (e) { /* localStorage blocked - fall through */ }
+      if (raw) {
+        try {
+          var parsed = JSON.parse(raw);
+          if (parsed && (parsed.access_token || parsed.refresh_token)) {
+            hasStoredSession = true;
+          }
+        } catch (e) { /* malformed - ignore */ }
+      }
+    } catch (e) { /* storage blocked - fall through */ }
 
     var hasAuthInUrl = (typeof window !== 'undefined') && (
       window.location.hash.includes('access_token') ||
@@ -185,9 +191,15 @@ window.Auth = {
     // Poll up to 4 times at 500ms intervals (max 2s) before giving up.
     if (!user) {
       try {
-        var refMatch = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
-        var ref = refMatch ? refMatch[1] : null;
-        var raw = ref ? localStorage.getItem('sb-' + ref + '-auth-token') : null;
+        // D-212 — same adapter-aware read pattern as getSession().
+        var raw = null;
+        if (window.OtterQuoteCookieStorage) {
+          raw = window.OtterQuoteCookieStorage.getItem(window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth');
+        } else {
+          var refMatch = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : '').match(/https:\/\/([^.]+)/);
+          var ref = refMatch ? refMatch[1] : null;
+          if (ref) raw = localStorage.getItem('sb-' + ref + '-auth-token');
+        }
         var hasStored = false;
         if (raw) {
           try {

@@ -61,7 +61,7 @@ var CONFIG = {
 // Use window scope to avoid "sb declared twice" error on page script reloads or multiple loads.
 if (typeof window !== 'undefined') {
   if (typeof window.sb === 'undefined' && typeof supabase !== 'undefined') {
-    window.sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage } });
+    window.sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || "sb-otterquote-auth" } });
   }
 }
 // Global reference for backward compatibility with code expecting `sb` in local scope
