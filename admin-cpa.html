@@ -308,7 +308,7 @@ const SUPABASE_URL     = 'https://yeszghaspzwwstvsrioa.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc3pnaGFzcHp3d3N0dnNyaW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzczOTQsImV4cCI6MjA4ODkxMzM5NH0.rJylLGDUOP25xms5OLDa_tkUyj_ESHT9yzwVynZgiVI';
 const ADMIN_EMAIL      = 'dustinstohler1@gmail.com';
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
 
 // =============================================================================
 // AUTH

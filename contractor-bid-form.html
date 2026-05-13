@@ -2277,6 +2277,7 @@
   <footer id="site-footer"></footer>
 
   <!-- Scripts -->
+  <script src="js/cookie-storage.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
@@ -5436,7 +5437,7 @@
     // ── Initialize ──
     document.addEventListener('DOMContentLoaded', () => {
       if (!sb && typeof supabase !== 'undefined') {
-        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
+        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
       }
 
       // Wire up bid type UI
