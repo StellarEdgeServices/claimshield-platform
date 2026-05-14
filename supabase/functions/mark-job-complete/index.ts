@@ -5,8 +5,9 @@
  * W2-P1 — May 1, 2026
  *
  * Allows a contractor to mark one of their won jobs as complete.
- * Sets claims.completion_date, writes an activity_log entry, and
- * sends a homeowner notification email via Mailgun (D-228).
+ * Sets claims.completion_date, writes an activity_log entry,
+ * sends a homeowner notification email via Mailgun (D-228), and
+ * triggers the home profile prompt flow (D-231).
  *
  * Authorization:
  *   - Caller must have a valid Supabase JWT (contractor)
@@ -27,8 +28,8 @@
  *   409 — claim is not in a completable state (not contract_signed or awarded)
  *   500 — internal error
  *
- * Downstream listeners (NOT wired in this build — placeholder only):
- *   job_completed → process-hover-rebate, warranty-upload prompt, Lodge home-profile
+ * Downstream listeners (D-228 + D-231 wired in this build):
+ *   job_completed → sendHomeownerNotification (D-228), send-home-profile-prompt (D-231)
  *
  * Environment variables:
  *   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, MAILGUN_API_KEY
@@ -187,6 +188,38 @@ async function sendHomeownerNotification(
 }
 
 // =============================================================================
+// HOME PROFILE PROMPT TRIGGER (D-231)
+// Non-fatal fire-and-forget — triggers send-home-profile-prompt EF.
+// The EF enforces the 24h gate internally; pg_cron sends the actual email.
+// =============================================================================
+
+async function triggerHomeProfilePrompt(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  claimId: string
+): Promise<void> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-home-profile-prompt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ claim_id: claimId }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "(unreadable)");
+      console.error(`[${FUNCTION_NAME}] send-home-profile-prompt returned ${res.status} for claim ${claimId}: ${errText}`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      console.log(`[${FUNCTION_NAME}] send-home-profile-prompt triggered for claim ${claimId} — result: ${data.result || "batch"}`);
+    }
+  } catch (err) {
+    console.error(`[${FUNCTION_NAME}] send-home-profile-prompt fetch threw (non-fatal) for claim ${claimId}:`, err);
+  }
+}
+
+// =============================================================================
 // MAIN HANDLER
 // =============================================================================
 
@@ -260,4 +293,136 @@ serve(async (req: Request) => {
 
     // ── Resolve contractor record ──────────────────────────────────────────────
     const { data: contractor, error: contractorError } = await supabase
-      .from("cont
+      .from("contractors")
+      .select("id, status")
+      .eq("user_id", authUserId)
+      .single();
+
+    if (contractorError || !contractor) {
+      console.error(`[${FUNCTION_NAME}] Contractor lookup failed for user ${authUserId}:`, contractorError?.message);
+      return jsonResponse({ ok: false, error: "Contractor account not found" }, 403, corsHeaders);
+    }
+
+    const contractorId = contractor.id;
+
+    // ── Verify ownership: contractor must have a won quote on this claim ───────
+    const { data: quote, error: quoteError } = await supabase
+      .from("quotes")
+      .select("id, status")
+      .eq("claim_id", claimId)
+      .eq("contractor_id", contractorId)
+      .in("status", ["selected", "awarded"])
+      .maybeSingle();
+
+    if (quoteError) {
+      console.error(`[${FUNCTION_NAME}] Quote lookup error:`, quoteError.message);
+      return jsonResponse({ ok: false, error: "Internal error verifying job ownership" }, 500, corsHeaders);
+    }
+
+    if (!quote) {
+      return jsonResponse({
+        ok: false,
+        error: "You do not have a won job on this claim, or the claim ID is invalid",
+      }, 403, corsHeaders);
+    }
+
+    // ── Fetch claim ────────────────────────────────────────────────────────────
+    const { data: claim, error: claimError } = await supabase
+      .from("claims")
+      .select("id, status, completion_date, property_address, user_id")
+      .eq("id", claimId)
+      .single();
+
+    if (claimError || !claim) {
+      return jsonResponse({ ok: false, error: "Claim not found" }, 404, corsHeaders);
+    }
+
+    // ── Idempotency: already complete ──────────────────────────────────────────
+    if (claim.completion_date) {
+      console.log(`[${FUNCTION_NAME}] Claim ${claimId} already complete at ${claim.completion_date} — returning existing timestamp`);
+      return jsonResponse({
+        ok: true,
+        completion_date: claim.completion_date,
+        already_complete: true,
+      }, 200, corsHeaders);
+    }
+
+    // ── State guard: reject non-completable claims ─────────────────────────────
+    if (!COMPLETABLE_STATES.includes(claim.status)) {
+      return jsonResponse({
+        ok: false,
+        error: `Claim is in status '${claim.status}' and cannot be marked complete. Expected: ${COMPLETABLE_STATES.join(" or ")}.`,
+      }, 409, corsHeaders);
+    }
+
+    // ── Set completion_date ────────────────────────────────────────────────────
+    const completionDate = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from("claims")
+      .update({ completion_date: completionDate })
+      .eq("id", claimId);
+
+    if (updateError) {
+      console.error(`[${FUNCTION_NAME}] Failed to set completion_date on claim ${claimId}:`, updateError.message);
+      return jsonResponse({ ok: false, error: "Failed to record job completion" }, 500, corsHeaders);
+    }
+
+    // ── Write activity_log ─────────────────────────────────────────────────────
+    const address = claim.property_address || "a project";
+    const { error: logError } = await supabase
+      .from("activity_log")
+      .insert({
+        user_id:    authUserId,
+        event_type: "job_completed",
+        title:      `Job marked complete for ${address}`,
+        metadata: {
+          claim_id:     claimId,
+          quote_id:     quote.id,
+          marked_by:    contractorId,
+          completed_at: completionDate,
+        },
+      });
+
+    if (logError) {
+      // Non-fatal — completion_date is already written. Log and continue.
+      console.error(`[${FUNCTION_NAME}] activity_log insert failed (non-fatal):`, logError.message);
+    }
+
+    // ── Homeowner notification (D-228) ─────────────────────────────────────────
+    // Resolve contractor display name for the email body.
+    const { data: contractorProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", authUserId)
+      .maybeSingle();
+    const contractorName = contractorProfile?.full_name || "Your contractor";
+
+    await sendHomeownerNotification(
+      supabase,
+      claimId,
+      claim.user_id,
+      address,
+      contractorName,
+      completionDate,
+      mailgunApiKey
+    );
+
+    // ── Home profile prompt trigger (D-231) ────────────────────────────────────
+    // Fire-and-forget — send-home-profile-prompt applies the 24h gate internally.
+    // pg_cron will send the actual email; this wires the trigger as specified by D-231.
+    await triggerHomeProfilePrompt(supabaseUrl, serviceRoleKey, claimId);
+
+    console.log(`[${FUNCTION_NAME}] Job marked complete — claim ${claimId} by contractor ${contractorId}`);
+
+    return jsonResponse({
+      ok: true,
+      completion_date: completionDate,
+      already_complete: false,
+    }, 200, corsHeaders);
+
+  } catch (err) {
+    console.error(`[${FUNCTION_NAME}] Unhandled error:`, err);
+    return jsonResponse({ ok: false, error: "Internal server error" }, 500, corsHeaders);
+  }
+});
