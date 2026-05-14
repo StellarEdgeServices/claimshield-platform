@@ -1,27 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- D-225 launch-eve hotfix (May 14, 2026): Supabase Auth allowlist is silently
-     overriding magic-link redirects to SITE_URL. This script catches the case
-     where a contractor lands on the homepage with an auth hash and bounces
-     them to the correct onboarding page. Must run before any Supabase init. -->
+<!-- D-225 launch-eve hotfix v2 (May 14, 2026): Supabase Auth allowlist silently
+     overrides magic-link redirect_to to SITE_URL. Catch contractors landing on
+     the homepage with an auth hash; bounce them to the correct onboarding page.
+     v2 reads role from the access_token JWT user_metadata (set by contractor-join.html
+     via signInWithOtp options.data.role) instead of localStorage, which proved
+     unreliable across tabs/windows. Runs before any Supabase init. -->
 <script>
 (function () {
+  function log() { try { console.log.apply(console, ['[bounce]'].concat([].slice.call(arguments))); } catch (e) {} }
   try {
     var hash = window.location.hash || '';
     var search = window.location.search || '';
     var hasAuth = hash.indexOf('access_token') !== -1 ||
                   search.indexOf('code=') !== -1;
+    log('hash=', hash.substring(0,80), 'search=', search.substring(0,80), 'hasAuth=', hasAuth);
     if (!hasAuth) return;
+
+    // Primary: extract role from access_token JWT (user_metadata.role)
     var role = null;
-    try { role = localStorage.getItem('cs_auth_role'); } catch (e) {}
+    try {
+      var params = new URLSearchParams(hash.charAt(0) === '#' ? hash.substring(1) : hash);
+      var token = params.get('access_token');
+      if (token) {
+        var parts = token.split('.');
+        if (parts.length === 3) {
+          var b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
+          var payload = JSON.parse(atob(b64));
+          role = (payload.user_metadata && payload.user_metadata.role) ||
+                 (payload.app_metadata && payload.app_metadata.role) || null;
+          log('JWT user_metadata.role=', role, 'sub=', payload.sub);
+        }
+      }
+    } catch (e) { log('JWT decode err:', e && e.message); }
+
+    // Fallback: localStorage
+    if (!role) {
+      try { role = localStorage.getItem('cs_auth_role'); log('localStorage cs_auth_role=', role); } catch (e) {}
+    }
+
     if (role === 'contractor') {
       try { localStorage.removeItem('cs_auth_role'); } catch (e) {}
+      log('BOUNCING to /contractor-pre-approval.html');
       window.location.replace('/contractor-pre-approval.html' + search + hash);
+    } else {
+      log('not a contractor (role=' + role + '), letting homepage render');
     }
-    // homeowner / no-intent: let homepage render with logged-in state.
-    // The "My Dashboard" button in the nav lets the user navigate manually.
-  } catch (e) { /* never block render on bounce-script error */ }
+  } catch (e) {
+    try { console.warn('[bounce] fatal err:', e && e.message); } catch (_) {}
+  }
 })();
 </script>
 <!-- Sentry Error Monitoring -->
