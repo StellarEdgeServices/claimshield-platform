@@ -1,0 +1,95 @@
+# D-232: One-way mirror sync — staging fast-forwards to match main on every push to main.
+#
+# Branch policy (D-232, May 13, 2026):
+#   main is the production source of truth; staging is a one-way mirror.
+#   Direct commits to staging are blocked at branch protection.
+#   This workflow is the only writer to staging. Sync is always a fast-forward;
+#   non-FF aborts the run and surfaces a P1 ATC alert (sync failure indicator).
+#
+# Permissions: contents: write — required to push to the protected staging branch.
+# Authorization: github-actions[bot] is allowlisted in staging branch protection
+#   restrictions.apps (configured by D-232 impl 2).
+#
+# Triggers:
+#   push to main  — every production deploy auto-syncs staging.
+#   workflow_dispatch — manual recovery if a sync fails.
+#
+# ATC integration (D-232 impl 6): if staging HEAD diverges from main HEAD by any
+#   commit count > 0 between syncs, ATC raises a P1 ClickUp task with
+#   triage-needed tag. Belt-and-suspenders against silent re-emergence of drift.
+
+name: Sync staging from main (D-232)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: sync-staging-from-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Fast-forward staging to main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch main
+        run: git fetch origin main:main
+
+      - name: Verify fast-forward is possible
+        id: ff_check
+        run: |
+          set -euo pipefail
+          STAGING_HEAD=$(git rev-parse staging)
+          MAIN_HEAD=$(git rev-parse main)
+          echo "staging_head=$STAGING_HEAD" >> "$GITHUB_OUTPUT"
+          echo "main_head=$MAIN_HEAD"     >> "$GITHUB_OUTPUT"
+
+          if [ "$STAGING_HEAD" = "$MAIN_HEAD" ]; then
+            echo "result=already_synced" >> "$GITHUB_OUTPUT"
+            echo "::notice::staging already at $MAIN_HEAD — nothing to do."
+            exit 0
+          fi
+
+          # Is staging an ancestor of main? If yes, fast-forward is safe.
+          if git merge-base --is-ancestor staging main; then
+            echo "result=ff_ok" >> "$GITHUB_OUTPUT"
+            echo "::notice::staging $STAGING_HEAD is ancestor of main $MAIN_HEAD — fast-forward safe."
+          else
+            echo "result=non_ff" >> "$GITHUB_OUTPUT"
+            echo "::error::staging $STAGING_HEAD is NOT an ancestor of main $MAIN_HEAD — non-fast-forward. D-232 invariant violated. Manual intervention required."
+            exit 1
+          fi
+
+      - name: Fast-forward staging to main
+        if: steps.ff_check.outputs.result == 'ff_ok'
+        run: |
+          set -euo pipefail
+          git merge --ff-only main
+          git push origin staging
+          echo "::notice::staging fast-forwarded to ${{ steps.ff_check.outputs.main_head }}."
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Sync result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- staging HEAD: ${{ steps.ff_check.outputs.staging_head }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- main HEAD:    ${{ steps.ff_check.outputs.main_head }}"    >> "$GITHUB_STEP_SUMMARY"
+          echo "- result:       ${{ steps.ff_check.outputs.result }}"       >> "$GITHUB_STEP_SUMMARY"
