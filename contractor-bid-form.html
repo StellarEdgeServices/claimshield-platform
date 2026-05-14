@@ -2277,7 +2277,6 @@
   <footer id="site-footer"></footer>
 
   <!-- Scripts -->
-  <script src="js/cookie-storage.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
@@ -5006,13 +5005,7 @@
             }
           }
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          // C2 fix: use the dynamic platform fee from window._feePct (set by
-          // updateFeeDisclosure() above). Hardcoded 5.0 made quotes.fee_percentage and
-          // quotes.fee_amount contradict quotes.platform_fee_pct (which uses _feePct)
-          // and fee_acceptances.fee_pct — financial-record integrity issue.
-          const feePercentage = (typeof window._feePct === 'number' && window._feePct > 0)
-            ? window._feePct
-            : (typeof _platformFeePct === 'number' && _platformFeePct > 0 ? _platformFeePct : 5.0);
+          const feePercentage = 5.0;
 
           // Insurance jobs: fee is based on RCV from loss sheet, not bid amount
           let feeBase = totalPrice;
@@ -5328,35 +5321,30 @@
                 }
               }
 
-              // ── D-215 Layer 2 / D-225 Phase 2C C1: fire send-bid-confirmation EF ──
-              // UETA evidence email (Layer 2 of D-215). Fire-and-forget: quote + fee_acceptance
-              // are already committed; email send failure is non-fatal. Logs to Sentry.
+              // ── D-215 Layer 2: Send bid confirmation email (UETA evidence) ──
+              // Runs after fee_acceptances insert. Non-fatal: quote and Layer 1 record
+              // are already committed. send-bid-confirmation EF handles its own JWT
+              // verification; sb.functions.invoke() passes the user's session token.
               try {
-                const tradeStr = Array.isArray(quoteData.trades)
-                  ? quoteData.trades.join(', ')
-                  : (quoteData.trade || (Array.isArray(currentClaim?.trades) ? currentClaim.trades.join(', ') : ''));
-                const { error: sbcError } = await sb.functions.invoke('send-bid-confirmation', {
+                const tradeLabel = wizardMode && wizardTradeQueue.length > 0
+                  ? wizardTradeQueue.join(', ')
+                  : (Array.isArray(currentClaim.trades) ? currentClaim.trades.join(', ') : 'roofing');
+                await sb.functions.invoke('send-bid-confirmation', {
                   body: {
                     quote_id: insertedQuote.id,
                     contractor_id: currentContractor.id,
-                    bid_amount: Number(quoteData.total_price),
+                    bid_amount: quoteData.total_price,
                     platform_fee_pct: _feePct,
                     platform_fee_amount: _feeAmount,
-                    net_amount: Number(quoteData.total_price) - Number(_feeAmount),
-                    property_address: currentClaim?.property_address || '',
-                    trade: tradeStr,
-                  }
+                    trade: tradeLabel,
+                  },
                 });
-                if (sbcError) {
-                  console.error('[D-215] send-bid-confirmation invoke returned error (non-fatal):', sbcError);
-                  if (typeof Sentry !== 'undefined') {
-                    Sentry.captureException(sbcError, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
-                  }
-                }
-              } catch (sbcErr) {
-                console.error('[D-215] send-bid-confirmation threw (non-fatal):', sbcErr);
+              } catch (emailErr) {
+                console.error('[D-215 Layer 2] send-bid-confirmation failed (non-fatal, bid committed):', emailErr);
                 if (typeof Sentry !== 'undefined') {
-                  Sentry.captureException(sbcErr, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
+                  Sentry.captureException(emailErr, {
+                    extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }
+                  });
                 }
               }
             }
@@ -5481,7 +5469,7 @@
     // ── Initialize ──
     document.addEventListener('DOMContentLoaded', () => {
       if (!sb && typeof supabase !== 'undefined') {
-        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
+        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
       }
 
       // Wire up bid type UI
@@ -5594,50 +5582,4 @@
 
       loadingEl.style.display = 'block';
       errorEl.style.display = 'none';
-      containerEl.style.display = 'none';
-      signedEl.style.display = 'none';
-      skipEl.style.display = 'none';
-
-      try {
-        // Build signer info from the contractor's profile
-        const signerName = currentContractor.company_name || currentContractor.owner_name || 'Contractor';
-        const signerEmail = currentContractor.email || currentUser.email;
-
-        const { data: result, error: invokeError } = await sb.functions.invoke('create-docusign-envelope', {
-          body: {
-            claim_id: currentClaim.id,
-            document_type: 'contractor_sign',
-            contractor_id: currentContractor.id,
-            quote_id: window._newQuoteId || null,
-            signer: {
-              email: signerEmail,
-              name: signerName,
-            },
-          },
-        });
-
-        if (invokeError) {
-          throw new Error(invokeError.message || 'Failed to create DocuSign envelope');
-        }
-
-        // Store envelope ID
-        window._contractorEnvelopeId = result.envelope_id;
-
-        // Load signing URL in iframe
-        loadingEl.style.display = 'none';
-        containerEl.style.display = 'block';
-        const frame = document.getElementById('contractorDocusignFrame');
-        if (frame && result.signing_url) {
-          frame.src = result.signing_url;
-        }
-      } catch (err) {
-        console.error('[ContractorSigning] initContractorSigning error:', err);
-        loadingEl.style.display = 'none';
-        errorEl.style.display = 'block';
-        const errDetail = document.getElementById('contractorDocusignErrorDetail');
-        if (errDetail) errDetail.textContent = err.message || 'Please try again or contact support.';
-      }
-    }
-  </script>
-</body>
-</html>
+      containerEl.style.display = 
