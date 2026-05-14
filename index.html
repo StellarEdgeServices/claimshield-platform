@@ -1,6 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- D-225 launch-eve hotfix (May 14, 2026): Supabase Auth allowlist is silently
+     overriding magic-link redirects to SITE_URL. This script catches the case
+     where a contractor lands on the homepage with an auth hash and bounces
+     them to the correct onboarding page. Must run before any Supabase init. -->
+<script>
+(function () {
+  try {
+    var hash = window.location.hash || '';
+    var search = window.location.search || '';
+    var hasAuth = hash.indexOf('access_token') !== -1 ||
+                  search.indexOf('code=') !== -1;
+    if (!hasAuth) return;
+    var role = null;
+    try { role = localStorage.getItem('cs_auth_role'); } catch (e) {}
+    if (role === 'contractor') {
+      try { localStorage.removeItem('cs_auth_role'); } catch (e) {}
+      window.location.replace('/contractor-pre-approval.html' + search + hash);
+    }
+    // homeowner / no-intent: let homepage render with logged-in state.
+    // The "My Dashboard" button in the nav lets the user navigate manually.
+  } catch (e) { /* never block render on bounce-script error */ }
+})();
+</script>
 <!-- Sentry Error Monitoring -->
 <script
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
