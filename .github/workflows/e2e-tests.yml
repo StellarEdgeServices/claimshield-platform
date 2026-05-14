@@ -7,6 +7,7 @@ on:
       - main
   pull_request:
     branches:
+      - staging
       - main
 
 jobs:
@@ -18,6 +19,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Spec file structural integrity check (Stage 5 prevention, 86e1cee4y)
+        run: python3 scripts/check-spec-files-closed.py
 
       - name: Lint vanilla JS for syntax errors
         run: |
