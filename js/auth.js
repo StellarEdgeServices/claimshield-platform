@@ -51,6 +51,22 @@ window.Auth = {
           var parsed = JSON.parse(raw);
           if (parsed && (parsed.access_token || parsed.refresh_token)) {
             hasStoredSession = true;
+            // Fast path: if the local access token is not yet expired, return it
+            // immediately without any network call. This prevents valid sessions
+            // from bouncing to login during Supabase auth degradation incidents.
+            // (Auth resiliency hardening — 2026-05-14 | task 86e1d1agx)
+            if (parsed.access_token) {
+              try {
+                var jwtParts = parsed.access_token.split('.');
+                if (jwtParts.length === 3) {
+                  var jwtPayload = JSON.parse(atob(jwtParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                  if (jwtPayload.exp && jwtPayload.exp > Math.floor(Date.now() / 1000)) {
+                    // Token still valid locally — skip network call entirely
+                    return parsed;
+                  }
+                }
+              } catch (e) { /* JWT decode failed — fall through to network path */ }
+            }
           }
         } catch (e) { /* malformed - ignore */ }
       }
