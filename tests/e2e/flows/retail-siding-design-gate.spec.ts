@@ -45,21 +45,9 @@ async function loginAsContractor(page: import('@playwright/test').Page, state: T
   await page.goto(magicLink);
   await page.waitForURL(/contractor-dashboard/, { timeout: 30_000 });
   await page.waitForLoadState('load');
-  // Wait for Supabase to persist session.
-  // OtterQuoteCookieStorage (D-212) writes under 'sb-otterquote-auth',
-  // not the legacy Supabase suffix 'sb-*-auth-token'. Check canonical
-  // key first, then legacy, then poll the Supabase client directly.
-  // Mirrors loginAsHomeowner predicate (commit 94f6aff) + loginAsContractor
-  // predicate (commit dba09da, 86e1cee4y fix).
-  await page.waitForFunction(async () => {
-    const canonicalKey = (window as any).OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth';
-    if (localStorage.getItem(canonicalKey)) return true;
-    if (Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'))) return true;
-    if ((window as any).sb) {
-      const { data } = await (window as any).sb.auth.getSession();
-      return data.session !== null;
-    }
-    return false;
+  // Wait for Supabase to persist session
+  await page.waitForFunction(() => {
+    return Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
   }, { timeout: 15_000 });
 }
 
@@ -101,9 +89,17 @@ test.describe('Flow C — Retail Siding Design Gate (D-164)', () => {
     await page.goto('/contractor-opportunities.html');
     await page.waitForLoadState('load');
 
-    // Wait for opportunities to load
+    // Wait for the opportunities container to render its final state.
+    // NOTE: Earlier tests in the suite (contractor-journey A8) submit a bid on
+    // the insurance test claim, which the my-bids filter then hides from the
+    // contractor's view. The retail claim is also hidden (ready_for_bids=false).
+    // So the list may legitimately be empty — we wait for the container to have
+    // *any* content (cards or empty-state div), not specifically for cards.
     await page.waitForFunction(
-      () => document.querySelectorAll('[data-claim-id]').length > 0,
+      () => {
+        const container = document.getElementById('opportunitiesContainer');
+        return container !== null && container.innerHTML.trim().length > 0;
+      },
       { timeout: 15_000 }
     );
 
@@ -253,17 +249,4 @@ test.describe('Flow C — Retail Siding Design Gate (D-164)', () => {
 
       // Wait for confirmation (bid persisted)
       await page.waitForFunction(
-        () => document.body.textContent?.includes('success') || document.body.textContent?.includes('submitted'),
-        { timeout: 15_000 }
-      ).catch(() => {
-        // Non-fatal: if confirmation isn't shown, proceed to verify persistence
-      });
-
-      // Verify bid was persisted with enum docusign_scope containing 'Retail Siding'
-      const bidPersisted = await verifyBidPersisted(state.contractorId, state.testRetailClaimId);
-      if (bidPersisted) {
-        console.log('  ✅ Bid submitted and persisted; DocuSign envelope will include Retail Siding scope');
-      }
-    }
-  });
-});
+        () => document.body.textContent?.includes('success')
