@@ -42,6 +42,10 @@ Mark each item ✅ (pass) / ❌ (fail — stop) / N/A (genuinely not applicable 
   - `js/auth.js`
   - Any file over ~1,500 lines (check: `wc -l <file>`)
 
+### JS Syntax Lint
+- [ ] **`bash scripts/pre-push-check.sh` returns FAIL: 0.** Runs `node --check` against every `js/**/*.js` file. Catches the silent-parse-failure class of bug.
+  - *Why: May 1–6, 2026 — `js/auth.js` had a SyntaxError at line 761 (commit 11b32d1e accidentally deleted an `sb.auth.onAuthStateChange((event, session) => { ... })` wrapper while leaving the body). `window.Auth` never got defined; every authenticated page silently broke. Eight CI runs failed before the cause was found because Chrome doesn't surface SyntaxErrors prominently in MCP tooling. `node --check` would have caught it in 50ms. See ADR-009.*
+
 ### SQL Migration Gate
 *(Skip if no schema changes in this deploy.)*
 - [ ] **Companion rollback script committed.** Every SQL migration file (`sql/vN-*.sql`) has a corresponding `sql/vN-rollback-*.sql` committed alongside it.
@@ -60,8 +64,8 @@ Mark each item ✅ (pass) / ❌ (fail — stop) / N/A (genuinely not applicable 
 ### Auth Pattern
 *(Check only if new authenticated pages added or auth code modified.)*
 - [ ] **F-007 pattern applied.** All new/modified authenticated pages use `onAuthStateChange` + `INITIAL_SESSION`/`SIGNED_IN` guard + `_initFired` boolean. No `DOMContentLoaded + sb.auth.getSession()` pattern introduced.
-- [ ] **getRole() error handling preserved (ADR-010).** If `getRole()` or `requireAuth()` modified: verify PGRST116 (0 rows) falls through to profile check; any other contractors table error returns `null`; `null` does NOT trigger role-mismatch redirect. Run: `node --eval "/* paste getRole */"` or check logic manually.
-- [ ] **No mismatched contractor profiles in DB.** Run: `SELECT COUNT(*) FROM profiles p JOIN contractors c ON c.user_id = p.id WHERE p.role != 'contractor'` — must return 0. (ADR-010)
+- [ ] **`js/auth.js` parses cleanly.** `node --check js/auth.js` exits 0. (Covered automatically by the JS Syntax Lint CRITICAL item; restated here because auth.js is high-blast-radius — a parse failure silently breaks every authenticated page in the app.)
+- [ ] **Auth refactor → spec audit.** If auth code changed (js/auth.js, auth-callback.html, netlify/edge-functions/admin-gate.js), confirmed E2E test specs in tests/e2e/ have been audited for stale assumptions about cookie names, session shape, and Auth.ready() contract.
 
 ### Config Scope
 *(Check only if config.js or any file referencing CONFIG/sb was modified.)*
@@ -88,4 +92,41 @@ Mark each item ✅ (pass) / ❌ (fail — stop) / N/A (genuinely not applicable 
 - [ ] Changed pages render without console errors
 - [ ] If SQL migration: spot-check the migrated data or feature behavior in staging
 
-### Post-Deploy Verification (run against production after merging to 
+### Post-Deploy Verification (run against production after merging to main)
+- [ ] Production site returns 200 + "Stop chasing contractors" in body
+- [ ] Changed pages render correctly
+- [ ] No Sentry alerts triggered within 5 minutes of deploy
+- [ ] If Stripe/DocuSign/Supabase affected: verify integration still responds
+
+---
+
+
+## D-215 / Auth Gates (added 2026-05-07, ADR-010 + bug-killer session)
+
+**CRITICAL — D-215 UETA compliance (any change to contractor-bid-form.html bid submit flow)**
+- [ ] `fee_acceptances` INSERT runs AFTER `quotes` INSERT (so `insertedQuote.id` is available for `bid_id`)
+- [ ] All required NOT NULL fields present: `contractor_id`, `claim_id`, `bid_id`, `fee_pct`, `fee_basis`, `fee_amount`, `fee_text_displayed`, `accepted_at`
+- [ ] `quote_id` is NOT referenced (column does not exist on `fee_acceptances`)
+- [ ] INSERT error is non-fatal with `console.error` + Sentry capture
+
+**HIGH — nav.js / auth.js page hygiene (any new HTML page with a `site-header`)**
+- [ ] If page includes `nav.js`: either (a) `auth.js` is also included, or (b) `data-auth="false"` is set on `site-header`
+- [ ] Pure redirect / utility pages with no auth UI must have `data-auth="false"`
+
+## Checklist Completion
+
+```
+Deploy date:
+Tier:
+Files in changeset:
+Checklist run by: Claude (autonomous) / Dustin (manual review)
+CRITICAL items: all passed ✅ / waiver granted for: [item]
+HIGH items: all passed ✅ / waiver granted for: [item]
+Staging smoke test: passed / N/A
+Notes:
+```
+
+---
+
+*Last updated: May 1, 2026 — Created as part of D-196 project-rules enforcement.*
+*Referenced in claude-memory.md Base Deploy Steps, Step 5.*
