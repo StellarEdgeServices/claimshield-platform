@@ -534,6 +534,146 @@
     .file-upload input[type="file"] { display: none; }
     .file-upload label { cursor: pointer; color: var(--amber); }
 
+    /* ── D-231: Home Profile Prompt Card ────────────────────────────────────── */
+    #home-profile-prompt-card {
+      display: none;
+      background: #fff;
+      border: 1.5px solid #D1FAE5;
+      border-left: 4px solid #16A34A;
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0 0;
+      position: relative;
+    }
+    #home-profile-prompt-card.visible { display: block; }
+    .hp-card-dismiss {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #9CA3AF;
+      font-size: 1.125rem;
+      line-height: 1;
+      padding: 0.25rem;
+    }
+    .hp-card-dismiss:hover { color: #6B7280; }
+    #home-profile-prompt-card h4 {
+      margin: 0 0 0.375rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #15803D;
+    }
+    #home-profile-prompt-card p {
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+      color: #374151;
+      line-height: 1.55;
+    }
+
+    /* ── D-231: Home Profile Modal ───────────────────────────────────────────── */
+    #home-profile-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #home-profile-modal.open { display: flex; }
+    .hp-modal-box {
+      background: #fff;
+      border-radius: 0.875rem;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .hp-modal-header {
+      background: #0D1B2E;
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 0.875rem 0.875rem 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+    .hp-modal-header h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+    .hp-modal-close-btn {
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .hp-modal-close-btn:hover { color: #fff; }
+    .hp-modal-body { padding: 1.5rem; }
+    .hp-field-group { margin-bottom: 1.125rem; }
+    .hp-field-group .form-label { font-weight: 600; font-size: 0.875rem; color: #374151; display: block; margin-bottom: 0.375rem; }
+    .hp-field-group .form-hint { font-size: 0.8rem; color: #6B7280; margin: 0.25rem 0 0; }
+    .hp-optional-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #E07B00;
+      margin: 1rem 0 0.75rem;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .hp-optional-toggle .hp-chevron { transition: transform 0.2s ease; display: inline-block; }
+    .hp-optional-toggle.expanded .hp-chevron { transform: rotate(180deg); }
+    #hp-optional-fields { display: none; }
+    #hp-optional-fields.visible { display: block; }
+    .hp-future-projects-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .hp-project-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: #374151;
+      background: #fff;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .hp-project-chip.selected {
+      border-color: #16A34A;
+      background: #F0FDF4;
+      color: #15803D;
+      font-weight: 600;
+    }
+    .hp-modal-footer {
+      padding: 1rem 1.5rem 1.5rem;
+      border-top: 1px solid #F1F5F9;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+    @media (max-width: 480px) {
+      .hp-future-projects-grid { grid-template-columns: 1fr; }
+      .hp-modal-footer { flex-direction: column; }
+    }
+
     /* Status banner action buttons */
     .status-banner-actions {
       display: flex;
@@ -952,6 +1092,23 @@
             <a href="bids.html" class="btn btn-sm btn-secondary" id="viewBidsLinkTop">View Bids</a>
             <!-- Switch Contractor button injected by JS when claim status = contract_signed -->
           </div>
+        </div>
+
+        <!-- D-231: Home Profile Prompt Card (below status-banner, below warranty card) -->
+        <!-- Visibility controlled by JS; hidden until completion_date IS NOT NULL and no profile exists -->
+        <div id="home-profile-prompt-card" role="complementary" aria-label="Home profile prompt">
+          <button class="hp-card-dismiss" aria-label="Dismiss home profile prompt"
+                  onclick="dismissHomeProfileCard()">✕</button>
+          <h4>🏠 Keep your home profile for next time</h4>
+          <p>
+            Store your home's basics — year built, square footage, future projects of interest —
+            so your next quote starts with everything already in place. Takes about 2 minutes.
+          </p>
+          <button class="btn btn-sm"
+                  style="background:#16A34A;color:#fff;border:none;cursor:pointer;font-weight:600;"
+                  onclick="openHomeProfileModal()">
+            Build My Home Profile →
+          </button>
         </div>
 
         <!-- Project Info Section -->
@@ -2204,6 +2361,23 @@
             }
           }
 
+          // D-231: Home profile prompt — shown below status-banner when job is complete.
+          // Card appears below the warranty card (which is the last injected status-banner action).
+          // initHomeProfilePrompt handles all eligibility checks (no profile, not dismissed).
+          if (currentClaim.completion_date && currentProfile?.id) {
+            // Non-blocking — runs after current render cycle
+            setTimeout(() => {
+              if (typeof window.initHomeProfilePrompt === 'function') {
+                window.initHomeProfilePrompt(
+                  currentClaim.id,
+                  currentProfile.id,
+                  currentClaim.completion_date,
+                  currentClaim.trades || []
+                );
+              }
+            }, 0);
+          }
+
           return;
         }
 
@@ -2949,6 +3123,54 @@
         }
     </script>
 
+<!-- Messaging Thread UI Section for dashboard.html -->
+<!-- Insert this after the "Claims" or "Bids" card section, before closing main -->
+
+<div class="card messages-section" style="margin-top: 32px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+    <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--navy);">Messages</h3>
+  </div>
+
+  <!-- Claim Selector -->
+  <div style="margin-bottom: 20px;">
+    <label style="display: block; font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 8px;">Select a project:</label>
+    <select id="messagingClaimSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit;">
+      <option value="">-- No projects with messages yet --</option>
+    </select>
+  </div>
+
+  <!-- Message Thread Container -->
+  <div id="messagingThreadContainer" style="display: none;">
+    <!-- Contractor Info -->
+    <div id="contractorInfo" style="background: #F0F9FF; border-left: 4px solid var(--navy); padding: 12px; margin-bottom: 16px; border-radius: 4px;">
+      <div style="font-weight: 600; font-size: 14px; color: var(--navy);">Talking with <span id="contractorName">--</span></div>
+    </div>
+
+    <!-- Messages List -->
+    <div id="messagesList" style="border: 1px solid #E2E8F0; border-radius: 6px; padding: 16px; height: 300px; overflow-y: auto; margin-bottom: 16px; background: #FAFBFC;">
+      <p style="color: #94A3B8; text-align: center; margin: 0;">No messages yet.</p>
+    </div>
+
+    <!-- Message Input -->
+    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+      <textarea
+        id="messageBody"
+        placeholder="Type your message..."
+        style="flex: 1; padding: 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px;"
+      ></textarea>
+      <button
+        id="messageSendBtn"
+        style="align-self: flex-end; padding: 12px 24px; background: var(--navy); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;"
+      >
+        Send
+      </button>
+    </div>
+
+    <!-- Status Message -->
+    <div id="messageStatus" style="font-size: 12px; color: #64748B; text-align: center;"></div>
+  </div>
+</div>
+
 <script>
 // Messaging functionality for dashboard.html
 (function() {
@@ -3143,169 +3365,4 @@
 
   // Start on auth state change
   let initFired = false;
-  sb.auth.onAuthStateChange((event, session) => {
-    if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !initFired) {
-      initFired = true;
-      if (session?.user?.id) {
-        initMessaging();
-      }
-    }
-  });
-})();
-</script>
-
-
-<script>
-// Messaging — dashboard.html (v74, F-007 compliant)
-(function() {
-  const POLLING_INTERVAL = 30000;
-  const SEND_FUNCTION_URL = "https://yeszghaspzwwstvsrioa.supabase.co/functions/v1/send-message-notification";
-
-  let currentClaimId = null;
-  let pollingInterval = null;
-  let userId = null; // set from onAuthStateChange session
-
-  async function initMessaging() {
-    if (!userId) return;
-
-    const claimSelect = document.getElementById("messagingClaimSelect");
-    const threadContainer = document.getElementById("messagingThreadContainer");
-
-    const { data: claims } = await sb
-      .from("claims")
-      .select("id, property_address, selected_contractor_id, quotes(contractor_id, contractors(id, profiles:profiles(full_name, email)))")
-      .eq("user_id", userId);
-
-    if (!claims || claims.length === 0) {
-      claimSelect.innerHTML = '<option value="">-- No projects available --</option>';
-      threadContainer.style.display = "none";
-      return;
-    }
-
-    claimSelect.innerHTML = '<option value="">-- Select a project --</option>';
-    const eligible = claims.filter((c) => c.selected_contractor_id);
-    eligible.forEach((c) => {
-      const option = document.createElement("option");
-      option.value = c.id;
-      option.textContent = c.property_address || "Claim " + c.id.substring(0, 8);
-      claimSelect.appendChild(option);
-    });
-
-    if (claimSelect.options.length === 1) {
-      claimSelect.innerHTML = '<option value="">-- No projects with selected contractors --</option>';
-      threadContainer.style.display = "none";
-      return;
-    }
-
-    claimSelect.addEventListener("change", (e) => {
-      currentClaimId = e.target.value;
-      if (currentClaimId) {
-        threadContainer.style.display = "block";
-        loadMessages();
-        if (pollingInterval) clearInterval(pollingInterval);
-        pollingInterval = setInterval(loadMessages, POLLING_INTERVAL);
-      } else {
-        threadContainer.style.display = "none";
-        if (pollingInterval) clearInterval(pollingInterval);
-      }
-    });
-
-    document.getElementById("messageSendBtn").addEventListener("click", sendMessage);
-  }
-
-  async function loadMessages() {
-    if (!currentClaimId) return;
-
-    const { data: claim } = await sb
-      .from("claims")
-      .select("selected_contractor_id, quotes(contractor_id, contractors(profiles(full_name)))")
-      .eq("id", currentClaimId)
-      .single();
-
-    if (claim?.quotes && claim.quotes.length > 0) {
-      const name = claim.quotes[0]?.contractors?.profiles?.full_name;
-      if (name) document.getElementById("contractorName").textContent = name;
-    }
-
-    const { data: messages, error } = await sb
-      .from("messages")
-      .select("id, sender_id, sender_role, body, created_at, profiles:sender_id(full_name)")
-      .eq("claim_id", currentClaimId)
-      .order("created_at", { ascending: true });
-
-    if (error) { console.error("Error loading messages:", error); return; }
-
-    const messagesList = document.getElementById("messagesList");
-    if (!messages || messages.length === 0) {
-      messagesList.innerHTML = '<p style="color: #94A3B8; text-align: center; margin: 0;">No messages yet. Start the conversation!</p>';
-      return;
-    }
-
-    messagesList.innerHTML = messages.map((msg) => {
-      const isOwn = msg.sender_id === userId;
-      const timestamp = new Date(msg.created_at).toLocaleString();
-      return '<div style="margin-bottom:12px;padding:12px;background:' + (isOwn ? "#EFF6FF" : "#F1F5F9") + ';border-radius:6px;border-left:3px solid ' + (isOwn ? "var(--navy)" : "var(--amber)") + ';">' +
-        '<div style="font-weight:600;font-size:13px;color:var(--navy);margin-bottom:4px;">' + msg.profiles.full_name + (isOwn ? " (You)" : "") + '</div>' +
-        '<div style="font-size:13px;color:#333;margin-bottom:8px;word-wrap:break-word;">' + escapeHtml(msg.body) + '</div>' +
-        '<div style="font-size:11px;color:#94A3B8;">' + timestamp + '</div></div>';
-    }).join("");
-
-    messagesList.scrollTop = messagesList.scrollHeight;
-  }
-
-  async function sendMessage() {
-    if (!currentClaimId) return;
-    const bodyEl = document.getElementById("messageBody");
-    const statusEl = document.getElementById("messageStatus");
-    const sendBtn = document.getElementById("messageSendBtn");
-    const body = bodyEl.value.trim();
-    if (!body) return;
-
-    sendBtn.disabled = true;
-    statusEl.textContent = "Sending...";
-
-    try {
-      const { data: newMessage, error: insertError } = await sb
-        .from("messages")
-        .insert([{ claim_id: currentClaimId, sender_id: userId, sender_role: "homeowner", body: body }])
-        .select("id").single();
-
-      if (insertError) throw insertError;
-      bodyEl.value = "";
-      statusEl.textContent = "";
-
-      try {
-        await fetch(SEND_FUNCTION_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message_id: newMessage.id }),
-        });
-      } catch (notifError) { console.error("Notification error:", notifError); }
-
-      await loadMessages();
-    } catch (error) {
-      statusEl.textContent = "Error sending message. Please try again.";
-      console.error("Send error:", error);
-    } finally {
-      sendBtn.disabled = false;
-    }
-  }
-
-  function escapeHtml(text) {
-    return text.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
-  }
-
-  let _initFired = false;
-  sb.auth.onAuthStateChange((event, session) => {
-    if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !_initFired) {
-      _initFired = true;
-      if (session?.user?.id) {
-        userId = session.user.id;
-        initMessaging();
-      }
-    }
-  });
-})();
-</script>
-</body>
-</html>
+  sb.auth.onAuthStateCh
