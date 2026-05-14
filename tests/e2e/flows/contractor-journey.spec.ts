@@ -45,10 +45,21 @@ async function loginAsContractor(page: import('@playwright/test').Page, state: T
   await page.waitForURL(/contractor-dashboard/, { timeout: 30_000 });
   // Allow the Supabase JS client and page JS to initialize
   await page.waitForLoadState('load');
-  // Wait for Supabase client to persist the session token to localStorage
-  // before any subsequent page.goto() calls (otherwise auth is lost on navigation)
-  await page.waitForFunction(() => {
-    return Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+  // Wait for Supabase client to persist the session token before any
+  // subsequent page.goto() calls (otherwise auth is lost on navigation).
+  // OtterQuoteCookieStorage (D-212) writes under 'sb-otterquote-auth',
+  // not the legacy Supabase suffix 'sb-*-auth-token'. Check the canonical
+  // key first, then legacy, then poll the Supabase client directly.
+  // Mirrors loginAsHomeowner predicate (commit 94f6aff).
+  await page.waitForFunction(async () => {
+    const canonicalKey = (window as any).OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth';
+    if (localStorage.getItem(canonicalKey)) return true;
+    if (Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'))) return true;
+    if ((window as any).sb) {
+      const { data } = await (window as any).sb.auth.getSession();
+      return data.session !== null;
+    }
+    return false;
   }, { timeout: 15_000 });
   // Wait for any pending auth requests (token refresh, getUser) to settle.
   // This ensures the JWT in localStorage is valid/refreshed before we navigate
