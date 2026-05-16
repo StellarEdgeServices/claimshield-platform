@@ -753,6 +753,20 @@
     }
 
     // ── Step 2 submit ──────────────────────────────────────────────────────────
+    // Performance fix (2026-05-16): prior implementation had zero timeouts on all
+    // async operations. Sequential awaits on Supabase storage uploads, DB calls, and
+    // an inline sb.auth.getSession() inside the HubSpot fetch could each hang
+    // indefinitely, causing the "Continue to Agreements" button to appear permanently
+    // frozen. Fix: withTimeout() wrapper on every async call.
+    function withTimeout(promise, ms, label) {
+        const timeout = new Promise(function(_, reject) {
+            setTimeout(function() {
+                reject(new Error(label + ' timed out after ' + (ms / 1000) + 's — please check your connection and try again'));
+            }, ms);
+        });
+        return Promise.race([promise, timeout]);
+    }
+
     async function submitStep2() {
         const advBtn = document.getElementById('step2-advance-btn');
         if (advBtn && advBtn.dataset.submitting === 'true') return;  // duplicate-submit guard
@@ -772,33 +786,40 @@
         if (!docState.wc.satisfied) { alert("Please provide workers' compensation info or exemption."); return; }
         if (licenseState.entries.length === 0 && !licenseState.noLicense) { alert('Please add a contractor license or check "I don\'t have a license for this work".'); return; }
 
+        // Pre-fetch auth token BEFORE showPanel('loading') — 10s timeout, non-fatal
+        let accessToken = '';
+        try {
+            const sessionResult = await withTimeout(sb.auth.getSession(), 10000, 'Auth token prefetch');
+            accessToken = sessionResult?.data?.session?.access_token || '';
+        } catch (e) { console.warn('Auth token prefetch failed (non-fatal):', e.message); }
+
         if (advBtn) { advBtn.dataset.submitting = 'true'; advBtn.disabled = true; advBtn.style.opacity = '0.5'; advBtn.textContent = 'Saving…'; }
         showPanel('loading');
 
         try {
             const user_id = currentUser.id;
 
-            // Upload COI
+            // Upload COI — 30s limit
             let coi_file_url = null;
             if (docState.coi.file) {
                 const coiFileName = `${user_id}/${Date.now()}-${docState.coi.file.name}`;
-                const { data: coiData, error: coiError } = await sb.storage
-                    .from('contractor-documents')
-                    .upload(coiFileName, docState.coi.file, { upsert: true });
-
+                const { data: coiData, error: coiError } = await withTimeout(
+                    sb.storage.from('contractor-documents').upload(coiFileName, docState.coi.file, { upsert: true }),
+                    30000, 'COI upload'
+                );
                 if (coiError) throw new Error(`COI upload failed: ${coiError.message}`);
                 coi_file_url = coiFileName;
             }
 
-            // Upload WC certificate or WCE-1 exemption document
+            // Upload WC certificate or WCE-1 exemption document — 30s limit
             let wc_cert_file_ref = null;
             let wc_cert_expiry = null;
             if (docState.wc.choice === 'file' && docState.wc.file) {
                 const wcFileName = `${user_id}/${Date.now()}-${docState.wc.file.name}`;
-                const { data: wcData, error: wcError } = await sb.storage
-                    .from('contractor-documents')
-                    .upload(wcFileName, docState.wc.file, { upsert: true });
-
+                const { data: wcData, error: wcError } = await withTimeout(
+                    sb.storage.from('contractor-documents').upload(wcFileName, docState.wc.file, { upsert: true }),
+                    30000, 'WC upload'
+                );
                 if (wcError) throw new Error(`WC upload failed: ${wcError.message}`);
                 wc_cert_file_ref = wcFileName;
 
@@ -809,10 +830,10 @@
             } else if (docState.wc.choice === 'exemption' && docState.wc.wce1File) {
                 // D-213: WCE-1 path requires actual document upload (state-issued certificate)
                 const wce1FileName = `${user_id}/wce1_cert_${Date.now()}_${docState.wc.wce1File.name}`;
-                const { error: wce1Error } = await sb.storage
-                    .from('contractor-documents')
-                    .upload(wce1FileName, docState.wc.wce1File, { upsert: true });
-
+                const { error: wce1Error } = await withTimeout(
+                    sb.storage.from('contractor-documents').upload(wce1FileName, docState.wc.wce1File, { upsert: true }),
+                    30000, 'WCE-1 upload'
+                );
                 if (wce1Error) throw new Error(`WCE-1 upload failed: ${wce1Error.message}`);
                 wc_cert_file_ref = wce1FileName;
 
@@ -825,11 +846,6 @@
             // License files are uploaded per-entry after contractors update (D-218)
 
             // Build update object with v61 column names
-            // B1 fix: variable name now matches column (coi_file_url). Origin/main already
-            // wrote to the correct column but with a stale variable name.
-            // B2 fix: coi_expires_at captured from date input above.
-            // B3/B4/B5 fix: phone, trades, service_counties written here so the bid form's
-            // profile-completeness gate passes for every newly-approved contractor.
             const updateObj = {
                 coi_file_url: coi_file_url,
                 coi_expires_at: coiExpiryVal || null,
@@ -856,70 +872,73 @@
                 updateObj.license_path = 'not_provided';
             }
 
-            // Update contractors table
-            const { error: updateError } = await sb.from('contractors')
-                .update(updateObj)
-                .eq('user_id', user_id);
-
+            // Update contractors table — 10s limit
+            const { error: updateError } = await withTimeout(
+                sb.from('contractors').update(updateObj).eq('user_id', user_id),
+                10000, 'Contractor record update'
+            );
             if (updateError) throw updateError;
             contractor.onboarding_step = 2;
 
-            // Insert contractor_licenses rows (D-218)
+            // Insert contractor_licenses rows (D-218) — 10s per insert
             if (!licenseState.noLicense) {
                 for (const entry of licenseState.entries) {
                     let doc_url = null;
                     if (entry.file) {
                         const path = `licenses/${user_id}/${Date.now()}-${entry.file.name}`;
-                        const { error: upErr } = await sb.storage
-                            .from('contractor-documents')
-                            .upload(path, entry.file, { upsert: true });
-                        if (!upErr) doc_url = path;
+                        const licUploadResult = await withTimeout(
+                            sb.storage.from('contractor-documents').upload(path, entry.file, { upsert: true }),
+                            30000, 'License doc upload'
+                        ).catch(e => ({ error: e }));
+                        if (!licUploadResult.error) doc_url = path;
                         // non-fatal: if upload fails, save row with doc_url = null
                     }
-                    const { error: insErr } = await sb.from('contractor_licenses').insert({
-                        contractor_id: contractor.id,
-                        municipality: entry.jurisdiction,
-                        license_number: entry.licenseNumber || null,
-                        license_document_url: doc_url,
-                        expiration_date: entry.expiryDate || null,
-                        jurisdiction_level: entry.jurisdictionLevel,
-                        verification_url: entry.verificationUrl || null
-                    });
+                    const { error: insErr } = await withTimeout(
+                        sb.from('contractor_licenses').insert({
+                            contractor_id: contractor.id,
+                            municipality: entry.jurisdiction,
+                            license_number: entry.licenseNumber || null,
+                            license_document_url: doc_url,
+                            expiration_date: entry.expiryDate || null,
+                            jurisdiction_level: entry.jurisdictionLevel,
+                            verification_url: entry.verificationUrl || null
+                        }),
+                        10000, 'License insert'
+                    );
                     if (insErr) throw new Error(`License insert failed: ${insErr.message}`);
                 }
             }
 
-            // Sync contractor pre-approval data to HubSpot (D-210, D-218)
-            // EF derives wc_path from contractors.wc_cert_file_ref and
-            // license_path/license_count/license_summary from contractor_licenses table.
+            // Sync contractor pre-approval data to HubSpot (D-210, D-218) — 15s limit, non-fatal
+            // Pre-fetched accessToken used here (avoids inline getSession hang)
             try {
-                await fetch('/functions/v1/create-hubspot-contact', {
+                await withTimeout(fetch('/functions/v1/create-hubspot-contact', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${(await sb.auth.getSession()).data.session?.access_token || ''}`
+                        'Authorization': `Bearer ${accessToken}`
                     },
                     body: JSON.stringify({
                         mode: 'contractor',
                         email: currentUser.email,
                         contractor_id: contractor.id
                     })
-                });
+                }), 15000, 'HubSpot sync');
                 console.log('HubSpot contact synced (wc_path, license_path, license_count, license_summary)');
             } catch (e) {
                 console.warn('HubSpot sync failed (non-fatal):', e);
             }
 
-            // Send notification (non-fatal)
+            // Send notification — 15s limit, non-fatal
             try {
-                await sb.functions.invoke('send-support-email', {
+                await withTimeout(sb.functions.invoke('send-support-email', {
                     body: {
                         from_name: contractor.company_name || contractor.contact_name || 'New Applicant',
                         from_email: currentUser.email,
                         subject: 'New Contractor Application — Documents Received',
                         message: 'Contractor has submitted required insurance and documentation. Ready for verification.'
                     }
-                });
+                }), 15000, 'Support email');
             } catch (e) {
                 console.warn('Support email failed (non-fatal):', e);
             }
