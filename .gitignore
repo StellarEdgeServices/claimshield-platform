@@ -36,3 +36,5 @@ tests/e2e/playwright-report/
 _drafts/
 # Backup files — never deploy (general pattern)
 *.bak.*
+# Handoff files — local session notes, not repo artifacts
+handoffs/
