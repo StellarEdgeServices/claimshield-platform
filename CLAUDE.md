@@ -121,3 +121,30 @@ Tier/Model custom fields must be populated for executor routing.
 - Verify capabilities before declaring inability (R-017)
 - Log errors immediately via structured comment or handoff note (R-003)
 - One observation ≠ system overhaul — propose targeted delta only (R-026)
+
+---
+
+## SLASH COMMANDS
+
+### /bug-killer
+
+Invokes the Claude Code-native bug investigation protocol (R-007).
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md` exactly.
+
+Stages 0-5: stop bleeding -> read evidence -> hypothesis -> minimal fix -> verify -> prevention.
+Risk-stratified checkpoints at Stage 2 (auth/payment/schema) and Stage 4. Opus orchestrator, Sonnet sub-agents.
+
+If slash command not recognized: paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md and follow it exactly.`
+
+### /migration-author
+
+Invokes the Claude Code-native migration author (D-182/D-221).
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md` exactly.
+
+Produces forward.sql + rollback.sql + pre-flight.md. Runs Supabase branch test. D-182 Tier 3 always -- creates approval task before any deploy.
+
+If slash command not recognized: paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md and follow it exactly.`
