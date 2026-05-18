@@ -38,3 +38,5 @@ _drafts/
 *.bak.*
 # Handoff files — local session notes, not repo artifacts
 handoffs/
+# Handoff files — local session notes, not repo artifacts
+handoffs/
