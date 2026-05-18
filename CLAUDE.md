@@ -1,104 +1,125 @@
-<!-- D-221 soak cycle 3 — 2026-05-08T15:14:08Z (soak complete) -->
-# OtterQuote Deploy — Claude Working Rules
+# CLAUDE.md — OtterQuote Platform (Claude Code Context)
 
-This file governs how Claude (and any AI assistant) interacts with the files in this directory.
+> Read at every Code session startup. Authoritative through memory files in `~/Downloads/Claude Downloads/Claude's Memories/`.
+
+## Session Start Protocol
+
+1. Read the latest file in `handoffs/` (sort by filename — most recent first).
+2. Check HARDSHELL migration status: ClickUp list 901711730553, filter `[HARDSHELL]` in task name.
+3. If active Sentry incidents exist: triage before starting feature work.
+4. Begin the highest-priority eligible task.
+
+## Authority Model (R-004)
+
+| Tier | Name | Covers | Action |
+|------|------|--------|--------|
+| A | Autonomous | Pure implementation — no visible UX/copy change, no schema change, no new endpoint | Execute, no check-in |
+| B | Notify-after | Visible UX detail, copy tweak, non-breaking schema addition, new frontend route | Do it, note in handoff |
+| C | Ask first | D-number decision, money/Stripe/payment, legal/contract copy, brand voice, Tier 3 deploy (Edge Functions, SQL migrations, auth) | Stop — surface to Dustin |
+
+**Default to Tier A** when uncertain between A and B. **Default to Tier C** when uncertain between B and C.
+
+## Tier 3 = Always Tier C (D-182)
+
+The following always require explicit Dustin approval before deploy:
+- SQL migrations (any schema change)
+- Edge Function changes or new deployments
+- Auth flow (js/auth.js, auth-callback.html, netlify/edge-functions/admin-gate.js)
+- Payment / Stripe code
+- Legal or contract copy
+
+## Key File Paths
+
+| What | Path |
+|------|------|
+| Repo | `StellarEdgeServices/otterquote-platform` (GitHub) |
+| Memory root | `~/Downloads/Claude Downloads/Claude's Memories/` |
+| OtterQuote memory | `Claude's Memories/otterquote-memory.md` |
+| D-number registry | `Claude's Memories/otterquote-ref-platform.md` + `otterquote-ref-*.md` |
+| Rule reference | `Claude's Memories/rule-reference.md` |
+| Deploy tool | `Stellar Edge Services/OtterQuote/Tools/commit_via_api.py` |
+| Deploy secrets | `Stellar Edge Services/OtterQuote/Tools/.deploy-secrets` |
+| Handoffs | `handoffs/` (this repo) |
+| In-Flight ledger | `Claude's Memories/In Flight/` |
+
+## Deploy Chain (D-221 Path A)
+
+All code changes go through `commit_via_api.py`:
+
+1. `deploy_to_main(paths, message, pr_title, working_dir)` — feature branch → PR to main
+2. GitHub Actions CI runs on PR
+3. Merge to main → Netlify auto-deploys production
+4. Staging is a one-way mirror of main (D-232) — never deploy to staging directly
+
+**Never write repo files with file tools directly.** Use `commit_via_api` only.
+
+## Handoff Convention
+
+Write a handoff file at the end of every meaningful Code session.
+
+**Path:** `handoffs/YYYY-MM-DD-HH-MM-[type].md`
+
+**Types:** `feature`, `bugfix`, `migration`, `config`, `hardshell`
+
+**Required sections:**
+
+```
+## Session Type
+[type] — [one-line summary]
+
+## Tasks Completed
+- [ClickUp ID] — [task name]
+
+## Files Changed
+- [repo/path/to/file.ext]
+
+## Unresolved Items
+- [anything left mid-flight, or "None"]
+
+## Next Session Should
+- [concrete first action]
+```
+
+Write the handoff BEFORE closing the session. Cowork reads it on next startup.
+
+## Active R-Numbers
+
+| R# | Rule |
+|----|------|
+| R-001 | File-based memory only — no native memory tools |
+| R-003 | Proactive error logging — invoke error-log skill immediately on unexpected behavior |
+| R-004 | Tier A/B/C authority model (above) |
+| R-005 | Real-time task closure — mark ClickUp complete immediately when done |
+| R-006 | Effort weighting — production-grade first pass, no "fix later" TODOs |
+| R-007 | Bug-killer protocol — evidence-first, 5-stage, sequential |
+| R-011 | ATC+Wingman operating model — ATC supervises, Wingman executes |
+| R-013 | Skill SKILL.md files written to master only via Cowork Skills panel upload |
+| R-015 | Pre-escalation doctrine — exhaust available info before surfacing Lane 2 |
+| R-033 | claude-memory.md is read-only for all automated processes |
+| R-034 | Lane 2 consolidation — surface via status-report, not ad hoc |
+| R-036 | E2E test coverage required before any user-facing flow ships |
+| R-037 | Launch-readiness walk (pre-flight-walk) required before any go-live |
+| R-040 | Memory write governance — every write needs named trigger + owner triple |
+
+## Operation Hardshell (Active Migration)
+
+Moving execution-dependent skills from Cowork sandbox → Claude Code (real shell access).
+
+**Phase 1 (Foundation):** Install CLI, configure MCPs, write CLAUDE.md, create handoffs/ folder, verify toolchain  
+**Phase 2 (POC):** First Code-executed ClickUp task  
+**Phases 3-4:** Migrate Wingman, Forge, Bug-Killer  
+**Phase 5:** Migrate scheduled tasks  
+**Phases 6-7:** QC and finalization
+
+**Post-migration system split:** Code = execution / repo / git. Cowork = memory / planning / briefings.
+
+ClickUp tracking: list 901711730553, tag `[HARDSHELL]`.
+
+## D / R Counter Reference
+
+Before assigning a new number, always verify the current max in the registry:
+- **D-numbers:** ~D-233 next — verify in `otterquote-ref-platform.md`
+- **R-numbers:** ~R-041 next — verify in `rule-reference.md`
 
 ---
-
-## ⚠️ Large File Edit Rules — MANDATORY
-
-The Cowork Edit tool **silently truncates files** when writing through the Windows bindfs mount. The truncation can hit files of *any size* — confirmed May 4, 2026 on a 161-line file (`auth-callback.html`) and a 587-line file (`get-started.html`) — so the prior "~1,500 lines" threshold is obsolete. **Treat the Cowork Edit and Write tools as unsafe for any file inside `otterquote-deploy/`.** Use Python with `shutil.copy2` for all writes to this directory.
-
-### Files that MUST NOT be edited via the Cowork Edit tool directly:
-
-| File | Reason |
-|------|--------|
-| `contractor-profile.html` | Large page — confirmed truncation risk |
-| `contractor-bid-form.html` | Large page — confirmed truncation risk |
-| `contractor-about.html` | Large page (969 lines) — confirmed truncation risk (May 1, 2026) |
-| `supabase/functions/create-docusign-envelope/index.ts` | Large Edge Function — confirmed truncation risk |
-| `supabase/functions/create-hover-order/index.ts` | Large Edge Function — confirmed truncation risk |
-| `supabase/functions/get-hover-pdf/index.ts` | Large Edge Function — confirmed truncation risk |
-| `supabase/functions/process-coi-reminders/index.ts` | Large Edge Function — confirmed truncation risk |
-| `js/auth.js` | Large auth module — confirmed truncation risk |
-| **Any file in `otterquote-deploy/`** | Cowork Edit/Write through bindfs truncates silently at any size — confirmed May 4, 2026 on a 161-line file. Use Python `shutil.copy2` for all writes. |
-
-### Required approach for these files:
-
-Use Python or bash to apply patches. Read the file in memory, modify, write to `/tmp/`, then commit from there. Never pipe the file through the Cowork Edit tool or `cp` from the Windows mount.
-
-**Also unsafe on any file via the Windows mount:**
-- `sed -i` — uses a temp file + rename under the hood; truncates through bindfs (confirmed May 1, 2026 on a 112-line file)
-- Any tool that writes by creating a temp file and renaming (patch, perl -i, etc.)
-
-**Safe operations on the mount:** direct writes via Python `shutil.copy2` (preferred), or `cp /tmp/file mount/file` from a sandbox temp file. Avoid the Cowork Write/Edit tools entirely on this directory.
-
-**Null-byte padding variant (confirmed May 8, 2026 on `commit_via_api.py` at 89 lines):**
-
-A second truncation mode exists where the file appears full-size (byte count matches expected) but the tail of the content is replaced with `\x00` null bytes. The file SIZE check passes — only a null-byte scan catches this variant. Always run both checks after any write:
-
-```python
-with open(dst_path, 'rb') as f:
-    content = f.read()
-assert len(content) == expected_size, f"Size mismatch: {len(content)} vs {expected_size}"
-assert content.count(b'\x00') == 0, f"Null bytes in file — content is corrupted (null-byte padding variant)"
-```
-
-Retry `shutil.copy2` up to 3 times on failure before surfacing to Dustin.
-
-**Recovery command for Edge Functions if truncated:**
-```bash
-supabase functions download [function-name] --project-ref yeszghaspzwwstvsrioa
-```
-This restores the complete production source. Use for:
-- `create-docusign-envelope`
-- `create-hover-order`
-- `get-hover-pdf`
-- `process-coi-reminders`
-
-For **committed non-Edge-Function source** (HTML, JS) truncated through the mount, restore via git:
-```bash
-git checkout HEAD -- <file-path>
-```
-
----
-
-## Deployment Rules
-
-See `~/Downloads/Claude Downloads/Claude's Memories/claude-memory.md` for the full Base Deploy Steps and D-182 tier system. Key rules:
-
-1. **Always check the site is up first:** `web_fetch https://otterquote.com` — confirm 200 + "Stop chasing contractors" in body before any deploy. (April 27, 2026: 9.5-hour outage caused by Netlify billing pause was not detected by backend monitoring.)
-2. **Use a unique temp dir:** `DEPLOY_DIR=/tmp/deploy-$(date +%s)` — never hardcode `/tmp/deploy`.
-3. **Run Deploy_Review_Checklist.md before every push.** CRITICAL items block always. HIGH items block absent explicit waiver.
-4. **Deploy to staging first.** Verify smoke tests pass → merge to main → Netlify auto-deploys production.
-5. **Clean up after deploy:** `pip cache purge && apt-get clean && rm -rf $DEPLOY_DIR`
-
----
-
-## D-196 Drift Check
-
-After rsync'ing from `otterquote-deploy/` to `$DEPLOY_DIR`, run:
-
-```bash
-cd $DEPLOY_DIR && git status --short
-```
-
-If any unexpected files appear (files not in the intended changeset), **halt and surface to Dustin before pushing.** This catches local-repo drift before it reaches production.
-
----
-
-## Auth Pattern (F-007)
-
-All authenticated pages must use the `onAuthStateChange` + `INITIAL_SESSION`/`SIGNED_IN` guard + `_initFired` boolean pattern. **Never** bootstrap with `DOMContentLoaded + sb.auth.getSession()` — this causes race conditions on Supabase JS v2.
-
-```javascript
-let _initFired = false;
-sb.auth.onAuthStateChange((event, session) => {
-  if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !_initFired) {
-    _initFired = true;
-    // init page here
-  }
-});
-```
-
-Apply to every new authenticated page. Pages already using this pattern: dashboard.html, admin-payouts.html, bids.html, contract-signing.html, contractor-b
+*Generated 2026-05-18 by Wingman wm-86e1ehn63-c7e2 (Cowork session, HARDSHELL P1.S3)*
