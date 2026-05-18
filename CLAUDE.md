@@ -109,6 +109,80 @@ When you need to update memory files → write to Claude Downloads paths above.
 
 ---
 
+## SLASH COMMANDS
+
+### /executor [variant]
+
+Manual interactive Tier 1 task executor. Reads ClickUp queue, groups independent Tier 1 tasks, and dispatches parallel sub-agents (up to 4 per wave) in the per-task model. Runs in waves until all Tier 1 work is complete or blocked.
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\executor-code-SKILL.md` exactly.
+
+Variant routing:
+- `/executor opus` — elevate parent to Opus (heavy Tier C exposure or strategy-laden work)
+- `/executor sonnet` — explicit Sonnet parent
+- `/executor` — defaults to Sonnet
+
+If slash command is not recognized (first run before restart), paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\executor-code-SKILL.md and follow it exactly.`
+
+Budget: runs until queue is empty or two consecutive zero-completion waves.
+
+---
+
+### /wingman [variant]
+
+Lane 1 autonomous task executor. Registered as a custom slash command at `.claude/commands/wingman.md`.
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\wingman-code-SKILL.md` exactly.
+
+Variant routing:
+- `/wingman F-35` — Opus model tasks only
+- `/wingman F-22` — Sonnet model tasks (default)
+- `/wingman F-18` — Haiku model tasks only
+- `/wingman` — defaults to F-22 (Sonnet)
+
+If slash command is not recognized (first run before restart), paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\wingman-code-SKILL.md and follow it exactly. Variant: F-22.`
+
+Pull eligible Tier 1 tasks from ClickUp list 901711730553 matching the trigger tier. Execute autonomously within Tier A/B authority. Write heartbeat every 10 min, done files on completion, shift log shard and handoff file at session end.
+
+Budget: 5 tasks / 60 minutes / 2 consecutive failures.
+
+---
+
+### /bug-killer [task_id] [description]
+
+Sequential, evidence-first bug investigation protocol. Routes the bug through the Stage 0–5 protocol — Stage 0 stop bleeding, Stage 1 read evidence (read-only sub-agent), Stage 2 hypothesis (autonomous for frontend+high-confidence; checkpoint for auth/payment/schema), Stage 3 minimal fix, Stage 4 verify+merge, Stage 5 prevention layer. Codified as R-007.
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md` exactly.
+
+Pass the ClickUp task ID and a short description as the bug identifier:
+- `/bug-killer 86e1XXXXX [short bug name]` — opens or resumes the bug thread at `Bug Threads/[task_id]-[name].md`
+
+If slash command is not recognized (first run before restart), paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md and follow it exactly. Bug: [task_id] [description].`
+
+Orchestrator: Opus. Sub-agents: Sonnet (read-only Stage 1; bounded Stage 3). No parallel sub-agents — bug-killer is sequential. Two failed attempts = mandatory Dustin checkpoint. Prevention artifact in Stage 5 is non-negotiable.
+
+---
+
+### /migration-author [description]
+
+Supabase SQL migration author. Drafts forward + rollback halves, runs against a Supabase branch before proposing, checks all 8 danger patterns, outputs `v<NN>_<slug>.sql` + `v<NN>_<slug>_rollback.sql` + `v<NN>_<slug>_pre-flight.md` to `supabase/migrations/`.
+
+When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md` exactly.
+
+Accepts an optional description of the change:
+- `/migration-author add is_contractor_verified to profiles` — drafts migration for that change
+- `/migration-author` — prompts for change details
+
+If slash command is not recognized (first run before restart), paste this prompt manually:
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md and follow it exactly. Change: [description].`
+
+All migrations are **D-182 Tier 3** — no migration self-deploys. After files are written and branch test passes, the skill creates a ClickUp approval task and waits for explicit Dustin approval before any deploy. Deploy chain is D-221 Path A: GitHub PR → merge → Supabase migration auto-run.
+
+---
+
 ## CLICKUP
 List 901711730553 = Product and Tech (primary work queue)
 Close tasks with status: `complete`
@@ -121,30 +195,3 @@ Tier/Model custom fields must be populated for executor routing.
 - Verify capabilities before declaring inability (R-017)
 - Log errors immediately via structured comment or handoff note (R-003)
 - One observation ≠ system overhaul — propose targeted delta only (R-026)
-
----
-
-## SLASH COMMANDS
-
-### /bug-killer
-
-Invokes the Claude Code-native bug investigation protocol (R-007).
-
-When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md` exactly.
-
-Stages 0-5: stop bleeding -> read evidence -> hypothesis -> minimal fix -> verify -> prevention.
-Risk-stratified checkpoints at Stage 2 (auth/payment/schema) and Stage 4. Opus orchestrator, Sonnet sub-agents.
-
-If slash command not recognized: paste this prompt manually:
-`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\bug-killer-code-SKILL.md and follow it exactly.`
-
-### /migration-author
-
-Invokes the Claude Code-native migration author (D-182/D-221).
-
-When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md` exactly.
-
-Produces forward.sql + rollback.sql + pre-flight.md. Runs Supabase branch test. D-182 Tier 3 always -- creates approval task before any deploy.
-
-If slash command not recognized: paste this prompt manually:
-`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\migration-author-code-SKILL.md and follow it exactly.`
