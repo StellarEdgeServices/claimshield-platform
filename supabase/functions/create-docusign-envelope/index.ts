@@ -232,6 +232,8 @@ async function getTemplateFromStorage(
   contractorId: string,
   documentType: string
 ): Promise<string> {
+  // "contractor-templates" (hyphen) is the Supabase Storage bucket.
+  // "contractor_templates" (underscore) is the DB table. These are distinct — do not confuse.
   const bucketName = "contractor-templates";
   const filePath = `${contractorId}/${documentType}.pdf`;
 

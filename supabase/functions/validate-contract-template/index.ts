@@ -331,7 +331,8 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: `No manifest for ${tmpl.trade}/${tmpl.funding_type}` }, 400);
     }
 
-    // Download PDF from Supabase Storage
+    // Download PDF from Supabase Storage.
+    // "contractor-templates" (hyphen) = Storage bucket. "contractor_templates" (underscore) = DB table (used above). These are distinct.
     const { data: pdfBlob, error: downloadErr } = await supabase.storage
       .from("contractor-templates")
       .download(tmpl.pdf_storage_path);
