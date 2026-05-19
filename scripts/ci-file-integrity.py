@@ -6,11 +6,12 @@ Catches FUSE/bindfs mount truncation before corrupt files reach production.
 Root cause: May 3, 2026 production outage — login.html and contractor-join.html
 were silently truncated by bindfs write corruption, causing a 9.5-hour outage.
 
-Detects four violation classes:
+Detects five violation classes:
   1. Null-byte padding  — file is full-size but filled with \x00 after real content
   2. Size-floor failure — file is shorter than any legitimate page could be
   3. Canary minimums   — critical pages must exceed known-good thresholds
   4. JS parse error    — node --check catches syntax errors including clean truncation
+  5. HTML structure    — HTML files must end with </html> (catches clean HTML truncation)
 
 Canary matching rules:
   - Keys with no '/' are ROOT-ANCHORED: only match at repo root (e.g. 'index.html'
@@ -46,7 +47,7 @@ CANARY_FILES = {
     'get-started.html':            4000,   # root-anchored
     'contractor-dashboard.html':   5000,   # root-anchored
     'dashboard.html':              5000,   # root-anchored
-    'auth-callback.html':          2000,   # root-anchored
+    'auth-callback.html':          7000,   # root-anchored (bumped 2000→7000 May 2026: well-formed size 9338B)
     'js/auth.js':                  8000,   # path canary
     'js/config.js':                 200,   # path canary
 }
@@ -154,6 +155,18 @@ for root, dirs, files in os.walk('.'):
                     f"cannot syntax-check JS files"
                 )
 
+        # Check 5: HTML structural completeness — must end with </html>.
+        # Catches clean HTML truncation that has no null bytes and clears size
+        # canary thresholds (the May 19, 2026 86e1fbxgq pattern).
+        if ext == '.html':
+            trimmed = data.rstrip()
+            if not trimmed.endswith(b'</html>'):
+                tail = trimmed[-60:].decode('utf-8', errors='replace')
+                failures.append(
+                    f"FAIL [html-truncation] {rel_path}: file does not end with "
+                    f"</html> (tail: ...{tail!r}) — clean truncation signature"
+                )
+
 # ── Summary ─────────────────────────────────────────────────────────────────
 print(f"Scanned {checked} files ({', '.join(sorted(EXTENSIONS))})")
 print()
@@ -167,5 +180,5 @@ if failures:
     print("Check the commit source — do not deploy until all violations are resolved.")
     sys.exit(1)
 else:
-    print(f"✅ All {checked} files passed null-byte, size integrity, and JS syntax checks.")
+    print(f"✅ All {checked} files passed null-byte, size, HTML structure, and JS syntax checks.")
     sys.exit(0)
