@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- Coming-soon gate — flip CONFIG.HOMEOWNER_LAUNCH_ENABLED=true in js/config.js to remove -->
+<script src="js/config.js"></script>
+<script>(function(){if(typeof CONFIG!=='undefined'&&!CONFIG.HOMEOWNER_LAUNCH_ENABLED){window.location.replace('/coming-soon.html?from=ref-inspector&persona=homeowner');}})()</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -848,19 +851,4 @@ async function handleFormSubmit(e) {
 
   } catch (error) {
     console.error('Form submission error:', error);
-    alert(`Something went wrong: ${error.message}. Please try again.`);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Get Started — It\'s Free';
-  }
-}
-
-/**
- * Toggle FAQ accordion
- */
-function toggleFaq(headerElement) {
-  headerElement.parentElement.classList.toggle('open');
-}
-</script>
-
-</body>
-</html>
+    
