@@ -105,7 +105,7 @@
   <div class="error-icon">🔒</div>
   <h1>Sign-in failed</h1>
   <p class="subtitle">Your sign-in link may have expired or already been used. Please request a new one.</p>
-  <a href="/get-started.html" class="btn-retry">Try again</a>
+  <a class='btn-retry' href='/get-started'>Try again</a>
 </div>
 
 <script>
@@ -191,10 +191,15 @@
     // dashboard — that's how the contractor->homeowner-dashboard loop
     // started. Route them to the join page so they can apply.
     if (intent === 'contractor') {
-      _oqLog('routing -> /contractor-join.html?from=oauth_no_account (intent=contractor, no contractor record)');
+      // D-225 fix May 13: route to /contractor-pre-approval.html, not back to
+      // contractor-join.html. The pre-approval page reads cs_contractor_signup
+      // from localStorage and creates the contractors row, then drops into the
+      // onboarding wizard. Bouncing back to contractor-join was the magic-link
+      // bounce loop ("create account, get link, back to start, repeat").
+      _oqLog('routing -> /contractor-pre-approval.html (intent=contractor, no record yet)');
       localStorage.removeItem('cs_auth_role');
-      _oqTrackAuth('contractor_new', '/contractor-join.html');
-      window.location.href = '/contractor-join.html?from=oauth_no_account';
+      _oqTrackAuth('contractor_new', '/contractor-pre-approval.html');
+      window.location.href = '/contractor-pre-approval.html';
       return;
     }
 
@@ -223,4 +228,42 @@
       } catch (e) {
         _oqLog('claim check threw:', e && e.message);
       }
-      _oqLog('routing -> /trade-selector.html (homeo
+      _oqLog('routing -> /trade-selector.html (homeowner, no claim)');
+      _oqTrackAuth('homeowner_new', '/trade-selector.html');
+      window.location.href = '/trade-selector.html';
+      return;
+    }
+
+    // Brand new user, no signal at all — start the homeowner intake.
+    _oqLog('routing -> /trade-selector.html (no signal at all, default)');
+    _oqTrackAuth('unknown_new', '/trade-selector.html');
+    window.location.href = '/trade-selector.html';
+  }
+
+  // D-208 F-007d pattern: wait for PKCE exchange if code is in URL
+  sb.auth.onAuthStateChange(async function(event, session) {
+    if (event === 'SIGNED_IN' && session) {
+      await handle(session);
+    } else if (event === 'INITIAL_SESSION') {
+      if (session) {
+        await handle(session);
+      } else if (!window._oq_has_auth_in_url) {
+        // No auth tokens in URL and no existing session — something went wrong
+        await handle(null);
+      }
+      // else: _oq_has_auth_in_url is true, PKCE exchange in progress — wait for SIGNED_IN
+    }
+  });
+
+  // Safety timeout: 30 seconds
+  setTimeout(function() {
+    if (!handled) {
+      handle(null);
+    }
+  }, 30000);
+
+})();
+</script>
+
+</body>
+</html>
