@@ -20,6 +20,7 @@ Canary matching rules:
     (e.g. 'js/auth.js' matches js/auth.js and also vendor/js/auth.js)
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -158,10 +159,12 @@ for root, dirs, files in os.walk('.'):
         # Check 5: HTML structural completeness — must end with </html>.
         # Catches clean HTML truncation that has no null bytes and clears size
         # canary thresholds (the May 19, 2026 86e1fbxgq pattern).
+        # Trailing HTML comments (e.g. deploy markers <!-- deploy: ... -->) and
+        # whitespace are stripped before the check — these are valid post-close content.
         if ext == '.html':
-            trimmed = data.rstrip()
-            if not trimmed.endswith(b'</html>'):
-                tail = trimmed[-60:].decode('utf-8', errors='replace')
+            stripped = re.sub(rb'(\s|<!--.*?-->)+$', b'', data, flags=re.DOTALL)
+            if not stripped.endswith(b'</html>'):
+                tail = data.rstrip()[-60:].decode('utf-8', errors='replace')
                 failures.append(
                     f"FAIL [html-truncation] {rel_path}: file does not end with "
                     f"</html> (tail: ...{tail!r}) — clean truncation signature"
