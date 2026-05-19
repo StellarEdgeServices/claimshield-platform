@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- GA4 — fires auth_success engagement event before redirect so sessions aren't counted as bounces -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
 <!-- D-208: Capture auth tokens before Supabase createClient() clears the URL -->
 <script>window._oq_has_auth_in_url = window.location.hash.includes('access_token') || window.location.search.includes('code=');</script>
 <meta charset="UTF-8">
@@ -102,7 +105,7 @@
   <div class="error-icon">🔒</div>
   <h1>Sign-in failed</h1>
   <p class="subtitle">Your sign-in link may have expired or already been used. Please request a new one.</p>
-  <a class='btn-retry' href='/get-started'>Try again</a>
+  <a href="/get-started.html" class="btn-retry">Try again</a>
 </div>
 
 <script>
@@ -124,6 +127,20 @@
       var args = Array.prototype.slice.call(arguments);
       args.unshift('[auth-callback]');
       console.log.apply(console, args);
+    } catch (e) {}
+  }
+
+  // Fire a GA4 engagement event before every redirect so the auth-callback
+  // session is never counted as a bounce (GA4 requires at least one engagement
+  // event within 10 s; the redirect fires faster than that without this).
+  function _oqTrackAuth(role, destination) {
+    try {
+      if (typeof gtag === 'function') {
+        gtag('event', 'auth_success', {
+          auth_role: role || 'unknown',
+          auth_destination: destination
+        });
+      }
     } catch (e) {}
   }
 
@@ -164,6 +181,7 @@
     // even if the user clicked the wrong login button, route them home.
     if (role === 'contractor') {
       _oqLog('routing -> /contractor-dashboard.html (DB says contractor)');
+      _oqTrackAuth('contractor', '/contractor-dashboard.html');
       window.location.href = '/contractor-dashboard.html';
       return;
     }
@@ -173,14 +191,10 @@
     // dashboard — that's how the contractor->homeowner-dashboard loop
     // started. Route them to the join page so they can apply.
     if (intent === 'contractor') {
-      // D-225 fix May 13: route to /contractor-pre-approval.html, not back to
-      // contractor-join.html. The pre-approval page reads cs_contractor_signup
-      // from localStorage and creates the contractors row, then drops into the
-      // onboarding wizard. Bouncing back to contractor-join was the magic-link
-      // bounce loop ("create account, get link, back to start, repeat").
-      _oqLog('routing -> /contractor-pre-approval.html (intent=contractor, no record yet)');
+      _oqLog('routing -> /contractor-join.html?from=oauth_no_account (intent=contractor, no contractor record)');
       localStorage.removeItem('cs_auth_role');
-      window.location.href = '/contractor-pre-approval.html';
+      _oqTrackAuth('contractor_new', '/contractor-join.html');
+      window.location.href = '/contractor-join.html?from=oauth_no_account';
       return;
     }
 
@@ -201,6 +215,7 @@
                  'error:', claimRes && claimRes.error && claimRes.error.message);
           if (claimRes && claimRes.data) {
             _oqLog('routing -> /dashboard.html');
+            _oqTrackAuth('homeowner', '/dashboard.html');
             window.location.href = '/dashboard.html';
             return;
           }
@@ -208,40 +223,4 @@
       } catch (e) {
         _oqLog('claim check threw:', e && e.message);
       }
-      _oqLog('routing -> /trade-selector.html (homeowner, no claim)');
-      window.location.href = '/trade-selector.html';
-      return;
-    }
-
-    // Brand new user, no signal at all — start the homeowner intake.
-    _oqLog('routing -> /trade-selector.html (no signal at all, default)');
-    window.location.href = '/trade-selector.html';
-  }
-
-  // D-208 F-007d pattern: wait for PKCE exchange if code is in URL
-  sb.auth.onAuthStateChange(async function(event, session) {
-    if (event === 'SIGNED_IN' && session) {
-      await handle(session);
-    } else if (event === 'INITIAL_SESSION') {
-      if (session) {
-        await handle(session);
-      } else if (!window._oq_has_auth_in_url) {
-        // No auth tokens in URL and no existing session — something went wrong
-        await handle(null);
-      }
-      // else: _oq_has_auth_in_url is true, PKCE exchange in progress — wait for SIGNED_IN
-    }
-  });
-
-  // Safety timeout: 30 seconds
-  setTimeout(function() {
-    if (!handled) {
-      handle(null);
-    }
-  }, 30000);
-
-})();
-</script>
-
-</body>
-</html>
+      _oqLog('routing -> /trade-selector.html (homeo
