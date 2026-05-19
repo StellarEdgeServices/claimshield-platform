@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- Coming-soon gate — flip CONFIG.HOMEOWNER_LAUNCH_ENABLED=true in js/config.js to remove -->
+<script src="js/config.js"></script>
+<script>(function(){if(typeof CONFIG!=='undefined'&&!CONFIG.HOMEOWNER_LAUNCH_ENABLED){window.location.replace('/coming-soon.html?from=partner-insurance&persona=partner');}})()</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -1345,12 +1348,4 @@
             input.addEventListener('change', function() {
                 const label = this.nextElementSibling;
                 const fileName = this.files[0]?.name || 'File selected';
-                label.textContent = '✓ ' + fileName;
-            });
-        });
-    </script>
-
-<!-- Referral landing page link for SEO crawlability -->
-<p style="text-align:center;font-size:0.85rem;color:var(--slate);padding:8px 0 16px;"><a href="/ref-insurance.html" style="color:var(--amber);">Homeowner referral landing page</a></p>
-</body>
-</html>
+                label.textContent =
