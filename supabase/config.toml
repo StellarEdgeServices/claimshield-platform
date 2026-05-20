@@ -1,3 +1,7 @@
+[functions.send-incomplete-onboarding-reminders]
+# Cron-exception: JWT verification disabled; access is gated by CRON_SECRET header check inside the function.
+verify_jwt = false
+
 [auth]
 site_url = "https://stellaredgeservices.com"
 additional_redirect_urls = [
