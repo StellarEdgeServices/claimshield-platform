@@ -1203,10 +1203,18 @@ async function autoPopulateFields(
     .eq("contractor_id", contractorId)
     .single();
 
+  const { data: homeownerProfile } = claimData?.user_id
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", claimData.user_id)
+        .single()
+    : { data: null };
+
   const fields: TextTabFields = {};
 
   if (claimData) {
-    fields.customer_name = signerName || "";
+    fields.customer_name = homeownerProfile?.full_name || "";
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
