@@ -41,19 +41,4 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
   },
 });
 
-/**
- * Server-side admin client (NEVER ship to browser).
- * Used only in Next.js API routes and server components.
- *
- * Requires SUPABASE_SERVICE_ROLE_KEY which grants unrestricted database access.
- */
-export const supabaseAdmin: SupabaseClient | null = (() => {
-  const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!adminKey) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY not set — admin operations unavailable.');
-    return null;
-  }
-  return createClient(supabaseUrl!, adminKey, {
-    auth: { persistSession: false },
-  });
-})();
+// Server-side admin client lives in supabase-admin.ts — do not import here.
