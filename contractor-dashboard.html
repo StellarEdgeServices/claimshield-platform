@@ -1395,9 +1395,13 @@
                     type: evt.event_type,
                   }));
                 }
+              } else {
+                // Contractor profile not found — clear the loading spinner
+                document.getElementById('serviceAreaText').textContent = 'Service area: Not configured — complete your profile';
               }
             } catch (err) {
               console.error('Error loading contractor data:', err);
+              document.getElementById('serviceAreaText').textContent = 'Service area: Could not load — please refresh';
             }
           }
 
