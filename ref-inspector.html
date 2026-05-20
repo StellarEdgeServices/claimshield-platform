@@ -851,4 +851,19 @@ async function handleFormSubmit(e) {
 
   } catch (error) {
     console.error('Form submission error:', error);
-    
+    alert(`Something went wrong: ${error.message}. Please try again.`);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Get Started — It\'s Free';
+  }
+}
+
+/**
+ * Toggle FAQ accordion
+ */
+function toggleFaq(headerElement) {
+  headerElement.parentElement.classList.toggle('open');
+}
+</script>
+
+</body>
+</html>

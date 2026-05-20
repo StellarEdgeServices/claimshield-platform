@@ -645,7 +645,7 @@
 
     <div class="faq-item">
       <h3>What does it cost me?</h3>
-      <p>Nothing. Otter Quotes is 100% free for Homeowners.</p>
+      <p>Nothing. Otter Quotes is 100% free for homeowners. Contractors pay a small platform fee when they win your job.</p>
     </div>
 
     <div class="faq-item">
@@ -815,4 +815,22 @@
         await Auth.sendMagicLink(email, 'homeowner');
         alert('Login link resent! Check your email.');
       } catch (err) {
-     
+        alert('Could not resend. Please try again in a moment.');
+      }
+    }
+  });
+
+  // Check if already logged in — redirect
+  Auth.getUser().then(user => {
+    if (user) {
+      window.location.href = '/dashboard.html';
+    }
+  });
+
+  // Initialize
+  personalizeFromReferralCode();
+})();
+</script>
+
+</body>
+</html>

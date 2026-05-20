@@ -771,4 +771,17 @@ async function handleFormSubmit(e) {
 
     // Optional: scroll to confirmation or show modal
     setTimeout(() => {
-      alert(`Check your ema
+      alert(`Check your email for a secure login link. We'll get you set up in minutes.`);
+    }, 500);
+
+  } catch (error) {
+    console.error('Form submission error:', error);
+    alert(`Error: ${error.message}`);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Get Started — It\'s Free';
+  }
+}
+</script>
+
+</body>
+</html>
