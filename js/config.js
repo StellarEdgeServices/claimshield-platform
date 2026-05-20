@@ -59,4 +59,7 @@ var CONFIG = {
 };
 
 // ── Initialize Supabase Client ──
-var sb; // var (not
+var sb; // var (not let) — allows safe early-load in <head> of gated pages alongside redirect guard
+if (typeof supabase !== 'undefined') {
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage } });
+}
