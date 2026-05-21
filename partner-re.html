@@ -1371,4 +1371,13 @@
     navigator.clipboard.writeText(link).then(() => {
       const originalText = copyBtn.textContent;
       copyBtn.textContent = '\u2713 Copied!';
-      setTimeout(() => { copyBtn.textContent = original
+      setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+    }).catch(() => {});
+  });
+})();
+</script>
+
+<!-- Referral landing page link for SEO crawlability -->
+<p style="text-align:center;font-size:0.85rem;color:var(--slate);padding:8px 0 16px;"><a href="/ref-re.html" style="color:var(--amber);">Homeowner referral landing page</a></p>
+</body>
+</html>

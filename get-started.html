@@ -653,4 +653,19 @@
     }
   });
 
-  // Check if user is already logg
+  // Check if user is already logged in — route to appropriate dashboard
+  Auth.getUser().then(async user => {
+    if (user) {
+      await Auth.redirectToDashboard();
+    }
+  });
+
+  // Set up auth state listener for post-auth profile creation
+  Auth.onAuthStateChangeListener();
+})();
+</script>
+
+<footer id="site-footer"></footer>
+
+</body>
+</html>
