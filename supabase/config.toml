@@ -1,3 +1,22 @@
+[functions.send-incomplete-onboarding-reminders]
+# Cron-exception: JWT verification disabled; access is gated by CRON_SECRET header check inside the function.
+verify_jwt = false
+
+[functions.process-payout-reminders]
+# Cron-exception: JWT verification disabled; access is gated by CRON_SECRET header check inside the function.
+verify_jwt = false
+
+[functions.notify-payout-pending]
+# DB-trigger-exception: called by apply_referral_commission() trigger via pg_net with service role bearer.
+# JWT verification disabled; rate-limited + idempotent (notification_sent_at stamp). CRON_SECRET gate
+# deferred — requires Tier 3 SQL migration to update pg_net call in apply_referral_commission trigger.
+verify_jwt = false
+
+[functions.parse-loss-sheet]
+# Frontend + EF-called: called with user JWT from bids.html loss-sheet upload and from other EFs.
+# JWT verification disabled to allow service-role callers; rate-limited (10/day, 50/month per claim).
+verify_jwt = false
+
 [auth]
 site_url = "https://stellaredgeservices.com"
 additional_redirect_urls = [
