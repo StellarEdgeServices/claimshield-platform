@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>var isStaging = window.location.hostname.includes('staging') || window.location.hostname.includes('netlify.app');var appBase = isStaging ? 'https://app-staging.otterquote.com' : 'https://app.otterquote.com';window.location.replace(appBase + '/get-started');</script>
 <!-- Sentry Error Monitoring -->
 <script
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- Coming-soon gate — flip CONFIG.HOMEOWNER_LAUNCH_ENABLED=true in js/config.js to remove -->
+<script src="js/config.js"></script>
+<script>(function(){if(typeof CONFIG!=='undefined'&&!CONFIG.HOMEOWNER_LAUNCH_ENABLED){window.location.replace('/coming-soon.html?from=get-started&persona=homeowner');}})()</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -334,7 +336,7 @@
         <div class="form-group">
           <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; font-weight: 400;">
             <input type="checkbox" id="sms-consent" class="form-checkbox" style="margin-top: 2px; flex-shrink: 0;">
-            <span style="font-size: 0.9rem; line-height: 1.5;">I agree to receive transactional SMS from Otter Quotes. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe. See our <a href='/privacy' style='color: var(--amber); text-decoration: underline;'>Privacy Policy</a> and <a href='/terms' style='color: var(--amber); text-decoration: underline;'>Terms of Service</a>.</span>
+            <span style="font-size: 0.9rem; line-height: 1.5;">I agree to receive transactional SMS from Otter Quotes. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe. See our <a href="privacy.html" style="color: var(--amber); text-decoration: underline;">Privacy Policy</a> and <a href="terms.html" style="color: var(--amber); text-decoration: underline;">Terms of Service</a>.</span>
           </label>
         </div>
 
@@ -374,17 +376,17 @@
 
         <p class="text-sm text-center" style="color: var(--gray);">
           By creating an account, you agree to our
-          <a href='/terms'>Terms of Service</a> and
-          <a href='/privacy'>Privacy Policy</a>.
+          <a href="terms.html">Terms of Service</a> and
+          <a href="privacy.html">Privacy Policy</a>.
         </p>
 
         <p class="text-sm text-center" style="color: var(--gray); margin-top: var(--sp-4);">
           Already have an account?
-          <a href='/login' style='color: var(--amber); font-weight: 600;'>Sign in here</a>
+          <a href="login.html" style="color: var(--amber); font-weight: 600;">Sign in here</a>
         </p>
 
         <p class="text-sm text-center" style="color: var(--gray); margin-top: var(--sp-2);">
-          Are you a contractor? <a href='/contractor-login' style='color: var(--amber); font-weight: 600;'>Sign in to your contractor account</a>
+          Are you a contractor? <a href="contractor-login.html" style="color: var(--amber); font-weight: 600;">Sign in to your contractor account</a>
         </p>
       </form>
 
@@ -609,21 +611,7 @@
 
     } catch (err) {
       console.error('Signup error:', err);
-      // D-225 May 13 — detect Supabase Auth rate-limit specifically; the generic
-      // "Something went wrong" framing was alarming users who had simply clicked
-      // Submit twice. Supabase embeds "after N seconds" in the rate-limit msg.
-      // Defense-in-depth detection: top-level message, nested err.error.message, status code, 'rate' or 'security purposes' phrasing all flag rate-limit.
-      var rateLimitMatch = err && err.message && err.message.match(/after (\d+) seconds/i);
-      var nestedMsg = err && err.error && err.error.message;
-      var nestedMatch = nestedMsg && nestedMsg.match(/after (\d+) seconds/i);
-      var match = rateLimitMatch || nestedMatch;
-      if (match || (err && (err.status === 429 || (err.message && /rate|limit|security purposes/i.test(err.message))))) {
-        var seconds = match ? match[1] : null;
-        errorEl.textContent = 'We already sent you a sign-in link. Check your inbox (and spam folder).'
-          + (seconds ? ' You can request another in ' + seconds + ' seconds if needed.' : ' Please wait a moment before requesting another.');
-      } else {
-        errorEl.textContent = 'Something went wrong. Please try again or email us at ' + CONFIG.SUPPORT_EMAIL;
-      }
+      errorEl.textContent = 'Something went wrong. Please try again or email us at ' + CONFIG.SUPPORT_EMAIL;
       errorEl.style.display = 'block';
     } finally {
       submitBtn.classList.remove('btn-loading');

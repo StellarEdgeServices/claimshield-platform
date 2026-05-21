@@ -9,11 +9,16 @@
  * Sends each a branded reminder email with a link back to contractor-pre-approval.html,
  * then stamps partial_completion_email_sent_at = now() to prevent re-sending.
  *
+ * Auth: verify_jwt = false (see supabase/config.toml). Access is gated by CRON_SECRET
+ * instead — callers must pass "Authorization: Bearer <CRON_SECRET>". The pg_cron job
+ * must include this header. This is the standard Supabase cron-exception pattern.
+ *
  * Environment variables:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   MAILGUN_API_KEY
  *   MAILGUN_DOMAIN
+ *   CRON_SECRET          — shared secret; set via `supabase secrets set CRON_SECRET=<value>`
  */
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -126,6 +131,16 @@ serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Cron-secret gate — required on all non-OPTIONS requests (verify_jwt = false for this function)
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   // Health check ping
