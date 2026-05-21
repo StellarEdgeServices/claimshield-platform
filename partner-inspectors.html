@@ -1124,4 +1124,12 @@ function copyItem(type) {
   }).catch(() => {});
 }
 function toggleFaq(btn) {
-  const item = btn.closest(
+  const item = btn.closest('.faq-item');
+  item.classList.toggle('open');
+}
+    </script>
+
+<!-- Referral landing page link for SEO crawlability -->
+<p style="text-align:center;font-size:0.85rem;color:var(--slate);padding:8px 0 16px;"><a href="/ref-inspector.html" style="color:var(--amber);">Homeowner referral landing page</a></p>
+</body>
+</html>
