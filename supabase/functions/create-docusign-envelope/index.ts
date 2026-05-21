@@ -1356,7 +1356,32 @@ async function handleContractorSign(
 
   const contractDate = new Date().toLocaleDateString("en-US");
   const contractorName = contractorData?.company_name || signer.name || "Contractor";
-  const homeownerName = autoFields.customer_name || "Homeowner";
+
+  // Resolve homeowner identity from profiles before PDF generation.
+  // autoFields.customer_name is set from signer.name (contractor) in autoPopulateFields,
+  // so it must NOT be used as the homeowner name — doing so causes UNKNOWN_ENVELOPE_RECIPIENT
+  // when handleHomeownerSign tries to create the recipient view (PFW canary 2026-05-20).
+  let homeownerEmail = "homeowner@placeholder.otterquote.com";
+  let homeownerFullName = "Homeowner";
+  if (claimData?.user_id) {
+    const { data: hwProfileData } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", claimData.user_id)
+      .single();
+    if (hwProfileData) {
+      homeownerEmail = hwProfileData.email || homeownerEmail;
+      homeownerFullName = hwProfileData.full_name || "Homeowner";
+    }
+  }
+  if (homeownerFullName === contractorName || homeownerFullName.trim().length === 0) {
+    console.error(
+      `[create-docusign-envelope] homeowner name mismatch: homeownerFullName="${homeownerFullName}", ` +
+      `contractorName="${contractorName}", claim_id=${claim_id} — falling back to "Homeowner"`
+    );
+    homeownerFullName = "Homeowner";
+  }
+  const homeownerName = homeownerFullName;
   const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
 
   const isRetail = fundingType !== "insurance";
@@ -1396,20 +1421,6 @@ async function handleContractorSign(
   const addendumDocId = isRetail && scopeOfWorkBase64 ? "3" : "2";
   const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
   const contractorTabs = buildSignerTabs(documentId, "contractor");
-
-  let homeownerEmail = "homeowner@placeholder.otterquote.com";
-  let homeownerFullName = homeownerName;
-  if (claimData?.user_id) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", claimData.user_id)
-      .single();
-    if (profileData) {
-      homeownerEmail = profileData.email || homeownerEmail;
-      homeownerFullName = profileData.full_name || homeownerFullName;
-    }
-  }
 
   const docLabel = getDocumentLabel("contractor_sign");
 
