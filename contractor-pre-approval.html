@@ -1198,6 +1198,7 @@
         }
         if (coiExpiry) {
             coiExpiry.addEventListener('change', updateStep2Button);
+            coiExpiry.addEventListener('input', updateStep2Button);
         }
         if (wcUpload) {
             wcUpload.addEventListener('change', function(e) {
@@ -1207,6 +1208,7 @@
         }
         if (wcExpiry) {
             wcExpiry.addEventListener('change', updateWCCardState);
+            wcExpiry.addEventListener('input', updateWCCardState);
         }
 
         // Profile basics listeners (B3/B4/B5)
@@ -1240,6 +1242,7 @@
         }
         if (wce1Expiry) {
             wce1Expiry.addEventListener('change', updateWCCardState);
+            wce1Expiry.addEventListener('input', updateWCCardState);
         }
 
         // Initialize multi-license card (D-218)
