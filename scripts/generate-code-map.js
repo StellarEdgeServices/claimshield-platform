@@ -172,7 +172,7 @@ function run() {
     summary: {
       pages: htmlFiles.length,
       edge_functions: deployedEfCount || referencedEfNames.size,
-      sql_tables: 45, // maintained manually — schema changes tracked in sql/ migrations
+      sql_tables: 46, // maintained manually — schema changes tracked in sql/ migrations
       cross_references: {
         page_to_edge_function: totalPageToEf,
         edge_function_to_table: 131, // maintained manually — EF→table refs from supabase/functions
