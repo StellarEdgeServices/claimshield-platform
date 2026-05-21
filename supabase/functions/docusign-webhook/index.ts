@@ -247,7 +247,7 @@ serve(async (req) => {
             // Look up the winning quote to get contractor ID and amount
             const { data: quote, error: quoteErr } = await supabase
               .from("quotes")
-              .select("id, contractor_id, total_price, payment_status")
+              .select("id, contractor_id, total_price, payment_status, platform_fee_pct")
               .eq("claim_id", claim.id)
               .eq("status", "awarded")
               .single();
@@ -282,20 +282,21 @@ serve(async (req) => {
               );
             }
 
-            // Fetch platform fee percentage
-            const { data: platformSettings, error: psErr } = await supabase
+            // Fetch platform fee percentage (fallback only — per-bid fee takes precedence per D-214/D-215)
+            const { data: platformSettings } = await supabase
               .from("platform_settings")
               .select("platform_fee_percent")
               .single();
 
-            if (psErr) {
-              console.warn(
-                "Could not fetch platform fee, using default 5%:",
-                psErr
+            // D-214: use the fee accepted at bid submission (quote.platform_fee_pct).
+            // Fall back to platform_settings only for pre-D-214 quotes where platform_fee_pct was not recorded.
+            // Never fabricate a rate — throw if both sources are absent.
+            const platformFeePercent = quote.platform_fee_pct ?? platformSettings?.platform_fee_percent;
+            if (platformFeePercent == null) {
+              throw new Error(
+                `[docusign-webhook] D-214 violation: no fee_pct on quote ${quote.id} and platform_settings unavailable — aborting payment to prevent fabricated rate charge`
               );
             }
-            const platformFeePercent =
-              platformSettings?.platform_fee_percent || 5;
             const feeAmount = Math.round(
               quote.total_price * (platformFeePercent / 100) * 100
             );
