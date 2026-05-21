@@ -34,6 +34,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.0";
 
 const FUNCTION_NAME = "create-docusign-envelope";
 
+const PDF_MAX_BYTES = 3_000_000;
+
+class DocumentTooLargeError extends Error {
+  readonly statusCode = 400;
+  readonly code = "DOCUMENT_TOO_LARGE";
+  constructor(fileName: string, bytes: number) {
+    super(`PDF "${fileName}" is ${(bytes / 1_000_000).toFixed(1)} MB — exceeds the 3 MB limit. Upload a smaller file.`);
+    this.name = "DocumentTooLargeError";
+  }
+}
+
 // CORS tightened Apr 15, 2026 (Session 195): sensitive function (contract
 // envelope creation + DocuSign signing URL generation) — origin allowlisted
 // instead of wildcard. Matches the Session 181 pattern applied to send-sms,
@@ -249,9 +260,13 @@ async function getTemplateFromStorage(
     }
 
     const arrayBuffer = await data.arrayBuffer();
-    const base64 = base64EncodeBinary(new Uint8Array(arrayBuffer));
-    return base64;
+    const fileBytes = new Uint8Array(arrayBuffer);
+    if (fileBytes.length > PDF_MAX_BYTES) {
+      throw new DocumentTooLargeError(filePath, fileBytes.length);
+    }
+    return base64EncodeBinary(fileBytes);
   } catch (err) {
+    if (err instanceof DocumentTooLargeError) throw err;
     throw new Error(
       `Failed to retrieve template PDF (${bucketName}/${filePath}): ${err.message}`
     );
@@ -292,7 +307,11 @@ async function getPcTemplateFromStorage(supabase: any, fileUrl: string): Promise
   }
 
   const arrayBuffer = await data.arrayBuffer();
-  return base64EncodeBinary(new Uint8Array(arrayBuffer));
+  const fileBytes = new Uint8Array(arrayBuffer);
+  if (fileBytes.length > PDF_MAX_BYTES) {
+    throw new DocumentTooLargeError(storagePath, fileBytes.length);
+  }
+  return base64EncodeBinary(fileBytes);
 }
 
 function selectPcTemplateSlot(
@@ -1184,10 +1203,18 @@ async function autoPopulateFields(
     .eq("contractor_id", contractorId)
     .single();
 
+  const { data: homeownerProfile } = claimData?.user_id
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", claimData.user_id)
+        .single()
+    : { data: null };
+
   const fields: TextTabFields = {};
 
   if (claimData) {
-    fields.customer_name = signerName || "";
+    fields.customer_name = homeownerProfile?.full_name || "";
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
@@ -1313,7 +1340,11 @@ async function handleContractorSign(
       const { data: blob, error } = await supabase.storage.from("contractor-templates").download(storagePath);
       if (error) throw new Error(`Template download error: ${error.message}`);
       const ab = await blob.arrayBuffer();
-      templateBase64 = base64EncodeBinary(new Uint8Array(ab));
+      const templateBytes = new Uint8Array(ab);
+      if (templateBytes.length > PDF_MAX_BYTES) {
+        throw new DocumentTooLargeError(storagePath, templateBytes.length);
+      }
+      templateBase64 = base64EncodeBinary(templateBytes);
     } else {
       templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
     }
@@ -1966,6 +1997,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("create-docusign-envelope error:", error);
+
+    if (error instanceof DocumentTooLargeError) {
+      return new Response(
+        JSON.stringify({ error: error.code, message: error.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const message =
       error instanceof Error

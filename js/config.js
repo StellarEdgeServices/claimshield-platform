@@ -55,7 +55,7 @@ var CONFIG = {
 
   // ── Launch Gate ──
   // Set to true to open homeowner and partner pages. False keeps coming-soon.html active.
-  HOMEOWNER_LAUNCH_ENABLED: false,
+  HOMEOWNER_LAUNCH_ENABLED: true,
 };
 
 // ── Initialize Supabase Client ──
