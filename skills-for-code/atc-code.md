@@ -756,6 +756,26 @@ All ClickUp operations use `mcp__bbfecab5-2116-4d6b-99d8-19a7d6db65c6__` prefix:
 <!-- v1.6 — 2026-05-18 — Claude Code port of atc-SKILL.md v1.6 (R-034 / R-035) -->
 <!-- Adaptations: removed request_cowork_directory + allow_cowork_file_delete (not needed in Claude Code); Path constants (Windows); python3→python; bash rm→Path.unlink() for shard cleanup; handoffs/ folder read in Step 0; handoff file written in Step 8; all ClickUp MCP tool names explicit with mcp__bbfecab5-* prefix; GitHub API via bash curl in Step 4 branch drift -->
 
+---
+
+## Key Findings (R-061)
+
+Before completing R-048 closeout, surface any key findings from this run.
+A Key Finding is: anything learned about systems, processes, tools, or patterns
+that could improve future decisions or operations.
+
+Append each finding to `Claude's Memories/key-findings-inbox.md`:
+
+## [YYYY-MM-DD] [skill-name] — [one-line finding title]
+**Finding:** [one paragraph]
+**Domain:** CTO | Product | Marketing | Legal | Business
+**Source:** [task ID, PR, Sentry issue ID, or investigation reference]
+
+If no findings this run:
+_None this run._
+
+---
+
 ## Closeout Protocol (R-048)
 
 Before terminating, every run of this skill MUST complete the following steps:
