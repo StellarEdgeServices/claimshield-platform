@@ -34,9 +34,7 @@ LOOKBACK = 5
 # on 86e1fratf cluster. Remove a file from this set once it has been hardened.
 ALLOWLIST_NOTE = "tracked in 2026-05-21 bug-killer-code follow-up"
 ALLOWLIST: set[str] = {
-    "admin-warranty-drift.html",
-    "auth-callback.html",
-    "dashboard.html",
+    "auth-callback.html",  # Tier 2 — magic-link PKCE callback; silent return would mask CDN failures during auth
 }
 
 def find_unguarded(path: pathlib.Path) -> list[tuple[int, str]]:
