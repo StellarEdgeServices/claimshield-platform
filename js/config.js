@@ -2,7 +2,6 @@
 /**
  * OtterQuote — Global Configuration
  * All environment-specific values in one place.
- * STRIPE_PK is injected at build time by Netlify (netlify.toml [build] command).
  */
 
 var CONFIG = {
@@ -24,9 +23,7 @@ var CONFIG = {
   // NOTE: TWILIO_SID and TWILIO_TOKEN are server-side only (Edge Functions)
 
   // ── Stripe (payments: Hover fees, deductible escrow, contractor platform fees) ──
-  // Key injected at Netlify build time from STRIPE_PK env var (per-context in netlify.toml).
-  // pk_live_ for production, pk_test_ for staging — no hardcoded keys in source.
-  STRIPE_PK:     '%%STRIPE_PK%%',
+  STRIPE_PK:     'pk_live_51TCI2O0AJRnqIYPU4ybaUmt2FRxihUu4kMKXvjnrvfsWRHyoi8ptkVuyKsDs3Zq4dMrGniPGg5BxtAmZfukah5aI00K31rnCbk',
   // NOTE: STRIPE_SECRET_KEY is server-side only (Edge Functions)
 
   // ── DocuSign (e-signatures) ──
@@ -55,14 +52,14 @@ var CONFIG = {
   // When true, pages show sample data without requiring Supabase auth.
   // Set to false before production launch.
   DEMO_MODE: false,
+
+  // ── Launch Gate ──
+  // Set to true to open homeowner and partner pages. False keeps coming-soon.html active.
+  HOMEOWNER_LAUNCH_ENABLED: true,
 };
 
 // ── Initialize Supabase Client ──
-// Use window scope to avoid "sb declared twice" error on page script reloads or multiple loads.
-if (typeof window !== 'undefined') {
-  if (typeof window.sb === 'undefined' && typeof supabase !== 'undefined') {
-    window.sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || "sb-otterquote-auth" } });
-  }
+var sb; // var (not let) — allows safe early-load in <head> of gated pages alongside redirect guard
+if (typeof supabase !== 'undefined') {
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage } });
 }
-// Global reference for backward compatibility with code expecting `sb` in local scope
-var sb = (typeof window !== 'undefined') ? window.sb : undefined;

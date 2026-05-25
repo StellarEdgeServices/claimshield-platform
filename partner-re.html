@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- Coming-soon gate — flip CONFIG.HOMEOWNER_LAUNCH_ENABLED=true in js/config.js to remove -->
+<script src="js/config.js"></script>
+<script>(function(){if(typeof CONFIG!=='undefined'&&!CONFIG.HOMEOWNER_LAUNCH_ENABLED){window.location.replace('/coming-soon.html?from=partner-re&persona=partner');}})()</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -26,6 +29,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/design-system.css">
 <link rel="stylesheet" href="css/nav.css">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://otterquote.com"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Real Estate Partner Program",
+      "item": "https://otterquote.com/partner-re.html"
+    }
+  ]
+}
+</script>
 
 <style>
 /* ── Hero Section ── */
@@ -713,6 +738,26 @@
   }
 }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Otter Quotes",
+  "url": "https://otterquote.com",
+  "telephone": "844-875-3412",
+  "email": "info@otterquote.com",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "3410 N High School Rd, Ste G #102",
+    "addressLocality": "Indianapolis",
+    "addressRegion": "IN",
+    "postalCode": "46224",
+    "addressCountry": "US"
+  },
+  "description": "Otter Quotes helps homeowners get competing contractor bids for insurance claim repairs.",
+  "areaServed": "Indianapolis, IN and surrounding areas"
+}
+</script>
 </head>
 <body>
 
