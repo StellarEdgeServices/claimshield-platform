@@ -389,7 +389,7 @@ serve(async (req: Request) => {
       console.error(`[${FUNCTION_NAME}] activity_log insert failed (non-fatal):`, logError.message);
     }
 
-    // ── Homeowner notification (D-228) ─────────────────────────────────────────
+    // ── Homeowner notification (job-complete email) ──────────────────────────────
     // Resolve contractor display name for the email body.
     const { data: contractorProfile } = await supabase
       .from("profiles")
