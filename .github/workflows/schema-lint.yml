@@ -1,0 +1,36 @@
+name: Schema Column Lint
+
+on:
+  push:
+    branches: [staging, main]
+    paths:
+      - '**.html'
+      - 'js/**.js'
+      - 'supabase/functions/**'
+      - 'sql/schema-snapshot.json'
+      - 'scripts/schema-column-lint.py'
+  pull_request:
+    branches: [main]
+
+jobs:
+  schema-lint:
+    name: Schema contract check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # WARN-ONLY MODE: Initial rollout — violations exist in the codebase backlog.
+      # See ClickUp task [to be filed] for the violation list and remediation plan.
+      # Switch to fail-hard by removing the `|| true` once backlog is cleared.
+      - name: Run schema column linter (warn-only)
+        run: |
+          python3 scripts/schema-column-lint.py \
+            --root . \
+            --schema sql/schema-snapshot.json || true
+          echo "::notice::Schema linter ran in warn-only mode. FAIL lines above are real violations to fix. See ADR-010 for remediation plan."

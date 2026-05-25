@@ -50,6 +50,12 @@ Mark each item ✅ (pass) / ❌ (fail — stop) / N/A (genuinely not applicable 
 *(Skip if no schema changes in this deploy.)*
 - [ ] **Companion rollback script committed.** Every SQL migration file (`sql/vN-*.sql`) has a corresponding `sql/vN-rollback-*.sql` committed alongside it.
 - [ ] **Migration classified Tier 3.** Any deploy touching the database is Tier 3 — confirmed 2-hour window or explicit Dustin approval exists.
+- [ ] **Schema snapshot updated if columns added/removed.** If the migration adds or removes columns, regenerate `sql/schema-snapshot.json` and commit it in the same PR. Otherwise `schema-column-lint` CI will false-positive on the new columns.
+
+### Schema Contract
+*(Check if any `.html`, `js/**`, or `supabase/functions/**` files were modified.)*
+- [ ] **`schema-column-lint` CI passes.** Run locally: `python3 scripts/schema-column-lint.py --root . --schema sql/schema-snapshot.json`. Zero FAIL lines. (ADR-010-schema-column-lint)
+- [ ] **New write calls use exact schema column names.** No `coi_document_url` vs `coi_file_url`-style typos. Cross-reference `sql/schema-snapshot.json` if in doubt.
 
 ---
 
