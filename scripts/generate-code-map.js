@@ -8,7 +8,12 @@
  *   <repo>/Docs/code-map.json   — machine-readable map
  *   <repo>/Docs/code-map.md     — human-readable summary
  *
- * Usage: node scripts/generate-code-map.js [--repo-root <path>]
+ * Usage: node scripts/generate-code-map.js [--repo-root <path>] [--docs-dir <path>]
+ *        SUPABASE_MGMT_TOKEN=<sbp_...> SUPABASE_PROJECT_REF=<ref> node scripts/generate-code-map.js
+ *
+ * Fix (86e1fwe5r): Column-level schema tracking via Supabase Management API.
+ *   Set SUPABASE_MGMT_TOKEN and SUPABASE_PROJECT_REF env vars to enable.
+ *   Falls back to table-only mode when credentials are absent.
  *
  * EF call patterns detected:
  *   1. fetch(...) calls:     /functions/v1/<ef-name>
@@ -23,10 +28,11 @@ const path = require('path');
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const args     = process.argv.slice(2);
-const rootIdx  = args.indexOf('--repo-root');
+const args      = process.argv.slice(2);
+const rootIdx   = args.indexOf('--repo-root');
+const docsIdx   = args.indexOf('--docs-dir');
 const REPO_ROOT = rootIdx !== -1 ? args[rootIdx + 1] : path.resolve(__dirname, '..');
-const DOCS_DIR  = path.resolve(REPO_ROOT, 'Docs');
+const DOCS_DIR  = docsIdx !== -1 ? args[docsIdx + 1] : path.resolve(REPO_ROOT, 'Docs');
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -109,9 +115,69 @@ function buildJsEfCache(jsDir) {
 }
 
 // ---------------------------------------------------------------------------
+// Supabase column-level schema fetch (86e1fwe5r)
+// ---------------------------------------------------------------------------
+/**
+ * Fetch column metadata from Supabase via Management API.
+ * Requires SUPABASE_MGMT_TOKEN and SUPABASE_PROJECT_REF env vars.
+ * Returns { tableName: [{ column, type, nullable }] } or null on failure.
+ */
+async function fetchColumnMetadata() {
+  const mgmtToken  = process.env.SUPABASE_MGMT_TOKEN;
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  if (!mgmtToken || !projectRef) return null;
+
+  const url = `https://api.supabase.com/v1/projects/${projectRef}/database/query`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mgmtToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `SELECT table_name, column_name, data_type, is_nullable
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                ORDER BY table_name, ordinal_position`,
+      }),
+    });
+  } catch (err) {
+    console.warn(`[column-metadata] fetch failed: ${err.message}`);
+    return null;
+  }
+
+  if (!res.ok) {
+    console.warn(`[column-metadata] API error ${res.status}: ${await res.text()}`);
+    return null;
+  }
+
+  const rows = await res.json();
+  const tableMap = {};
+  for (const row of rows) {
+    if (!tableMap[row.table_name]) tableMap[row.table_name] = [];
+    tableMap[row.table_name].push({
+      column:   row.column_name,
+      type:     row.data_type,
+      nullable: row.is_nullable === 'YES',
+    });
+  }
+  return tableMap;
+}
+
+// ---------------------------------------------------------------------------
 // Main scan
 // ---------------------------------------------------------------------------
-function run() {
+async function run() {
+  // Fetch column-level schema data when credentials are available
+  const columnSchema = await fetchColumnMetadata();
+  if (columnSchema) {
+    console.log(`✓ column-level schema fetched for ${Object.keys(columnSchema).length} tables`);
+  } else {
+    console.log('  column-level schema: skipped (set SUPABASE_MGMT_TOKEN + SUPABASE_PROJECT_REF to enable)');
+  }
+
   const jsDir  = path.join(REPO_ROOT, 'js');
   const jsCache = buildJsEfCache(jsDir);
 
@@ -162,6 +228,7 @@ function run() {
   }
 
   // Build output
+  const tableCount = columnSchema ? Object.keys(columnSchema).length : 46;
   const output = {
     generated_date: TODAY,
     repo: 'otterquote-platform',
@@ -169,7 +236,8 @@ function run() {
     summary: {
       pages: htmlFiles.length,
       edge_functions: deployedEfCount || referencedEfNames.size,
-      sql_tables: 46, // maintained manually — schema changes tracked in sql/ migrations
+      sql_tables: tableCount,
+      column_tracking: columnSchema !== null,
       cross_references: {
         page_to_edge_function: totalPageToEf,
         edge_function_to_table: 131, // maintained manually — EF→table refs from supabase/functions
@@ -177,6 +245,7 @@ function run() {
       },
     },
     pages,
+    ...(columnSchema && { sql_tables_schema: columnSchema }),
   };
 
   // Write JSON
@@ -187,7 +256,8 @@ function run() {
   const md = buildMarkdown(output);
   fs.writeFileSync(path.join(DOCS_DIR, 'code-map.md'), md, 'utf8');
 
-  console.log(`✓ code-map generated: ${htmlFiles.length} pages, ${deployedEfCount} deployed EFs, ${referencedEfNames.size} referenced, ${totalPageToEf} page→EF refs`);
+  const columnMsg = columnSchema ? `, ${Object.keys(columnSchema).length} tables with column metadata` : '';
+  console.log(`✓ code-map generated: ${htmlFiles.length} pages, ${deployedEfCount} deployed EFs, ${referencedEfNames.size} referenced, ${totalPageToEf} page→EF refs${columnMsg}`);
   return output;
 }
 
@@ -238,4 +308,4 @@ function buildMarkdown(output) {
 }
 
 // ---------------------------------------------------------------------------
-run();
+run().catch(err => { console.error('generate-code-map failed:', err); process.exit(1); });

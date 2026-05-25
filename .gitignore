@@ -40,3 +40,7 @@ _drafts/
 # Handoff files — folder is tracked (via README), session notes are not
 handoffs/*
 !handoffs/README.md
+
+# Generated code-map artifacts — stored in Docs/ in Google Drive, not git
+Docs/code-map.json
+Docs/code-map.md
