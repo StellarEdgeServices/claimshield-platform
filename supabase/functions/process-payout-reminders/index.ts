@@ -31,8 +31,9 @@
  *   Call notify-payout-pending for each (in case pg_net failed on creation).
  *
  * ── Auth ─────────────────────────────────────────────────────────────────────
- *   No JWT required — invoked by pg_cron using service role bearer token.
- *   Listed in checklist exceptions (cron-invoked functions).
+ *   verify_jwt = false (see supabase/config.toml). Access is gated by CRON_SECRET
+ *   instead — callers must pass "Authorization: Bearer <CRON_SECRET>". The pg_cron
+ *   job must include this header. This is the standard Supabase cron-exception pattern.
  *
  * ── Rate limiting ─────────────────────────────────────────────────────────────
  *   Checked at function level (caller_id = null). Cap: 10/day.
@@ -50,6 +51,7 @@
  * Environment variables:
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   MAILGUN_API_KEY, MAILGUN_DOMAIN
+ *   CRON_SECRET          — shared secret; set via `supabase secrets set CRON_SECRET=<value>`
  *
  * ClickUp: 86e11617y
  */
@@ -184,6 +186,16 @@ serve(async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Cron-secret gate — required on all non-OPTIONS requests (verify_jwt = false for this function)
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabaseUrl    = Deno.env.get("SUPABASE_URL")!;
@@ -480,23 +492,18 @@ ${ctaButton("View Full History →", ADMIN_PAYOUTS_URL)}
     console.error(`[${FUNCTION_NAME}] Unhandled error:`, err);
     results.errors.push(String(err));
     results.elapsedMs = Date.now() - startTime;
+
+    await supabase.rpc("record_cron_health", {
+      p_job_name: FUNCTION_NAME,
+      p_status: "error",
+      p_error: String(err).substring(0, 500),
+    }).catch((e: unknown) => {
+      console.error(`[${FUNCTION_NAME}] Failed to record cron_health on error:`, e);
+    });
+
     return new Response(JSON.stringify({ ok: false, ...results }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    // Record cron health — unhandled error
-    const supabaseUrlErr = Deno.env.get("SUPABASE_URL");
-    const serviceKeyErr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (supabaseUrlErr && serviceKeyErr) {
-      const supabaseErr = createClient(supabaseUrlErr, serviceKeyErr);
-      const errorMsg = err?.message || String(err);
-      await supabaseErr.rpc("record_cron_health", {
-        p_job_name: FUNCTION_NAME,
-        p_status: "error",
-        p_error: errorMsg.length > 500 ? errorMsg.substring(0, 500) : errorMsg,
-      }).catch((e) => {
-        console.error(`[${FUNCTION_NAME}] Failed to record unhandled error in cron_health:`, e);
-      });
-    }
   }
 });
   

@@ -5349,23 +5349,24 @@
                 });
                 if (sbcError) {
                   console.error('[D-215] send-bid-confirmation invoke returned error (non-fatal):', sbcError);
-                  if (typeof Sentry !== 'undefined') {
+                  if (typeof Sentry !== 'undefined' && sbcError?.name !== 'FunctionsFetchError') {
                     Sentry.captureException(sbcError, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
                   }
                 }
               } catch (sbcErr) {
                 console.error('[D-215] send-bid-confirmation threw (non-fatal):', sbcErr);
-                if (typeof Sentry !== 'undefined') {
+                if (typeof Sentry !== 'undefined' && sbcErr?.name !== 'FunctionsFetchError') {
                   Sentry.captureException(sbcErr, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
                 }
               }
             }
 
             // GA4 conversion event — bid funnel
-            gtag('event', 'bid_submit', {
+            gtag('event', 'bid_submitted', {
               trade_types: Array.isArray(currentClaim.trades) ? currentClaim.trades : [],
               job_type: isRetailJob ? 'retail' : 'insurance',
-              bid_amount: quoteData.total_price,
+              claim_id: currentClaim.id,
+              amount: quoteData.total_price,
             });
           }
         }

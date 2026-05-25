@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- Coming-soon gate — flip CONFIG.HOMEOWNER_LAUNCH_ENABLED=true in js/config.js to remove -->
+<script src="js/config.js"></script>
+<script>(function(){if(typeof CONFIG!=='undefined'&&!CONFIG.HOMEOWNER_LAUNCH_ENABLED){window.location.replace('/coming-soon.html?from=login&persona=homeowner');}})()</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -223,12 +226,12 @@
 
         <p class="text-sm text-center" style="color: var(--gray);">
           Don't have an account yet?
-          <a href='/get-started' style='color: var(--amber); font-weight: 600;'>Create one free</a>
+          <a href="get-started.html" style="color: var(--amber); font-weight: 600;">Create one free</a>
         </p>
 
         <p class="text-sm text-center" style="color: var(--gray);">
           Are you a contractor?
-          <a href='/contractor-login' style='color: var(--amber); font-weight: 600;'>Sign in to your contractor account</a>
+          <a href="contractor-login.html" style="color: var(--amber); font-weight: 600;">Sign in to your contractor account</a>
         </p>
       </form>
 
@@ -332,20 +335,7 @@
 
     } catch (err) {
       console.error('Login error:', err);
-      // D-225 May 13 — detect Supabase Auth rate-limit specifically; the generic
-      // "Something went wrong" framing was alarming users who had clicked submit
-      // twice. Supabase embeds "after N seconds" in the rate-limit msg.
-      var rateLimitMatch = err && err.message && err.message.match(/after (\d+) seconds/i);
-      var nestedMsg = err && err.error && err.error.message;
-      var nestedMatch = nestedMsg && nestedMsg.match(/after (\d+) seconds/i);
-      var match = rateLimitMatch || nestedMatch;
-      if (match || (err && (err.status === 429 || (err.message && /rate|limit|security purposes/i.test(err.message))))) {
-        var seconds = match ? match[1] : null;
-        errorEl.textContent = 'We already sent you a login link. Check your inbox (and spam folder).'
-          + (seconds ? ' You can request another in ' + seconds + ' seconds if needed.' : ' Please wait a moment before requesting another.');
-      } else {
-        errorEl.textContent = 'Something went wrong. Please try again.';
-      }
+      errorEl.textContent = 'Something went wrong. Please try again.';
       errorEl.style.display = 'block';
     } finally {
       submitBtn.classList.remove('btn-loading');
@@ -396,18 +386,6 @@
       if (user) {
         await Auth.redirectToDashboard();
       }
-    });
-  } else {
-    // Came from admin gate. If the user already has a valid admin session but
-    // sb_at is stale, Auth.ready() refreshes the cookie as a side effect and
-    // we silently redirect back to the admin panel (no re-login needed).
-    Auth.ready().then(function(authState) {
-      if (authState && authState.isAdmin) {
-        window.location.href = '/admin-contractors.html';
-      }
-      // Non-admin or no session: stay on page so "admin required" banner shows.
-    }).catch(function() {
-      // No session or timeout: stay on page (existing behavior).
     });
   }
 })();

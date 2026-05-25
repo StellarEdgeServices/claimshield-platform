@@ -34,6 +34,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.0";
 
 const FUNCTION_NAME = "create-docusign-envelope";
 
+const PDF_MAX_BYTES = 3_000_000;
+
+class DocumentTooLargeError extends Error {
+  readonly statusCode = 400;
+  readonly code = "DOCUMENT_TOO_LARGE";
+  constructor(fileName: string, bytes: number) {
+    super(`PDF "${fileName}" is ${(bytes / 1_000_000).toFixed(1)} MB — exceeds the 3 MB limit. Upload a smaller file.`);
+    this.name = "DocumentTooLargeError";
+  }
+}
+
 // CORS tightened Apr 15, 2026 (Session 195): sensitive function (contract
 // envelope creation + DocuSign signing URL generation) — origin allowlisted
 // instead of wildcard. Matches the Session 181 pattern applied to send-sms,
@@ -56,6 +67,26 @@ function buildCorsHeaders(req: Request): Record<string, string> {
       "authorization, x-client-info, apikey, content-type",
     "Vary": "Origin",
   };
+}
+
+// ========== GA4 MEASUREMENT PROTOCOL ==========
+async function sendGA4Event(eventName: string, params: Record<string, unknown> = {}): Promise<void> {
+  const measurementId = Deno.env.get("GA4_MEASUREMENT_ID");
+  const apiSecret = Deno.env.get("GA4_API_SECRET");
+  if (!measurementId || !apiSecret) return;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: "server",
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (_) { /* non-fatal */ }
 }
 
 // ========== TOKEN CACHE ==========
@@ -249,9 +280,13 @@ async function getTemplateFromStorage(
     }
 
     const arrayBuffer = await data.arrayBuffer();
-    const base64 = base64EncodeBinary(new Uint8Array(arrayBuffer));
-    return base64;
+    const fileBytes = new Uint8Array(arrayBuffer);
+    if (fileBytes.length > PDF_MAX_BYTES) {
+      throw new DocumentTooLargeError(filePath, fileBytes.length);
+    }
+    return base64EncodeBinary(fileBytes);
   } catch (err) {
+    if (err instanceof DocumentTooLargeError) throw err;
     throw new Error(
       `Failed to retrieve template PDF (${bucketName}/${filePath}): ${err.message}`
     );
@@ -292,7 +327,11 @@ async function getPcTemplateFromStorage(supabase: any, fileUrl: string): Promise
   }
 
   const arrayBuffer = await data.arrayBuffer();
-  return base64EncodeBinary(new Uint8Array(arrayBuffer));
+  const fileBytes = new Uint8Array(arrayBuffer);
+  if (fileBytes.length > PDF_MAX_BYTES) {
+    throw new DocumentTooLargeError(storagePath, fileBytes.length);
+  }
+  return base64EncodeBinary(fileBytes);
 }
 
 function selectPcTemplateSlot(
@@ -1184,10 +1223,18 @@ async function autoPopulateFields(
     .eq("contractor_id", contractorId)
     .single();
 
+  const { data: homeownerProfile } = claimData?.user_id
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", claimData.user_id)
+        .single()
+    : { data: null };
+
   const fields: TextTabFields = {};
 
   if (claimData) {
-    fields.customer_name = signerName || "";
+    fields.customer_name = homeownerProfile?.full_name || "";
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
@@ -1313,7 +1360,11 @@ async function handleContractorSign(
       const { data: blob, error } = await supabase.storage.from("contractor-templates").download(storagePath);
       if (error) throw new Error(`Template download error: ${error.message}`);
       const ab = await blob.arrayBuffer();
-      templateBase64 = base64EncodeBinary(new Uint8Array(ab));
+      const templateBytes = new Uint8Array(ab);
+      if (templateBytes.length > PDF_MAX_BYTES) {
+        throw new DocumentTooLargeError(storagePath, templateBytes.length);
+      }
+      templateBase64 = base64EncodeBinary(templateBytes);
     } else {
       templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
     }
@@ -1325,7 +1376,32 @@ async function handleContractorSign(
 
   const contractDate = new Date().toLocaleDateString("en-US");
   const contractorName = contractorData?.company_name || signer.name || "Contractor";
-  const homeownerName = autoFields.customer_name || "Homeowner";
+
+  // Resolve homeowner identity from profiles before PDF generation.
+  // autoFields.customer_name is set from signer.name (contractor) in autoPopulateFields,
+  // so it must NOT be used as the homeowner name — doing so causes UNKNOWN_ENVELOPE_RECIPIENT
+  // when handleHomeownerSign tries to create the recipient view (PFW canary 2026-05-20).
+  let homeownerEmail = "homeowner@placeholder.otterquote.com";
+  let homeownerFullName = "Homeowner";
+  if (claimData?.user_id) {
+    const { data: hwProfileData } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", claimData.user_id)
+      .single();
+    if (hwProfileData) {
+      homeownerEmail = hwProfileData.email || homeownerEmail;
+      homeownerFullName = hwProfileData.full_name || "Homeowner";
+    }
+  }
+  if (homeownerFullName === contractorName || homeownerFullName.trim().length === 0) {
+    console.error(
+      `[create-docusign-envelope] homeowner name mismatch: homeownerFullName="${homeownerFullName}", ` +
+      `contractorName="${contractorName}", claim_id=${claim_id} — falling back to "Homeowner"`
+    );
+    homeownerFullName = "Homeowner";
+  }
+  const homeownerName = homeownerFullName;
   const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
 
   const isRetail = fundingType !== "insurance";
@@ -1365,20 +1441,6 @@ async function handleContractorSign(
   const addendumDocId = isRetail && scopeOfWorkBase64 ? "3" : "2";
   const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
   const contractorTabs = buildSignerTabs(documentId, "contractor");
-
-  let homeownerEmail = "homeowner@placeholder.otterquote.com";
-  let homeownerFullName = homeownerName;
-  if (claimData?.user_id) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", claimData.user_id)
-      .single();
-    if (profileData) {
-      homeownerEmail = profileData.email || homeownerEmail;
-      homeownerFullName = profileData.full_name || homeownerFullName;
-    }
-  }
 
   const docLabel = getDocumentLabel("contractor_sign");
 
@@ -1790,6 +1852,7 @@ async function handleLegacyFlow(
   if (!envelopeId) throw new Error("No envelopeId returned from DocuSign");
 
   console.log(`Envelope created (${document_type}): ${envelopeId}`);
+  await sendGA4Event("envelope_sent", { document_type, envelope_id: envelopeId, claim_id });
 
   const defaultReturnUrl = document_type === "project_confirmation"
     ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
@@ -1955,6 +2018,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("create-docusign-envelope error:", error);
+
+    if (error instanceof DocumentTooLargeError) {
+      return new Response(
+        JSON.stringify({ error: error.code, message: error.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const message =
       error instanceof Error
