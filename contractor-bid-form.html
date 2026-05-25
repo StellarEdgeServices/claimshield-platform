@@ -5362,10 +5362,11 @@
             }
 
             // GA4 conversion event — bid funnel
-            gtag('event', 'bid_submit', {
+            gtag('event', 'bid_submitted', {
               trade_types: Array.isArray(currentClaim.trades) ? currentClaim.trades : [],
               job_type: isRetailJob ? 'retail' : 'insurance',
-              bid_amount: quoteData.total_price,
+              claim_id: currentClaim.id,
+              amount: quoteData.total_price,
             });
           }
         }
