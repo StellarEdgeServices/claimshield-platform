@@ -27,6 +27,14 @@
         gtag('js', new Date());
         gtag('config', 'G-JNQ6XR3LX2');
     </script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwr7qlk8g5");
+</script>
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -37,27 +45,6 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/nav.css">
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": "https://otterquote.com"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Join as a Contractor",
-      "item": "https://otterquote.com/contractor-join.html"
-    }
-  ]
-}
-</script>
     <style>
         :root {
             --navy: #0D1B2E;
@@ -102,28 +89,54 @@
         .success-message { display: none; background-color: #D1FAE5; border: 1px solid #6EE7B7; color: #065F46; padding: var(--sp-8); border-radius: var(--radius-md); margin-bottom: var(--sp-8); text-align: center; }
         .success-message.show { display: block; }
         .fee-box { background: rgba(224,123,0,0.07); border-left: 4px solid var(--amber); border-radius: 0.5rem; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+        .oauth-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0 18px 0;
+            color: #94A3B8;
+            font-size: 0.875rem;
+        }
+        .oauth-divider::before, .oauth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: var(--radius-md);
+            background: rgba(255,255,255,0.04);
+            color: var(--white);
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+        .btn-google:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.25);
+            box-shadow: 0 4px 12px rgba(224,123,0,0.15);
+        }
+        .btn-google:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-google svg {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+        }
         @media (max-width: 768px) { .hero h1 { font-size: 2.5rem; } .form-container { padding: var(--sp-6); } .form-section h2 { font-size: 1.75rem; } }
     </style>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "Otter Quotes",
-      "url": "https://otterquote.com",
-      "telephone": "844-875-3412",
-      "email": "info@otterquote.com",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "3410 N High School Rd, Ste G #102",
-        "addressLocality": "Indianapolis",
-        "addressRegion": "IN",
-        "postalCode": "46224",
-        "addressCountry": "US"
-      },
-      "description": "Otter Quotes helps homeowners get competing contractor bids for insurance claim repairs.",
-      "areaServed": "Indianapolis, IN and surrounding areas"
-    }
-    </script>
 </head>
 <body>
     <header id="site-header" data-auth="true"></header>
@@ -204,6 +217,16 @@
                 </div>
 
                 <form id="contractorForm">
+                    <button type="button" class="btn-google" id="google-btn">
+                        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Sign in with Google
+                    </button>
+                    <div class="oauth-divider"><span>or sign up with email</span></div>
                     <div class="form-group">
                         <label for="businessEmail" class="form-label required">Business Email</label>
                         <input type="email" id="businessEmail" name="businessEmail" class="form-input" placeholder="you@yourcompany.com" required>
@@ -297,7 +320,7 @@
                 localStorage.setItem('cs_auth_role', 'contractor');
 
                 // Send magic link — call Supabase directly so we control redirectTo
-                const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
+                const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
                 const redirectTo = `${window.location.origin}/contractor-pre-approval.html`;
 
                 const { error } = await sb.auth.signInWithOtp({
@@ -326,6 +349,54 @@
                 alert(err.message || 'Something went wrong. Please try again or contact support@otterquote.com.');
             }
         });
+    // D-207: Google OAuth sign-in
+    document.getElementById('google-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('google-btn');
+        btn.disabled = true;
+        btn.textContent = 'Redirecting to Google…';
+        localStorage.setItem('cs_auth_role', 'contractor');
+        try {
+            await Auth.signInWithGoogle('/auth-callback.html?intent=contractor');
+        } catch (err) {
+            console.error('Google sign-in error:', err);
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Sign in with Google';
+            const errorEl = document.getElementById('form-error');
+            if (errorEl) {
+                errorEl.textContent = 'Google sign-in failed. Please try again or use email below.';
+                errorEl.style.display = 'block';
+            }
+        }
+    });
+
+        // D-207: Google OAuth sign-in for contractor sign-up
+    (async function initGoogleButton() {
+        // Wait for Auth module to be ready
+        if (typeof Auth !== 'undefined' && Auth.ready) {
+            try {
+                await Auth.ready();
+            } catch (e) {
+                console.warn('Auth.ready() not available, continuing anyway');
+            }
+        }
+        
+        const googleBtn = document.getElementById('google-btn');
+        if (googleBtn) {
+            googleBtn.addEventListener('click', async () => {
+                const btn = document.getElementById('google-btn');
+                btn.disabled = true;
+                btn.innerHTML = 'Redirecting to Google…';
+                localStorage.setItem('cs_auth_role', 'contractor');
+                try {
+                    await Auth.signInWithGoogle('/auth-callback.html?intent=contractor');
+                } catch (err) {
+                    console.error('Google sign-in error:', err);
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Sign in with Google';
+                }
+            });
+        }
+    })();
 
 </script>
     <script>

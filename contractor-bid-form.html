@@ -19,6 +19,14 @@
     gtag('js', new Date());
     gtag('config', 'G-JNQ6XR3LX2');
   </script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwr7qlk8g5");
+</script>
 
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1168,6 +1176,91 @@
     @media (max-width: 600px) {
       .hover-thumb-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ── Rescind Mode (action=rescind) ── */
+    #rescindConfirmCard {
+      background: #FEF2F2;
+      border: 2px solid #FECACA;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      margin-bottom: var(--sp-8);
+    }
+    .rescind-title {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #991B1B;
+      margin-bottom: var(--sp-4);
+    }
+    .rescind-body {
+      color: #7F1D1D;
+      font-size: 0.95rem;
+      margin-bottom: var(--sp-6);
+      line-height: 1.6;
+    }
+    .rescind-bid-detail {
+      background: #FFF;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius-md);
+      padding: var(--sp-4);
+      margin-bottom: var(--sp-6);
+      font-size: 0.875rem;
+      color: var(--navy);
+      line-height: 1.7;
+    }
+    .btn-rescind-confirm {
+      background: #DC2626;
+      color: #FFF;
+      border: none;
+      padding: var(--sp-3) var(--sp-6);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: var(--sp-4);
+      transition: background 0.15s;
+    }
+    .btn-rescind-confirm:hover:not(:disabled) { background: #B91C1C; }
+    .btn-rescind-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-rescind-cancel {
+      background: transparent;
+      color: var(--navy);
+      border: 1px solid #CBD5E1;
+      padding: var(--sp-3) var(--sp-6);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .btn-rescind-cancel:hover { border-color: var(--navy); }
+    #rescindSuccessCard {
+      display: none;
+      background: #F0FDF4;
+      border: 2px solid #BBF7D0;
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8);
+      margin-bottom: var(--sp-8);
+      text-align: center;
+    }
+    .rescind-success-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #14532D;
+      margin-bottom: var(--sp-3);
+    }
+    #rescindErrorMsg {
+      display: none;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius-md);
+      padding: var(--sp-3) var(--sp-4);
+      color: #991B1B;
+      font-size: 0.875rem;
+      margin-top: var(--sp-4);
+    }
   </style>
 </head>
 <body>
@@ -1194,6 +1287,24 @@
           <div style="font-size:0.9rem; color:#166534;">Your previous bid details are pre-filled below. Adjust anything if needed, then click <strong>Renew Bid</strong> to re-submit with a fresh 14-day validity window. Max 3 renewals total (42 days).</div>
         </div>
       </div>
+    </div>
+
+    <!-- RESCIND MODE: shown when contractor arrives via ?action=rescind in email link -->
+    <div id="rescindConfirmCard" style="display:none;">
+      <div class="rescind-title">⚠️ Rescind Your Bid</div>
+      <p class="rescind-body">You are about to withdraw your bid for this project. This action cannot be undone. Your bid will be removed and the homeowner will be notified.</p>
+      <div id="rescindBidDetail" class="rescind-bid-detail">Loading bid details…</div>
+      <div>
+        <button class="btn-rescind-confirm" id="rescindConfirmBtn" disabled>Yes, Rescind My Bid</button>
+        <button class="btn-rescind-cancel" id="rescindCancelBtn">Cancel</button>
+      </div>
+      <div id="rescindErrorMsg"></div>
+    </div>
+
+    <!-- Rescind success state -->
+    <div id="rescindSuccessCard">
+      <div class="rescind-success-title">✅ Bid Rescinded</div>
+      <p style="color:#166534; margin-bottom:var(--sp-6);">Your bid has been successfully withdrawn. Redirecting you to your dashboard…</p>
     </div>
 
     <div class="page-header">
@@ -2277,7 +2388,6 @@
   <footer id="site-footer"></footer>
 
   <!-- Scripts -->
-  <script src="js/cookie-storage.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
@@ -5006,13 +5116,7 @@
             }
           }
           const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
-          // C2 fix: use the dynamic platform fee from window._feePct (set by
-          // updateFeeDisclosure() above). Hardcoded 5.0 made quotes.fee_percentage and
-          // quotes.fee_amount contradict quotes.platform_fee_pct (which uses _feePct)
-          // and fee_acceptances.fee_pct — financial-record integrity issue.
-          const feePercentage = (typeof window._feePct === 'number' && window._feePct > 0)
-            ? window._feePct
-            : (typeof _platformFeePct === 'number' && _platformFeePct > 0 ? _platformFeePct : 5.0);
+          const feePercentage = 5.0;
 
           // Insurance jobs: fee is based on RCV from loss sheet, not bid amount
           let feeBase = totalPrice;
@@ -5328,45 +5432,39 @@
                 }
               }
 
-              // ── D-215 Layer 2 / D-225 Phase 2C C1: fire send-bid-confirmation EF ──
-              // UETA evidence email (Layer 2 of D-215). Fire-and-forget: quote + fee_acceptance
-              // are already committed; email send failure is non-fatal. Logs to Sentry.
+              // ── D-215 Layer 2: Send bid confirmation email (UETA evidence) ──
+              // Runs after fee_acceptances insert. Non-fatal: quote and Layer 1 record
+              // are already committed. send-bid-confirmation EF handles its own JWT
+              // verification; sb.functions.invoke() passes the user's session token.
               try {
-                const tradeStr = Array.isArray(quoteData.trades)
-                  ? quoteData.trades.join(', ')
-                  : (quoteData.trade || (Array.isArray(currentClaim?.trades) ? currentClaim.trades.join(', ') : ''));
-                const { error: sbcError } = await sb.functions.invoke('send-bid-confirmation', {
+                const tradeLabel = wizardMode && wizardTradeQueue.length > 0
+                  ? wizardTradeQueue.join(', ')
+                  : (Array.isArray(currentClaim.trades) ? currentClaim.trades.join(', ') : 'roofing');
+                await sb.functions.invoke('send-bid-confirmation', {
                   body: {
                     quote_id: insertedQuote.id,
                     contractor_id: currentContractor.id,
-                    bid_amount: Number(quoteData.total_price),
+                    bid_amount: quoteData.total_price,
                     platform_fee_pct: _feePct,
                     platform_fee_amount: _feeAmount,
-                    net_amount: Number(quoteData.total_price) - Number(_feeAmount),
-                    property_address: currentClaim?.property_address || '',
-                    trade: tradeStr,
-                  }
+                    trade: tradeLabel,
+                  },
                 });
-                if (sbcError) {
-                  console.error('[D-215] send-bid-confirmation invoke returned error (non-fatal):', sbcError);
-                  if (typeof Sentry !== 'undefined' && sbcError?.name !== 'FunctionsFetchError') {
-                    Sentry.captureException(sbcError, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
-                  }
-                }
-              } catch (sbcErr) {
-                console.error('[D-215] send-bid-confirmation threw (non-fatal):', sbcErr);
-                if (typeof Sentry !== 'undefined' && sbcErr?.name !== 'FunctionsFetchError') {
-                  Sentry.captureException(sbcErr, { extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }});
+              } catch (emailErr) {
+                console.error('[D-215 Layer 2] send-bid-confirmation failed (non-fatal, bid committed):', emailErr);
+                if (typeof Sentry !== 'undefined') {
+                  Sentry.captureException(emailErr, {
+                    extra: { bid_id: insertedQuote.id, claim_id: currentClaim.id, contractor_id: currentContractor.id }
+                  });
                 }
               }
             }
 
             // GA4 conversion event — bid funnel
-            gtag('event', 'bid_submitted', {
+            gtag('event', 'bid_submit', {
               trade_types: Array.isArray(currentClaim.trades) ? currentClaim.trades : [],
               job_type: isRetailJob ? 'retail' : 'insurance',
-              claim_id: currentClaim.id,
-              amount: quoteData.total_price,
+              bid_amount: quoteData.total_price,
             });
           }
         }
@@ -5482,7 +5580,7 @@
     // ── Initialize ──
     document.addEventListener('DOMContentLoaded', () => {
       if (!sb && typeof supabase !== 'undefined') {
-        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON, { auth: { storage: window.OtterQuoteCookieStorage, storageKey: window.OTTERQUOTE_AUTH_STORAGE_KEY || 'sb-otterquote-auth' } });
+        sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
       }
 
       // Wire up bid type UI
@@ -5508,6 +5606,12 @@
         if (actionParam === 'sign') {
           console.log('action=sign is deprecated — contract signing occurs after homeowner selection');
           // Fall through to normal bid form behavior
+        }
+
+        // action=rescind — contractor clicked "Rescind My Bid" in confirmation email
+        if (actionParam === 'rescind') {
+          await initRescindMode();
+          return; // Skip normal bid form initialization
         }
 
         // Multi-trade project check (non-wizard path)
@@ -5579,6 +5683,139 @@
     // ═══════════════════════════════════════════════════════════════
     // CONTRACT SIGNING — IC 24-5-11 Contractor-Signs-First Flow
     // ═══════════════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════════════
+    // RESCIND MODE — action=rescind URL param handler
+    // Called when contractor clicks "Rescind My Bid" in confirmation email.
+    // EF: rescind-bid requires quote_id + contractor_id (JWT-gated).
+    // ══════════════════════════════════════════════════════════════
+
+    async function initRescindMode() {
+      // Hide the normal bid form and all form sections that don't apply
+      ['bidFormCard', 'tradeSelectionCard', 'perTradeBreakdown', 'hoverHomePhotosCard',
+       'wizardProgressBar', 'wizardStep1Card', 'wizardStep3Card', 'feeDisclosureSection',
+       'contractSigningStep', 'changeBidBanner', 'renewBidBanner'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+
+      const card = document.getElementById('rescindConfirmCard');
+      if (card) card.style.display = 'block';
+
+      const detailEl = document.getElementById('rescindBidDetail');
+
+      // Require auth
+      if (!sb) {
+        if (detailEl) detailEl.textContent = 'Session error — please log in and try again.';
+        return;
+      }
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        if (detailEl) detailEl.innerHTML =
+          'You must be logged in to rescind your bid. <a href="login.html" style="color:#DC2626;">Log in</a>';
+        return;
+      }
+
+      // currentClaim and currentContractor are set by init() which runs before startUp()
+      if (!currentClaim || !currentContractor) {
+        if (detailEl) detailEl.textContent = 'Could not load claim details. Please contact support.';
+        return;
+      }
+
+      // Look up the contractor's active quote for this claim
+      const { data: quote, error: quoteErr } = await sb
+        .from('quotes')
+        .select('id, total_price, bid_status, created_at')
+        .eq('claim_id', currentClaim.id)
+        .eq('contractor_id', currentContractor.id)
+        .maybeSingle();
+
+      if (quoteErr || !quote) {
+        if (detailEl) detailEl.textContent =
+          'No active bid found for this project. It may have already been withdrawn or does not exist.';
+        return;
+      }
+
+      const RESCINDABLE = ['submitted', 'pending', 'under_review'];
+      if (!RESCINDABLE.includes(quote.bid_status)) {
+        if (detailEl) detailEl.innerHTML =
+          `<strong>Bid status: ${quote.bid_status}</strong><br>This bid cannot be withdrawn at its current stage. Only submitted, pending, or under-review bids can be rescinded.`;
+        return;
+      }
+
+      // Store quote_id for the confirm handler
+      window._rescindQuoteId = quote.id;
+
+      const fmt = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (detailEl) detailEl.innerHTML =
+        `<strong>Bid Amount:</strong> ${fmt(quote.total_price)}<br>` +
+        `<strong>Status:</strong> ${quote.bid_status}<br>` +
+        `<strong>Submitted:</strong> ${new Date(quote.created_at).toLocaleDateString()}`;
+
+      // Enable confirm button and wire up cancel
+      const confirmBtn = document.getElementById('rescindConfirmBtn');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.addEventListener('click', confirmRescind);
+      }
+      const cancelBtn = document.getElementById('rescindCancelBtn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => { window.location.href = 'contractor-dashboard.html'; });
+      }
+    }
+
+    async function confirmRescind() {
+      const btn = document.getElementById('rescindConfirmBtn');
+      const errEl = document.getElementById('rescindErrorMsg');
+      if (btn) { btn.disabled = true; btn.textContent = 'Rescinding…'; }
+      if (errEl) errEl.style.display = 'none';
+
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/rescind-bid', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (session?.access_token || ''),
+            'apikey': CONFIG.SUPABASE_ANON,
+          },
+          body: JSON.stringify({
+            quote_id: window._rescindQuoteId,
+            contractor_id: currentContractor.id,
+            reason: 'contractor_initiated',
+          }),
+        });
+
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}));
+          throw new Error(errBody.error || 'HTTP ' + resp.status);
+        }
+
+        // Success — swap cards, then redirect
+        const confirmCard = document.getElementById('rescindConfirmCard');
+        const successCard = document.getElementById('rescindSuccessCard');
+        if (confirmCard) confirmCard.style.display = 'none';
+        if (successCard) successCard.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        setTimeout(() => {
+          window.location.href = 'contractor-dashboard.html';
+        }, 3000);
+
+      } catch (err) {
+        console.error('[Rescind] confirmRescind error:', err);
+        if (btn) { btn.disabled = false; btn.textContent = 'Yes, Rescind My Bid'; }
+        if (errEl) {
+          errEl.textContent = err.message || 'Failed to rescind bid. Please try again or contact support.';
+          errEl.style.display = 'block';
+        }
+        if (typeof Sentry !== 'undefined') {
+          Sentry.captureException(err, {
+            extra: { quote_id: window._rescindQuoteId, contractor_id: currentContractor?.id }
+          });
+        }
+      }
+    }
 
     /**
      * DEPRECATED: This function is no longer called after bid submission.

@@ -19,6 +19,14 @@
         gtag('js', new Date());
         gtag('config', 'G-JNQ6XR3LX2');
     </script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwr7qlk8g5");
+</script>
 
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -124,7 +132,7 @@
             margin-top: var(--sp-8);
         }
 
-        .opportunities-table {
+        .leads-table {
             width: 100%;
             border-collapse: collapse;
             background: var(--white);
@@ -134,12 +142,12 @@
             margin-bottom: var(--sp-12);
         }
 
-        .opportunities-table thead {
+        .leads-table thead {
             background: #F9FAFB;
             border-bottom: 2px solid #E5E7EB;
         }
 
-        .opportunities-table th {
+        .leads-table th {
             padding: var(--sp-4);
             font-family: var(--font-body);
             font-size: 0.875rem;
@@ -150,7 +158,7 @@
             letter-spacing: 0.05em;
         }
 
-        .opportunities-table td {
+        .leads-table td {
             padding: var(--sp-4);
             font-family: var(--font-body);
             font-size: 0.95rem;
@@ -158,11 +166,11 @@
             border-bottom: 1px solid #E5E7EB;
         }
 
-        .opportunities-table tbody tr:hover {
+        .leads-table tbody tr:hover {
             background: #F9FAFB;
         }
 
-        .job-id {
+        .lead-id {
             font-family: var(--font-body);
             font-weight: 600;
             color: var(--navy);
@@ -665,12 +673,12 @@
                 gap: var(--sp-4);
             }
 
-            .opportunities-table {
+            .leads-table {
                 font-size: 0.85rem;
             }
 
-            .opportunities-table th,
-            .opportunities-table td {
+            .leads-table th,
+            .leads-table td {
                 padding: var(--sp-3);
             }
 
@@ -783,7 +791,7 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <span class="stat-card-label">Available Opportunities</span>
-                <span class="stat-card-value" id="availableOpportunitiesCount">&mdash;</span>
+                <span class="stat-card-value" id="availableLeadsCount">&mdash;</span>
                 <a href="contractor-opportunities.html" class="stat-card-link">View All →</a>
             </div>
             <div class="stat-card">
@@ -805,7 +813,7 @@
 
         <!-- Your Submitted Bids (awaiting homeowner decision) -->
         <h2 class="section-header" id="pendingBidsSection">Your Submitted Bids</h2>
-        <table class="opportunities-table" id="pendingBidsTable">
+        <table class="leads-table" id="pendingBidsTable">
             <thead>
                 <tr>
                     <th>Project Area</th>
@@ -823,7 +831,7 @@
 
         <!-- Active Projects (won/awarded/completed) -->
         <h2 class="section-header" id="projectsTable" style="margin-top: var(--sp-10);">Active &amp; Won Projects</h2>
-        <table class="opportunities-table" id="wonJobsTable">
+        <table class="leads-table" id="leadsTable">
             <thead>
                 <tr>
                     <th>Project ID</th>
@@ -836,7 +844,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="wonJobsTableBody">
+            <tbody id="leadsTableBody">
                 <!-- Populated by JavaScript -->
             </tbody>
         </table>
@@ -984,7 +992,7 @@
         // State
         let currentUser = null;
         let currentContractor = null;
-        let allJobs = [];
+        let allLeads = [];
         let allActivity = [];
 
         // Format relative time for activity feed
@@ -1069,9 +1077,9 @@
                                 agreement_version: today,
                                 // Stamp cpa_version on first acceptance so new contractors
                                 // never see the re-acceptance modal for the current version.
-                                cpa_version:     CURRENT_CPA_VERSION,
-                                cpa_accepted_at: now,
-                                needs_cpa_reattestation: false,
+                                cpa_version:              CURRENT_CPA_VERSION,
+                                cpa_accepted_at:          now,
+                                needs_cpa_reattestation:  false,
                             })
                             .eq('id', currentContractor.id);
 
@@ -1149,9 +1157,9 @@
                         }
 
                         // 4. Update in-memory state
-                        currentContractor.cpa_version     = CURRENT_CPA_VERSION;
-                        currentContractor.cpa_accepted_at = now;
-                        currentContractor.needs_cpa_reattestation = false;
+                        currentContractor.cpa_version              = CURRENT_CPA_VERSION;
+                        currentContractor.cpa_accepted_at          = now;
+                        currentContractor.needs_cpa_reattestation  = false;
 
                         // 5. Clear redirect guard so guard pages stop bouncing
                         localStorage.removeItem('oq_cpa_redirect_guard');
@@ -1268,7 +1276,7 @@
                 } catch (err) {
                   console.error('Error loading opportunity count:', err);
                 }
-                document.getElementById('availableOpportunitiesCount').textContent = availableCount;
+                document.getElementById('availableLeadsCount').textContent = availableCount;
 
                 // Active bids = quotes with status 'pending' or 'submitted'
                 // (use contractor.id, NOT currentUser.id — contractor_id on quotes is contractors table PK)
@@ -1376,7 +1384,7 @@
                     }
                   });
 
-                  allJobs = activeProjects;
+                  allLeads = activeProjects;
                   window._pendingBids = pendingBids; // available for populateDashboard
                 }
 
@@ -1395,13 +1403,9 @@
                     type: evt.event_type,
                   }));
                 }
-              } else {
-                // Contractor profile not found — clear the loading spinner
-                document.getElementById('serviceAreaText').textContent = 'Service area: Not configured — complete your profile';
               }
             } catch (err) {
               console.error('Error loading contractor data:', err);
-              document.getElementById('serviceAreaText').textContent = 'Service area: Could not load — please refresh';
             }
           }
 
@@ -1524,10 +1528,10 @@
               }
             }
 
-            // Populate jobs table
-            const jobsBody = document.getElementById('wonJobsTableBody');
-            if (allJobs.length === 0) {
-                jobsBody.innerHTML = `
+            // Populate leads table
+            const leadsBody = document.getElementById('leadsTableBody');
+            if (allLeads.length === 0) {
+                leadsBody.innerHTML = `
                     <tr>
                         <td colspan="8" style="text-align: center; padding: var(--sp-8);">
                             <div class="empty-state">
@@ -1539,39 +1543,39 @@
                     </tr>
                 `;
             } else {
-                jobsBody.innerHTML = allJobs.map(job => {
+                leadsBody.innerHTML = allLeads.map(lead => {
                     // Actions column: "Mark Job Complete" button for active won jobs,
                     // "Completed [date]" badge once done, "—" for anything else.
                     let actionsCell = '<span style="color: var(--slate);">—</span>';
-                    if (job.completionDate) {
-                        const dateStr = new Date(job.completionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        if (job.warrantyUrl) {
+                    if (lead.completionDate) {
+                        const dateStr = new Date(lead.completionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        if (lead.warrantyUrl) {
                             actionsCell = `<span class="status-badge" style="background:#DCFCE7; color:#15803D; border:1px solid #BBF7D0; white-space:nowrap;">✅ Completed ${dateStr}</span>` +
                                 `<br><span style="font-size:0.75rem; color:#15803D; font-weight:600; display:block; margin-top:4px;">📄 Warranty: ✓</span>`;
                         } else {
                             actionsCell = `<span class="status-badge" style="background:#DCFCE7; color:#15803D; border:1px solid #BBF7D0; white-space:nowrap;">✅ Completed ${dateStr}</span>` +
-                                `<br><button class="btn btn-sm upload-warranty-btn" data-claim-id="${job.fullId}" data-quote-id="${job.quoteId}" style="margin-top:4px; font-size:0.75rem; padding:2px 8px; background:transparent; color:#0284C7; border:1px solid #0284C7; border-radius:0.25rem; cursor:pointer; white-space:nowrap;">📄 Upload Warranty</button>`;
+                                `<br><button class="btn btn-sm upload-warranty-btn" data-claim-id="${lead.fullId}" data-quote-id="${lead.quoteId}" style="margin-top:4px; font-size:0.75rem; padding:2px 8px; background:transparent; color:#0284C7; border:1px solid #0284C7; border-radius:0.25rem; cursor:pointer; white-space:nowrap;">📄 Upload Warranty</button>`;
                         }
-                    } else if (job.status === 'Won') {
+                    } else if (lead.status === 'Won') {
                         actionsCell = `<button
                             class="btn btn-sm mark-complete-btn"
                             style="background:#15803D; color:#fff; border:none; border-radius:0.375rem; padding:4px 12px; font-size:0.8rem; cursor:pointer; white-space:nowrap;"
-                            data-claim-id="${job.fullId}"
-                            data-quote-id="${job.quoteId}"
-                            data-address="${job.location.replace(/"/g, '&quot;')}">
+                            data-claim-id="${lead.fullId}"
+                            data-quote-id="${lead.quoteId}"
+                            data-address="${lead.location.replace(/"/g, '&quot;')}">
                             Mark Job Complete
                         </button>`;
                     }
 
                     return `
                     <tr>
-                        <td class="job-id" title="${job.fullId || ''}">${job.id}</td>
-                        <td>${job.location}</td>
-                        <td>${job.damageType}</td>
-                        <td>${job.material}</td>
-                        <td>${job.estimatedValue}</td>
-                        <td><span class="status-badge status-${job.status.toLowerCase()}">${job.status}</span></td>
-                        <td>${job.completionDate ? '<span style="color: var(--slate);">—</span>' : (job.status === 'Won' ? '<span class="status-badge status-won">Active</span>' : '<span style="color: var(--slate);">—</span>')}</td>
+                        <td class="lead-id" title="${lead.fullId || ''}">${lead.id}</td>
+                        <td>${lead.location}</td>
+                        <td>${lead.damageType}</td>
+                        <td>${lead.material}</td>
+                        <td>${lead.estimatedValue}</td>
+                        <td><span class="status-badge status-${lead.status.toLowerCase()}">${lead.status}</span></td>
+                        <td>${lead.completionDate ? '<span style="color: var(--slate);">—</span>' : (lead.status === 'Won' ? '<span class="status-badge status-won">Active</span>' : '<span style="color: var(--slate);">—</span>')}</td>
                         <td>${actionsCell}</td>
                     </tr>`;
                 }).join('');
@@ -1661,7 +1665,6 @@
         // before the PKCE exchange completes on Google OAuth / magic link callbacks.
         document.addEventListener('DOMContentLoaded', () => {
             let _initFired = false;
-            if (!sb) return;
             sb.auth.onAuthStateChange(async (event, session) => {
                 if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !_initFired) {
                     // Auth callback landing: skip null INITIAL_SESSION, wait for SIGNED_IN.
@@ -1680,7 +1683,7 @@
         });
 
         // ── Mark Job Complete Flow ────────────────────────────────────────────────────────────────────
-        // Event delegation on the jobs table body: catches clicks on
+        // Event delegation on the leads table body: catches clicks on
         // .mark-complete-btn buttons rendered in the Actions column.
         function initMarkCompleteFlow() {
             const overlay      = document.getElementById('markCompleteModalOverlay');
@@ -1688,9 +1691,9 @@
             const cancelBtn    = document.getElementById('markCompleteCancelBtn');
             const confirmBtn   = document.getElementById('markCompleteConfirmBtn');
             const toast        = document.getElementById('markCompleteToast');
-            const jobsBody    = document.getElementById('wonJobsTableBody');
+            const leadsBody    = document.getElementById('leadsTableBody');
 
-            if (!overlay || !cancelBtn || !confirmBtn || !jobsBody) return;
+            if (!overlay || !cancelBtn || !confirmBtn || !leadsBody) return;
 
             let pendingClaimId  = null;
             let pendingAddress  = null;
@@ -1721,7 +1724,7 @@
             }
 
             // Open modal on button click (event delegation) — mark-complete AND upload-warranty
-            jobsBody.addEventListener('click', (e) => {
+            leadsBody.addEventListener('click', (e) => {
                 const completeBtn = e.target.closest('.mark-complete-btn');
                 if (completeBtn) {
                     const claimId = completeBtn.dataset.claimId;
@@ -1778,7 +1781,7 @@
                     const completedQuoteId = pendingQuoteId;
                     closeModal();
 
-                    const completeBtn = jobsBody.querySelector(`.mark-complete-btn[data-claim-id="${completedClaimId}"]`);
+                    const completeBtn = leadsBody.querySelector(`.mark-complete-btn[data-claim-id="${completedClaimId}"]`);
                     let completeBtnRow = null;
                     if (completeBtn) {
                         const dateStr = new Date(data.completion_date).toLocaleDateString('en-US', {
@@ -1905,6 +1908,49 @@
             wOverlay.addEventListener('click', onBackdrop);
         }
     </script>
+
+<!-- Messaging Thread UI Section for contractor-dashboard.html -->
+<!-- Insert this after the "Claims" card section, before closing main -->
+
+<div class="card messages-section" style="margin-top: 32px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+    <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--navy);">Messages</h3>
+  </div>
+
+  <!-- Claim Selector -->
+  <div style="margin-bottom: 20px;">
+    <label style="display: block; font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 8px;">Select a project:</label>
+    <select id="messagingClaimSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit;">
+      <option value="">-- No projects with messages yet --</option>
+    </select>
+  </div>
+
+  <!-- Message Thread Container -->
+  <div id="messagingThreadContainer" style="display: none;">
+    <!-- Messages List -->
+    <div id="messagesList" style="border: 1px solid #E2E8F0; border-radius: 6px; padding: 16px; height: 300px; overflow-y: auto; margin-bottom: 16px; background: #FAFBFC;">
+      <p style="color: #94A3B8; text-align: center; margin: 0;">No messages yet.</p>
+    </div>
+
+    <!-- Message Input -->
+    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+      <textarea
+        id="messageBody"
+        placeholder="Type your message..."
+        style="flex: 1; padding: 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px;"
+      ></textarea>
+      <button
+        id="messageSendBtn"
+        style="align-self: flex-end; padding: 12px 24px; background: var(--navy); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;"
+      >
+        Send
+      </button>
+    </div>
+
+    <!-- Status Message -->
+    <div id="messageStatus" style="font-size: 12px; color: #64748B; text-align: center;"></div>
+  </div>
+</div>
 
 <script>
 // Messaging functionality for contractor-dashboard.html
@@ -2096,7 +2142,6 @@
 
   // Start on auth state change
   let initFired = false;
-  if (!sb) return;
   sb.auth.onAuthStateChange((event, session) => {
     if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !initFired) {
       initFired = true;
@@ -2240,7 +2285,6 @@
   }
 
   let _initFired = false;
-  if (!sb) return;
   sb.auth.onAuthStateChange((event, session) => {
     if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !_initFired) {
       _initFired = true;
