@@ -1407,6 +1407,7 @@
                 closeApproveConfirmModal();
                 updateSummaryCards();
                 renderContractors();
+                if (typeof gtag === 'function') gtag('event', 'contractor_approved', { contractor_id: contractorId });
                 alert('Contractor approved and welcome email sent');
             } catch (err) {
                 console.error('Error approving contractor:', err);

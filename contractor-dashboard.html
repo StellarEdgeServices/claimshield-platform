@@ -1395,9 +1395,13 @@
                     type: evt.event_type,
                   }));
                 }
+              } else {
+                // Contractor profile not found — clear the loading spinner
+                document.getElementById('serviceAreaText').textContent = 'Service area: Not configured — complete your profile';
               }
             } catch (err) {
               console.error('Error loading contractor data:', err);
+              document.getElementById('serviceAreaText').textContent = 'Service area: Could not load — please refresh';
             }
           }
 
@@ -1657,6 +1661,7 @@
         // before the PKCE exchange completes on Google OAuth / magic link callbacks.
         document.addEventListener('DOMContentLoaded', () => {
             let _initFired = false;
+            if (!sb) return;
             sb.auth.onAuthStateChange(async (event, session) => {
                 if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !_initFired) {
                     // Auth callback landing: skip null INITIAL_SESSION, wait for SIGNED_IN.
@@ -2091,6 +2096,7 @@
 
   // Start on auth state change
   let initFired = false;
+  if (!sb) return;
   sb.auth.onAuthStateChange((event, session) => {
     if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !initFired) {
       initFired = true;
@@ -2234,6 +2240,7 @@
   }
 
   let _initFired = false;
+  if (!sb) return;
   sb.auth.onAuthStateChange((event, session) => {
     if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !_initFired) {
       _initFired = true;

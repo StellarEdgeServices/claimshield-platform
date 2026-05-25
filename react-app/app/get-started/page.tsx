@@ -1,16 +1,15 @@
 /**
  * Get Started — D-211 Phase 2
  *
- * Homeowner sign-up page (magic link + Google OAuth).
+ * Homeowner sign-up page (magic link email/password).
  * Feature-parity with static get-started.html.
  *
  * Auth flow:
  *   - If user is already logged in, redirect to appropriate dashboard.
  *   - New users: collect profile data → fire HubSpot (non-blocking) →
  *     leads insert (non-fatal) → write localStorage → signInWithOtp.
- *   - Google OAuth: set cs_auth_role → signInWithOAuth redirect.
  *
- * References: D-189 (HubSpot), D-207 (Google OAuth), D-211 (React surface)
+ * References: D-189 (HubSpot), D-211 (React surface) [D-207 Google OAuth removed pre-launch]
  */
 
 'use client';
@@ -97,11 +96,9 @@ export default function GetStartedPage() {
 
   // UI state
   const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [sentToEmail, setSentToEmail] = useState('');
-
 
   // ── Redirect if already logged in ──
   useEffect(() => {
@@ -258,26 +255,6 @@ export default function GetStartedPage() {
       alert('Magic link resent! Check your email.');
     } catch {
       alert('Could not resend. Please try again in a moment.');
-    }
-  };
-
-  // ── Google OAuth — D-207 ──
-  const handleGoogle = async () => {
-    setGoogleLoading(true);
-    localStorage.setItem('cs_auth_role', 'homeowner');
-    try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${AUTH_CALLBACK_URL}?intent=homeowner`,
-        },
-      });
-      if (oauthError) throw oauthError;
-      // Browser will redirect — no further action needed
-    } catch (err) {
-      console.error('[get-started] Google sign-in error:', err);
-      setGoogleLoading(false);
-      setError('Google sign-in failed. Please try the email signup below.');
     }
   };
 
@@ -480,42 +457,7 @@ export default function GetStartedPage() {
           animation: spin 0.6s linear infinite;
           vertical-align: middle;
           margin-right: 8px;
-        }
-        .btn-google {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          width: 100%;
-          padding: 12px 20px;
-          border-radius: 8px;
-          border: 1.5px solid #dadce0;
-          background: #fff;
-          cursor: pointer;
-          font-size: 15px;
-          font-weight: 500;
-          color: #3c4043;
-          transition: box-shadow 0.15s, border-color 0.15s;
-          font-family: inherit;
-          margin-bottom: 8px;
-        }
-        .btn-google:hover { box-shadow: 0 1px 4px rgba(0,0,0,.16); border-color: #c6c9cd; }
-        .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
-        .oauth-divider {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin: 12px 0 18px;
-          color: var(--gray, #64748b);
-          font-size: 13px;
-        }
-        .oauth-divider::before, .oauth-divider::after {
-          content: '';
-          flex: 1;
-          height: 1px;
-          background: rgba(255,255,255,0.15);
-        }
-        .text-sm-center {
+        }        .text-sm-center {
           font-size: 0.85rem;
           text-align: center;
           color: var(--gray, #64748b);
@@ -622,33 +564,6 @@ export default function GetStartedPage() {
             <p className="gs-subtitle">
               Create your free account and start getting competitive quotes from qualified contractors.
             </p>
-
-            {/* Google OAuth — D-207 primary sign-in */}
-            <button
-              type="button"
-              className="btn-google"
-              onClick={handleGoogle}
-              disabled={googleLoading}
-            >
-              {googleLoading ? (
-                <>
-                  <span className="btn-loading-spinner" />
-                  Redirecting to Google…
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                  </svg>
-                  Continue with Google
-                </>
-              )}
-            </button>
-
-            <div className="oauth-divider"><span>or sign up with email</span></div>
 
             {/* ── Magic Link Sent State ── */}
             {magicLinkSent ? (
