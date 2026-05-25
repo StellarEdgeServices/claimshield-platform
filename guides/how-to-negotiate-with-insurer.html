@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
+<title>How to Negotiate a Roof Insurance Claim Settlement (2026 Guide) · Otter Quotes</title>
+<meta name="description" content="Learn how to negotiate your roof insurance claim settlement. Understand ACV vs. RCV, recoverable depreciation, supplement claims, re-inspections, and when to bring in a public adjuster.">
+<link rel="canonical" href="https://otterquote.com/guides/how-to-negotiate-with-insurer.html">
+<meta property="og:title" content="How to Negotiate a Roof Insurance Claim Settlement (2026 Guide) · Otter Quotes">
+<meta property="og:description" content="Step-by-step guide to reviewing the adjuster's estimate, filing supplements, requesting re-inspections, and using contractor bids to support your roof insurance claim.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://otterquote.com/guides/how-to-negotiate-with-insurer.html">
+<meta property="og:image" content="https://otterquote.com/img/otter-logo.svg">
+<meta property="og:site_name" content="Otter Quotes">
+<meta property="article:author" content="Dustin Stohler">
+<meta property="article:published_time" content="2026-05-23">
+
+<!-- GA4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)}
+  gtag('js', new Date());
+  gtag('config', 'G-JNQ6XR3LX2');
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/design-system.css">
+<link rel="stylesheet" href="../css/nav.css">
+
+<style>
+.page-hero {
+  padding: var(--sp-16) 0 var(--sp-12);
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(224,123,0,0.06) 0%, transparent 60%);
+}
+.page-hero h1 {
+  margin-bottom: var(--sp-4);
+}
+.page-hero .subtitle {
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+  color: var(--slate);
+}
+.page-hero .meta {
+  font-size: 0.9rem;
+  color: var(--gray);
+  margin-top: var(--sp-4);
+}
+
+.article-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--sp-6);
+}
+
+.article-intro {
+  background: rgba(224, 123, 0, 0.06);
+  border-left: 4px solid var(--amber);
+  padding: var(--sp-6);
+  margin-bottom: var(--sp-10);
+  border-radius: var(--radius-md);
+}
+.article-intro p {
+  font-size: 1.05rem;
+  color: var(--slate);
+  line-height: 1.8;
+}
+
+.step {
+  margin-bottom: var(--sp-10);
+  padding-bottom: var(--sp-8);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.step:last-of-type {
+  border-bottom: none;
+}
+.step-number {
+  display: inline-block;
+  background: var(--amber);
+  color: var(--navy);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 2.5rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  margin-bottom: var(--sp-3);
+}
+.step h2 {
+  margin-bottom: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.step p {
+  color: var(--slate);
+  margin-bottom: var(--sp-4);
+  line-height: 1.8;
+}
+.step ul {
+  margin-left: var(--sp-6);
+  margin-bottom: var(--sp-4);
+}
+.step li {
+  margin-bottom: var(--sp-3);
+  color: var(--slate);
+  line-height: 1.7;
+}
+.step li strong {
+  color: var(--white);
+}
+
+.highlight-box {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 4px solid #E07B00;
+  padding: var(--sp-4) var(--sp-6);
+  margin: var(--sp-6) 0;
+  border-radius: var(--radius-md);
+}
+.highlight-box strong {
+  color: #fbbf24;
+}
+.highlight-box, .highlight-box p {
+  color: var(--slate);
+  line-height: 1.7;
+}
+
+.warning-box {
+  background: rgba(220, 38, 38, 0.06);
+  border-left: 4px solid #ef4444;
+  padding: var(--sp-4) var(--sp-6);
+  margin: var(--sp-6) 0;
+  border-radius: var(--radius-md);
+}
+.warning-box strong {
+  color: #f87171;
+}
+.warning-box, .warning-box p {
+  color: var(--slate);
+  line-height: 1.7;
+}
+
+.cta-box {
+  background: var(--navy-2);
+  border: 1px solid rgba(224, 123, 0, 0.2);
+  padding: var(--sp-10);
+  border-radius: var(--radius-lg);
+  margin: var(--sp-10) 0;
+  text-align: center;
+}
+.cta-box h3 {
+  color: var(--white);
+  margin-bottom: var(--sp-4);
+}
+.cta-box p {
+  color: var(--slate);
+  margin-bottom: var(--sp-6);
+  line-height: 1.6;
+}
+
+.checklist {
+  background: var(--navy-2);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6) var(--sp-8);
+  margin: var(--sp-6) 0;
+}
+.checklist h4 {
+  color: var(--amber);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-4);
+}
+.checklist ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.checklist li {
+  color: var(--slate);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  line-height: 1.6;
+}
+.checklist li:last-child {
+  border-bottom: none;
+}
+.checklist li::before {
+  content: "✓";
+  color: var(--amber);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.definition-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--sp-6) 0;
+}
+.definition-table th {
+  background: rgba(224, 123, 0, 0.12);
+  color: var(--amber);
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-bottom: 2px solid rgba(224, 123, 0, 0.2);
+}
+.definition-table td {
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--slate);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  line-height: 1.6;
+  vertical-align: top;
+}
+.definition-table tr:last-child td {
+  border-bottom: none;
+}
+.definition-table td:first-child {
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.faq-section {
+  margin-top: var(--sp-12);
+  margin-bottom: var(--sp-8);
+}
+.faq-section h2 {
+  margin-bottom: var(--sp-8);
+}
+.faq-item {
+  margin-bottom: var(--sp-8);
+  padding-bottom: var(--sp-6);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.faq-item:last-of-type {
+  border-bottom: none;
+}
+.faq-item h3 {
+  font-size: 1.1rem;
+  margin-bottom: var(--sp-3);
+  color: var(--white);
+}
+.faq-answer p {
+  color: var(--slate);
+  line-height: 1.8;
+  margin-bottom: var(--sp-3);
+}
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+.breadcrumb {
+  font-size: 0.85rem;
+  color: var(--gray);
+  padding: var(--sp-4) 0 0;
+  margin-bottom: 0;
+}
+.breadcrumb a {
+  color: var(--gray);
+  text-decoration: none;
+}
+.breadcrumb a:hover {
+  color: var(--amber);
+}
+.breadcrumb span {
+  margin: 0 var(--sp-2);
+}
+
+.author-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+  justify-content: center;
+}
+.author-line .author-name {
+  font-weight: 600;
+  color: var(--white);
+  font-size: 0.95rem;
+}
+.author-line .author-title {
+  color: var(--gray);
+  font-size: 0.85rem;
+}
+</style>
+</head>
+<body>
+
+<nav id="site-nav"></nav>
+<script src="../js/nav.js"></script>
+
+<section class="page-hero">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <span>&rsaquo;</span>
+      <a href="/guides/">Guides</a>
+      <span>&rsaquo;</span>
+      <span>How to Negotiate a Roof Insurance Claim</span>
+    </nav>
+    <h1 style="margin-top: var(--sp-6);">How to Negotiate a Roof Insurance Claim Settlement</h1>
+    <p class="subtitle">Your adjuster's first estimate is rarely their final offer. Here's how to review it, document what's missing, and use contractor bids to advocate for a fair settlement.</p>
+    <div class="meta">
+      <div class="author-line">
+        <div>
+          <div class="author-name">Dustin Stohler, JD</div>
+          <div class="author-title">Co-founder &amp; CEO, Otter Quotes &nbsp;&middot;&nbsp; Updated May 2026</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: var(--sp-12) 0 var(--sp-16);">
+  <div class="container">
+    <div class="article-body">
+
+      <div class="article-intro">
+        <p>Insurance adjusters and roofing contractors look at the same storm damage and often produce estimates that differ by thousands of dollars. That gap isn't necessarily fraud on either side &mdash; it reflects different measurement methods, different line-item pricing, and the fact that adjusters are employees of the insurer while contractors are responsible for actually doing the work. Understanding why those gaps exist, and what to do about them, is how you close them.</p>
+        <p>This guide walks through the claim process from policy review to settlement &mdash; what to document, how to read an adjuster's estimate, when and how to file a supplement, and what options you have if the insurer won't move.</p>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="step">
+        <div class="step-number">1</div>
+        <h2>Read Your Policy Before the Adjuster Shows Up</h2>
+        <p>The single most important thing you can do before any negotiation is know what your policy actually covers. Most homeowners have never read their declarations page carefully, which means they don't know whether they have Actual Cash Value (ACV) coverage or Replacement Cost Value (RCV) coverage &mdash; and that distinction controls how much you receive.</p>
+
+        <table class="definition-table">
+          <thead>
+            <tr>
+              <th>Coverage Type</th>
+              <th>How It Works</th>
+              <th>What You Receive</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ACV</td>
+              <td>Pays the current market value of your roof, accounting for depreciation based on its age and condition</td>
+              <td>Less than replacement cost &mdash; often significantly less on older roofs</td>
+            </tr>
+            <tr>
+              <td>RCV</td>
+              <td>Pays the cost to replace the damaged property with new materials of like kind and quality</td>
+              <td>Initial ACV check, then a second check for recoverable depreciation after work is completed</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>If you have RCV coverage, your insurer will typically issue an initial payment equal to the ACV of the damage &mdash; the replacement cost minus a depreciation holdback. Once the repair work is completed and documented, you submit proof of completion and the insurer releases the withheld depreciation. This second payment is called the <strong>recoverable depreciation</strong>, and many homeowners don't know to ask for it.</p>
+
+        <p>Beyond ACV vs. RCV, review these policy elements before your adjuster appointment:</p>
+        <ul>
+          <li><strong>Deductible:</strong> Know your deductible amount. If you have a percentage deductible (common in hail-prone areas), calculate what that dollar amount is against your home's insured value.</li>
+          <li><strong>Coverage exclusions:</strong> Policies vary on what constitutes storm damage vs. wear-and-tear. Age and condition exclusions can limit coverage on older roofs.</li>
+          <li><strong>Ordinance or law coverage:</strong> If your local building code requires upgraded materials when you replace a roof (common in many municipalities), ordinance or law coverage pays for that upgrade. Without it, you may be responsible for code-required improvements out of pocket.</li>
+          <li><strong>Matching provisions:</strong> Some policies cover repairs to damaged sections only; others require the insurer to match or replace undamaged sections when a perfect material match isn't available.</li>
+        </ul>
+
+        <div class="highlight-box">
+          <strong>Your declarations page is your starting point.</strong> It's a one-to-two page summary of your coverage limits, deductible, and coverage types. If you can't find it, call your insurer and ask them to email it to you before the adjuster comes out.
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <div class="step-number">2</div>
+        <h2>Document Every Square Foot of Damage Before the Inspection</h2>
+        <p>The adjuster's inspection typically lasts 30 to 90 minutes. Your documentation will be permanent. Take the time to build your own record before they arrive, so that if any damage is missed or disputed, you have your own timestamped evidence.</p>
+
+        <p>Document from the ground first, then arrange access to the roof if you can safely do so. If climbing is unsafe, a contractor can document the roof surface for you during a free estimate visit. Photograph and video every area with visible damage:</p>
+
+        <ul>
+          <li><strong>Shingles:</strong> Missing tabs, bruised or dented shingles (hail impacts look like small craters with exposed fiberglass mat), cracked or curling edges</li>
+          <li><strong>Flashings and penetrations:</strong> Chimney flashing, pipe boots, skylights, and valley flashing are frequently damaged in storms and just as frequently missed on adjuster estimates</li>
+          <li><strong>Gutters and downspouts:</strong> Hail impact dings on gutters are among the most reliable indicators of storm-force hail and are often coverable under the same claim</li>
+          <li><strong>Soffit and fascia:</strong> High wind events often damage soffit panels and fascia boards; document any displaced, dented, or cracked sections</li>
+          <li><strong>Interior water intrusion:</strong> Photograph any water stains, bubbling paint, or wet insulation visible from inside, particularly in the attic</li>
+        </ul>
+
+        <p>Create a folder with all photos organized by area. Include photos with timestamps enabled. This file becomes your documentation package if you need to file a supplement or request a re-inspection.</p>
+
+        <div class="checklist">
+          <h4>Pre-Inspection Documentation Checklist</h4>
+          <ul>
+            <li>Photographs of damaged shingles from multiple angles</li>
+            <li>Photos of flashing, pipe boots, and all roof penetrations</li>
+            <li>Photos of gutters and downspouts showing hail impact</li>
+            <li>Photos of any soffit, fascia, or siding damage</li>
+            <li>Interior attic photos showing any moisture or daylight intrusion</li>
+            <li>Date and location of the storm documented (weather service records or local news reports)</li>
+            <li>Copy of your declarations page and policy number ready for the adjuster</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <div class="step-number">3</div>
+        <h2>Be Present During the Adjuster's Inspection</h2>
+        <p>This is not optional. Adjusters work many claims simultaneously and may spend less time on your roof than the damage warrants. Being present lets you walk them through your documented damage, ask questions in real time, and ensure nothing is skipped.</p>
+
+        <p>What to do during the inspection:</p>
+        <ul>
+          <li><strong>Point out every area of documented damage.</strong> Don't assume the adjuster will find it all. If you have photos of a damaged flashing in the valley, show them. "I wanted to make sure you saw this area here" is a completely reasonable thing to say.</li>
+          <li><strong>Ask what they're noting.</strong> You're entitled to understand what the adjuster is documenting. Ask: "Are you including the gutters in this estimate? The pipe boots?"</li>
+          <li><strong>Take your own notes.</strong> Write down what the adjuster says they will and won't include. If they tell you something isn't covered, ask them to point to the specific policy language that excludes it.</li>
+          <li><strong>Don't agree to a final number on the spot.</strong> The adjuster may mention a ballpark figure during the inspection. That's their estimate, not a settlement. You have time to review the written estimate before making any decisions.</li>
+        </ul>
+
+        <p>If you have a contractor present during the adjuster's inspection, they can note discrepancies in scope in real time. Many contractors who work insurance projects regularly will accompany you at no charge, because catching a shortfall before the estimate is written is easier than supplementing it after. Your contractor speaks the same technical language as the adjuster and can flag missing line items immediately.</p>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step">
+        <div class="step-number">4</div>
+        <h2>Compare the Adjuster's Written Estimate Against a Contractor Bid</h2>
+        <p>Once you receive the written estimate &mdash; usually within a few days of the inspection &mdash; do not deposit the check or accept the settlement before you've had a contractor review it. Most insurance estimates are written using software called Xactimate, which prices materials and labor based on regional data. That pricing isn't always aligned with what local contractors actually charge, and the scope may be missing items entirely.</p>
+
+        <p>Get the estimate in front of at least one licensed roofing contractor, preferably two or three. Ask them to walk through the estimate line by line and flag anything that:</p>
+        <ul>
+          <li><strong>Is priced below current market rates</strong> for your area</li>
+          <li><strong>Is missing from the estimate entirely</strong> &mdash; items that were damaged and visible but not included (pipe boots, ice and water shield requirements, drip edge, valley flashing)</li>
+          <li><strong>Has incorrect measurements</strong> &mdash; adjusters use satellite measurement tools that occasionally calculate wrong square footage</li>
+          <li><strong>Omits code-required upgrades</strong> &mdash; if local code requires upgraded underlayment or specific fastening patterns, those costs need to be included</li>
+        </ul>
+
+        <div class="cta-box">
+          <h3>Get Multiple Bids Fast</h3>
+          <p>When you're comparing an insurance estimate against what repair actually costs, having bids from multiple licensed contractors in your area gives you the clearest picture. Otter Quotes collects competing bids from licensed contractors and delivers them to your dashboard so you can see the real numbers &mdash; without making a dozen phone calls.</p>
+          <a href="/how-it-works.html" class="btn btn-primary btn-lg">See How It Works</a>
+        </div>
+
+        <p>The gap between the adjuster's estimate and the contractor bids is the basis for any supplement request. This isn't about inflating anything &mdash; it's about making sure the insurer's estimate covers the actual cost of the work your policy covers. If multiple licensed contractors in your area cannot complete the work within the adjuster's pricing, the estimate may be inadequate.</p>
+
+        <p>When comparing estimates, look at:</p>
+        <ul>
+          <li><strong>Squares of roofing material</strong> &mdash; one square = 100 sq ft; verify the adjuster's square count matches your roof's actual size</li>
+          <li><strong>Material line items</strong> &mdash; synthetic underlayment vs. felt, drip edge, ridge cap shingles, starter strips, pipe flashing boots</li>
+          <li><strong>Labor rates</strong> &mdash; tear-off and disposal, re-decking if needed, flashing replacement labor</li>
+          <li><strong>Overhead and profit (O&amp;P)</strong> &mdash; general contractors are entitled to overhead and profit on top of direct costs; adjusters sometimes omit this on claims where a GC is required</li>
+        </ul>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="step">
+        <div class="step-number">5</div>
+        <h2>File a Supplement Claim for Anything That Was Missed</h2>
+        <p>A supplement is a request to add line items or increase pricing on an existing approved claim. Supplements are common &mdash; they're a normal part of the claims process, not an accusation. Adjusters work fast and sometimes miss items or use default pricing that doesn't reflect actual costs. Supplementing is how those gaps get corrected.</p>
+
+        <p>To file a supplement, contact your claims adjuster or the insurer's claims department and tell them you need to submit additional documentation. You will typically need to provide:</p>
+        <ul>
+          <li><strong>A written itemized breakdown</strong> of every line item you're requesting, with quantities and pricing that matches your contractor's bid</li>
+          <li><strong>Supporting documentation:</strong> Photographs of the missed damage, contractor estimates showing the current market price for the disputed items, manufacturer installation specifications that require certain materials (e.g., ice and water shield at a specified width)</li>
+          <li><strong>Building code documentation</strong> if you're requesting code-upgrade costs &mdash; pull the relevant section of your municipality's current building code</li>
+        </ul>
+
+        <p>Submit your supplement in writing and keep records. Email is ideal because it creates a timestamp and paper trail. A well-documented supplement with contractor bids and photographs is significantly harder to deny than a verbal disagreement.</p>
+
+        <div class="highlight-box">
+          <strong>Supplements are common on larger claims.</strong> On complex storm damage claims involving multiple trades (roofing, siding, gutters, windows), it's not unusual for the initial estimate to go through one or more rounds of supplementing before the final settlement number is reached. This is expected and standard &mdash; not adversarial.
+        </div>
+
+        <p>There is no deadline for filing supplements in most states, but sooner is better. Once a check is cashed and marked "final payment" on documentation, supplementing becomes harder. Do not cash any payment marked as full and final settlement until you're confident the amount is complete.</p>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="step">
+        <div class="step-number">6</div>
+        <h2>Request a Re-Inspection If You Disagree with the Scope</h2>
+        <p>If you've submitted a supplement with documentation and the insurer still won't include items you believe are covered, your next step is requesting a formal re-inspection. A re-inspection brings a different adjuster (sometimes a field supervisor or independent adjuster) out to look at the damage with fresh eyes and your documentation in hand.</p>
+
+        <p>Request the re-inspection in writing. Provide the following with your request:</p>
+        <ul>
+          <li>Your documentation package (photos, videos, weather records)</li>
+          <li>A copy of your contractor's estimate with specific items highlighted that differ from the insurance estimate</li>
+          <li>A written explanation of the specific items in dispute and why you believe they should be covered under your policy</li>
+        </ul>
+
+        <p>Be present at the re-inspection. Bring your documentation. If you have a contractor who can attend, bring them. Walk the adjuster through every disputed item with your photos and your contractor's notes. Re-inspections frequently result in upward adjustments, particularly when the homeowner arrives prepared.</p>
+
+        <div class="warning-box">
+          <strong>Do not perform permanent repairs before the re-inspection.</strong> Once repairs are completed, documentation of the original damage becomes harder to establish. For emergency tarping or temporary repairs needed to prevent further damage, document those repairs carefully and keep all receipts &mdash; the cost of necessary temporary repairs is typically recoverable under your policy.
+        </div>
+      </div>
+
+      <!-- STEP 7 -->
+      <div class="step">
+        <div class="step-number">7</div>
+        <h2>Invoke the Appraisal Clause If the Re-Inspection Fails</h2>
+        <p>Most homeowners policies include an appraisal clause &mdash; a formal dispute resolution mechanism that is separate from litigation. If you and your insurer disagree on the amount of loss and can't resolve it through normal claims channels, the appraisal clause provides a structured process to reach a binding resolution.</p>
+
+        <p>The typical appraisal process works like this:</p>
+        <ul>
+          <li><strong>Each party selects an independent appraiser.</strong> You choose your appraiser; the insurer chooses theirs. These are typically licensed adjusters or contractors with appraisal experience, not attorneys.</li>
+          <li><strong>The two appraisers attempt to agree on the amount of loss.</strong> If they agree, that figure is binding.</li>
+          <li><strong>If they can't agree, they select an umpire.</strong> Any two of the three parties agreeing on a number makes that number binding. The umpire selection process is usually spelled out in your policy.</li>
+        </ul>
+
+        <p>Invoking appraisal typically costs money &mdash; you pay your own appraiser, and sometimes share the cost of the umpire with the insurer. It's a meaningful step that makes sense when the disputed amount is significant relative to those costs. Appraisal is not a lawsuit; it doesn't require attorneys and is typically much faster than litigation.</p>
+
+        <p>To invoke appraisal, review your policy for the exact language and procedure. Send written notice to your insurer invoking the appraisal clause and naming your appraiser. Follow whatever timeline the policy specifies.</p>
+      </div>
+
+      <!-- STEP 8 -->
+      <div class="step">
+        <div class="step-number">8</div>
+        <h2>Know When a Public Adjuster or Attorney Makes Sense</h2>
+        <p>Most straightforward roof claims can be managed by the homeowner directly &mdash; review the estimate, gather contractor bids, file a supplement if needed, request a re-inspection if necessary. But some claims are complicated enough that professional representation makes sense.</p>
+
+        <p><strong>A public adjuster (PA)</strong> is a licensed professional who represents the homeowner in the claims process. Unlike an insurance adjuster who works for the insurer, or an independent adjuster who is hired by the insurer, a public adjuster is hired by and works for you. PAs review your policy, document and assess the damage, prepare the claim documentation, and negotiate with the insurer on your behalf. They are compensated as a percentage of the final settlement amount &mdash; typically 10% to 20%, though this varies by state and negotiation.</p>
+
+        <p>A public adjuster may make sense when:</p>
+        <ul>
+          <li>The claim is large (typically over $20,000 in disputed value) and highly complex</li>
+          <li>The damage involves multiple trades and systems (roof, siding, HVAC, interior)</li>
+          <li>The insurer has denied coverage and you believe the denial is wrong</li>
+          <li>You've been through re-inspection without resolution and want representation before invoking appraisal</li>
+          <li>You lack the time or technical knowledge to manage a complex claim yourself</li>
+        </ul>
+
+        <p><strong>A property damage attorney</strong> is appropriate when the insurer is acting in bad faith &mdash; unreasonably denying or delaying a valid claim, misrepresenting policy terms, or failing to conduct a reasonable investigation. Bad faith claims are legal actions and require an attorney. Most property damage attorneys work on contingency, meaning they take a percentage of the recovery rather than an hourly fee.</p>
+
+        <div class="warning-box">
+          <strong>If someone contacts you after a storm and offers to handle your insurance claim for you, ask them what license they hold.</strong> In most states, representing a homeowner in an insurance claim requires a public adjuster license. Contractors are not licensed to act as public adjusters and cannot legally negotiate your claim with your insurer. Be cautious of contractors who make the insurance proceeds &mdash; rather than the quality and scope of the work &mdash; the center of their sales pitch.
+        </div>
+
+        <p>If you're considering hiring a public adjuster, verify their license with your state's Department of Insurance and ask for references from recent clients. Check whether any complaints have been filed against them. A legitimate PA will be licensed, transparent about their fee structure, and willing to explain exactly what they'll do for your specific claim before you sign anything.</p>
+      </div>
+
+      <!-- Mid-article CTA -->
+      <div class="cta-box">
+        <h3>Your Best Negotiating Tool: Real Contractor Bids</h3>
+        <p>Whether you're supplementing an insurance estimate yourself or preparing documentation for a public adjuster, having multiple competitive bids from licensed contractors in your area is the clearest evidence of what the work actually costs. Otter Quotes puts those bids in your hands without the phone tag.</p>
+        <a href="https://app.otterquote.com/get-started" class="btn btn-primary btn-lg">Get Competing Bids &mdash; Free</a>
+      </div>
+
+      <!-- FAQ Section -->
+      <section class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+
+        <div class="faq-item">
+          <h3>What is the difference between ACV and RCV on a roof insurance claim?</h3>
+          <div class="faq-answer">
+            <p>ACV (Actual Cash Value) pays you the current depreciated value of your damaged roof, accounting for its age and wear. RCV (Replacement Cost Value) pays you what it costs to replace the damaged material with new material of like kind and quality, regardless of the roof's age. With RCV coverage, you typically receive an initial ACV payment, then a second payment called recoverable depreciation after the work is completed and documented. The difference between ACV and RCV on an older roof can be substantial &mdash; for a 15-year-old roof in a bad storm, the depreciation holdback could be 40% to 60% of the total replacement cost.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <h3>Can I negotiate my roof insurance settlement myself?</h3>
+          <div class="faq-answer">
+            <p>Yes. You are not required to hire a public adjuster, attorney, or anyone else to advocate for yourself in a claim. The steps that make the most difference &mdash; documenting the damage thoroughly, getting contractor bids to compare against the adjuster's estimate, filing a written supplement for missed items, and requesting a re-inspection &mdash; are all things a homeowner can do directly. Where a public adjuster adds value is on large, complex claims or when the insurer has denied coverage and you believe the denial is incorrect. For a straightforward hail or wind damage roof claim where the insurer accepts coverage but the estimate seems low, most homeowners can work through the supplementing process themselves with some preparation.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <h3>What is a roof insurance supplement?</h3>
+          <div class="faq-answer">
+            <p>A supplement is a formal request to revise an approved insurance estimate &mdash; either to add line items that were missed or to correct pricing that doesn't reflect actual market rates for your area. Supplements are a standard part of the claims process for complex or larger damage claims. You don't need to prove bad faith or dishonesty to file a supplement; you just need documentation showing that the original estimate is incomplete or underpriced. Contractor bids that itemize the same work are the clearest evidence for a supplement request.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <h3>How do contractor bids help my insurance claim?</h3>
+          <div class="faq-answer">
+            <p>Contractor bids serve as real-world evidence of what licensed professionals charge to perform the work your policy covers. If multiple contractors in your area quote a roof replacement at $18,000 and the insurance estimate comes in at $12,000, that gap is the foundation of your supplement request. The bids show the insurer what the work actually costs, priced by licensed contractors who will stand behind their quotes. They also help identify specific line items that the adjuster may have omitted &mdash; a contractor bid that includes flashing replacement labor, new pipe boots, and code-required ice and water shield makes it much easier to point to exactly what's missing from the insurance estimate.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <h3>What does a public adjuster actually do?</h3>
+          <div class="faq-answer">
+            <p>A public adjuster is a licensed professional who is hired by and represents the homeowner &mdash; not the insurer &mdash; in the claims process. They review your policy to identify all applicable coverages, conduct their own detailed damage assessment, prepare and submit the claim documentation, and negotiate directly with the insurance company on your behalf. They are compensated as a percentage of the settlement amount. Public adjusters are regulated and licensed at the state level; requirements vary by state. If you're considering hiring one, verify their license with your state's Department of Insurance before signing any contract.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <h3>What happens if my insurer and I can't agree on the settlement amount?</h3>
+          <div class="faq-answer">
+            <p>Most homeowners policies include an appraisal clause that provides a formal dispute resolution process. Under a typical appraisal clause, each party selects an independent appraiser, the two appraisers attempt to agree on the loss amount, and if they can't, they jointly select an umpire whose agreement with either appraiser produces a binding number. Appraisal is not litigation &mdash; it typically doesn't require attorneys and is much faster than filing a lawsuit. It does involve cost (you pay your own appraiser), so it's most practical when the disputed dollar amount justifies those costs. If you believe your insurer is acting in bad faith &mdash; unreasonably denying coverage, misrepresenting policy terms, or unreasonably delaying payment &mdash; that's a different situation and typically requires a property insurance attorney.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <div class="cta-box" style="margin-top: var(--sp-12); margin-bottom: var(--sp-8);">
+        <h3>Know What the Repair Actually Costs Before You Settle</h3>
+        <p>Otter Quotes connects you with licensed contractors in your area and delivers competing bids to your dashboard &mdash; so you have real numbers to compare against your insurance estimate before you sign anything.</p>
+        <a href="https://app.otterquote.com/get-started" class="btn btn-primary btn-lg">Get Started &mdash; It's Free</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer id="site-footer"></footer>
+<script src="../js/footer.js"></script>
+
+<!-- JSON-LD Schema: Article -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "How to Negotiate a Roof Insurance Claim Settlement",
+  "description": "Step-by-step guide to reviewing an insurance adjuster's estimate, filing supplement claims, requesting re-inspections, and using contractor bids to support a fair roof insurance settlement.",
+  "image": "https://otterquote.com/img/otter-logo.svg",
+  "author": {
+    "@type": "Person",
+    "name": "Dustin Stohler",
+    "description": "JD cum laude, IU Maurer School of Law. Former General Counsel and VP HR at Indiana Department of Workforce Development. Former General Counsel at Deca Financial. Co-founded Stay Dry Roofing, growing it from $0 to $10M in revenue. Co-founder and CEO of Otter Quotes."
+  },
+  "datePublished": "2026-05-23",
+  "dateModified": "2026-05-23",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Otter Quotes",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://otterquote.com/img/otter-logo.svg"
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://otterquote.com/guides/how-to-negotiate-with-insurer.html"
+  }
+}
+</script>
+
+<!-- JSON-LD Schema: HowTo -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Negotiate a Roof Insurance Claim Settlement",
+  "description": "A step-by-step guide to reviewing an adjuster's estimate, documenting damage, filing supplement claims, requesting re-inspections, and using contractor bids to advocate for a fair settlement.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Read Your Policy Before the Adjuster Shows Up",
+      "text": "Review your declarations page to understand your coverage type (ACV vs. RCV), deductible, exclusions, and whether you have ordinance or law coverage. Know your policy before the inspection so you can recognize what should be included."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Document Every Square Foot of Damage Before the Inspection",
+      "text": "Photograph and video all damaged areas including shingles, flashings, gutters, soffit, fascia, and any interior moisture signs. Create a timestamped documentation package organized by area before the adjuster arrives."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Be Present During the Adjuster's Inspection",
+      "text": "Attend the inspection, walk the adjuster through your documented damage, ask what they are and aren't including, and take your own notes. Do not agree to a settlement figure on the spot."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Compare the Adjuster's Written Estimate Against Contractor Bids",
+      "text": "Once you receive the written estimate, have one or more licensed roofing contractors review it line by line. Identify items that are missing, incorrectly measured, or priced below current market rates in your area."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 5,
+      "name": "File a Supplement Claim for Anything That Was Missed",
+      "text": "Submit a written supplement request to your insurer's claims department, including an itemized breakdown of disputed items, contractor bids, photographs, and any relevant building code documentation. Keep records of all correspondence."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 6,
+      "name": "Request a Re-Inspection If You Disagree with the Scope",
+      "text": "If the supplement is denied or partially denied, request a formal re-inspection in writing. Provide your documentation package, contractor estimates, and a written explanation of each disputed item. Be present at the re-inspection."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 7,
+      "name": "Invoke the Appraisal Clause If the Re-Inspection Fails",
+      "text": "Most policies include a formal appraisal dispute process. Each party selects an independent appraiser; if they can't agree, a jointly selected umpire produces a binding decision. Review your policy's appraisal clause and invoke it in writing if needed."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 8,
+      "name": "Know When a Public Adjuster or Attorney Makes Sense",
+      "text": "A public adjuster is a licensed professional who represents you in the claim process. They make sense on large, complex claims or when coverage has been denied and you believe the denial is wrong. A property insurance attorney is appropriate if your insurer is acting in bad faith."
+    }
+  ]
+}
+</script>
+
+<!-- JSON-LD Schema: FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the difference between ACV and RCV on a roof insurance claim?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ACV (Actual Cash Value) pays the current depreciated value of your damaged roof. RCV (Replacement Cost Value) pays what it costs to replace the damaged material with new material of like kind and quality. With RCV coverage, you typically receive an initial ACV payment and then a second payment called recoverable depreciation after the work is completed and documented. The gap between ACV and RCV on an older roof can be 40% to 60% of the total replacement cost."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I negotiate my roof insurance settlement myself?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can document damage, gather contractor bids to compare against the adjuster's estimate, file a written supplement for missed items, and request a re-inspection — all without hiring a professional representative. A public adjuster adds value on large, complex claims or when coverage has been denied. For a straightforward claim where the insurer accepts coverage but the estimate seems low, most homeowners can work through the supplementing process themselves with preparation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is a roof insurance supplement?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A supplement is a formal request to revise an approved insurance estimate — either to add line items that were missed or to correct pricing that doesn't reflect actual market rates. Supplements are standard practice on larger or more complex claims. You need documentation showing the original estimate is incomplete or underpriced; contractor bids that itemize the same work are the clearest evidence."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do contractor bids help my insurance claim?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Contractor bids provide real-world evidence of what licensed professionals charge to perform the covered work. If multiple contractors quote work at a higher price than the insurance estimate, that gap is the basis for a supplement request. Bids also identify specific line items the adjuster may have omitted, making it easier to point to exactly what's missing from the insurance estimate."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does a public adjuster actually do?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A public adjuster is a licensed professional hired by and working for the homeowner — not the insurer. They review your policy for all applicable coverages, conduct their own damage assessment, prepare and submit claim documentation, and negotiate directly with the insurance company on your behalf. They are compensated as a percentage of the settlement amount. Verify any PA's license with your state's Department of Insurance before signing a contract."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens if my insurer and I can't agree on the settlement amount?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most homeowners policies include an appraisal clause that provides a formal dispute resolution process. Each party selects an independent appraiser; if they disagree, a jointly selected umpire's agreement with either appraiser produces a binding number. Appraisal is not litigation and typically doesn't require attorneys. If you believe the insurer is acting in bad faith — unreasonably denying coverage or misrepresenting policy terms — that situation typically requires a property insurance attorney."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- JSON-LD Schema: BreadcrumbList -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://otterquote.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Guides",
+      "item": "https://otterquote.com/guides/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "How to Negotiate a Roof Insurance Claim",
+      "item": "https://otterquote.com/guides/how-to-negotiate-with-insurer.html"
+    }
+  ]
+}
+</script>
+
+</body>
+</html>
