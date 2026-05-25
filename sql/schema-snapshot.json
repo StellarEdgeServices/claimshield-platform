@@ -201,6 +201,13 @@
     "video_url",
     "profile_prompt_sent_at"
   ],
+  "coming_soon_waitlist": [
+    "id",
+    "email",
+    "persona",
+    "source_page",
+    "created_at"
+  ],
   "contractor_cert_verifications": [
     "id",
     "contractor_id",
