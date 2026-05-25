@@ -13,6 +13,10 @@
  * Returns:
  *   { success: true, notification_sent: boolean, recipient_email: string }
  *
+ * Auth: verify_jwt = false is NOT set — default Supabase JWT verification applies.
+ *   Triggered by a DB trigger on messages table insert via pg_net (service role bearer).
+ *   Rate-limited per sender_id to prevent notification spam.
+ *
  * Environment variables:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
@@ -212,6 +216,23 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const claim = message.claims;
     const senderProfile = message.profiles;
+
+    // Rate limit per sender — prevent notification spam
+    const { data: rlData, error: rlError } = await supabase.rpc("check_rate_limit", {
+      p_function_name: FUNCTION_NAME,
+      p_user_id: message.sender_id,
+    });
+    if (rlError) {
+      console.error(`[${FUNCTION_NAME}] Rate limit check error:`, rlError.message);
+    } else if (!rlData) {
+      return new Response(
+        JSON.stringify({ success: false, notification_sent: false, reason: "rate_limited" }),
+        {
+          status: 429,
+          headers: { ...buildCorsHeaders(req), "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Determine recipient based on sender role
     let recipientId: string;

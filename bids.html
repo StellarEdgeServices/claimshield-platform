@@ -1966,7 +1966,7 @@
           .neq('id', bidId);
         if (rejectErr) throw rejectErr;
 
-        gtag('event', 'contractor_selected', {
+        gtag('event', 'bid_accepted', {
           bid_id: bidId,
           contractor_id: bid.contractor_id,
           price: bid.total_price,

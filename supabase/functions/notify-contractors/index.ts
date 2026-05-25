@@ -18,6 +18,10 @@
  *      when a homeowner clicked "Request Agreement." No longer triggered in the current
  *      flow since signing happens after homeowner selection, not before.
  *
+ * Auth: Default Supabase JWT verification (no verify_jwt entry in config.toml).
+ *   Called from frontend (user JWT) and from EFs using service role key as bearer.
+ *   Multi-caller design is intentional; rate-limited (10/day, 30/month) per D-030.
+ *
  * Environment variables:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
