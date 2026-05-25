@@ -36,3 +36,7 @@ tests/e2e/playwright-report/
 _drafts/
 # Backup files — never deploy (general pattern)
 *.bak.*
+
+# Handoff files — folder is tracked (via README), session notes are not
+handoffs/*
+!handoffs/README.md

@@ -411,6 +411,11 @@ const Nav = {
               ? 'Your sales team — without the truck, the manager, or the advance.'
               : 'Helping homeowners get the best deal on roofing and exterior projects.'
             }</p>
+            <address class="footer-nap" style="font-style:normal;margin-top:0.75rem;font-size:0.8rem;color:#94a3b8;line-height:1.6;">
+              3410 N High School Rd, Ste G #102<br>Indianapolis, IN 46224<br>
+              <a href="tel:+18448753412" style="color:#E07B00;">(844) 875-3412</a><br>
+              <a href="mailto:info@otterquote.com" style="color:#E07B00;">info@otterquote.com</a>
+            </address>
           </div>
           <div class="footer-col">
             <h4 class="footer-heading">${isContractor ? 'Contractor Portal' : 'Platform'}</h4>

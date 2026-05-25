@@ -1,12 +1,24 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin":
-    "https://otterquote.com, https://app.otterquote.com, http://localhost:*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const ALLOWED_ORIGINS = [
+  "https://otterquote.com",
+  "https://app.otterquote.com",
+  "https://app-staging.otterquote.com",
+  "https://jade-alpaca-b82b5e.netlify.app",
+  "https://staging--jade-alpaca-b82b5e.netlify.app",
+];
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Vary": "Origin",
+  };
+}
 
 interface SendBidConfirmationRequest {
   quote_id: string;
@@ -145,6 +157,7 @@ Review My Bid: ${bidFormUrl}`;
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req);
   // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

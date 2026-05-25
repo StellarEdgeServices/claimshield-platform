@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Sentry Error Monitoring -->
+<script
+  src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
+  crossorigin="anonymous"
+></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
+<title>Coming Soon — Otter Quotes</title>
+<meta name="description" content="Otter Quotes is building something great. Enter your email to be notified when we're ready for you.">
+<meta name="robots" content="noindex, nofollow">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/nav.css">
+
+<style>
+  .cs-hero {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+  }
+  .cs-card {
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+  }
+  .cs-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .cs-logo-wrap img {
+    height: 48px;
+  }
+  .cs-logo-wordmark {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--navy, #1a2e4a);
+    letter-spacing: -0.5px;
+  }
+  .cs-headline {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy, #1a2e4a);
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  .cs-subhead {
+    font-size: 1.0625rem;
+    color: var(--text-secondary, #4a5568);
+    line-height: 1.65;
+    margin-bottom: 40px;
+  }
+  .cs-form {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cs-email-input {
+    flex: 1;
+    min-width: 220px;
+    padding: 14px 16px;
+    border: 2px solid var(--border, #d1d5db);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--navy, #1a2e4a);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .cs-email-input:focus {
+    border-color: var(--amber, #f59e0b);
+  }
+  .cs-submit-btn {
+    padding: 14px 28px;
+    background: var(--amber, #f59e0b);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .cs-submit-btn:hover { background: var(--amber-dark, #d97706); }
+  .cs-submit-btn:disabled { opacity: 0.6; cursor: default; }
+  .cs-success {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    color: #166534;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+  .cs-error {
+    display: none;
+    margin-top: 12px;
+    font-size: 0.875rem;
+    color: var(--red, #dc2626);
+  }
+</style>
+</head>
+<body>
+
+<header id="site-header" data-active=""></header>
+
+<main class="cs-hero">
+  <div class="cs-card">
+
+    <div class="cs-logo-wrap">
+      <img src="/img/brand-assets/otter-logo.svg" alt="Otter Quotes logo" onerror="this.style.display='none'">
+      <span class="cs-logo-wordmark">Otter Quotes</span>
+    </div>
+
+    <!-- Homeowner copy (default) -->
+    <div id="cs-homeowner">
+      <h1 class="cs-headline">We're not taking homeowners yet.</h1>
+      <p class="cs-subhead">We're building out our contractor network first so you'll have real competition from day one. Enter your email and we'll let you know the moment you can get your first quote.</p>
+    </div>
+
+    <!-- Partner copy -->
+    <div id="cs-partner" style="display:none;">
+      <h1 class="cs-headline">Our partner program isn't open yet.</h1>
+      <p class="cs-subhead">We're focusing on our homeowner launch first. We'll be ready for partners soon — drop your email and we'll reach out when the time is right.</p>
+    </div>
+
+    <form class="cs-form" id="cs-form" novalidate>
+      <input
+        type="email"
+        class="cs-email-input"
+        id="cs-email"
+        placeholder="you@example.com"
+        required
+        autocomplete="email"
+        aria-label="Email address"
+      >
+      <button type="submit" class="cs-submit-btn" id="cs-btn">Notify Me</button>
+    </form>
+
+    <div class="cs-success" id="cs-success">
+      You're on the list. We'll reach out as soon as we're ready.
+    </div>
+    <div class="cs-error" id="cs-error"></div>
+
+  </div>
+</main>
+
+<footer id="site-footer"></footer>
+
+<script src="js/cookie-storage.js"></script>
+<script src="js/config.js"></script>
+<script src="js/nav.js"></script>
+
+<script>
+(function () {
+  // Determine persona and source page from query params
+  var params = new URLSearchParams(window.location.search);
+  var persona = (params.get('persona') || 'homeowner').toLowerCase();
+  var sourcePage = params.get('from') || '';
+
+  // Show correct copy block
+  if (persona === 'partner') {
+    document.getElementById('cs-homeowner').style.display = 'none';
+    document.getElementById('cs-partner').style.display = '';
+  }
+
+  var form    = document.getElementById('cs-form');
+  var emailEl = document.getElementById('cs-email');
+  var btn     = document.getElementById('cs-btn');
+  var success = document.getElementById('cs-success');
+  var error   = document.getElementById('cs-error');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = (emailEl.value || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      error.textContent = 'Please enter a valid email address.';
+      error.style.display = '';
+      return;
+    }
+    error.style.display = '';
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    // Non-blocking: insert into coming_soon_waitlist
+    (function () {
+      try {
+        if (typeof sb === 'undefined' || !sb) {
+          // Supabase not ready; surface success silently (form is submitted intent)
+          showSuccess();
+          return;
+        }
+        sb.from('coming_soon_waitlist')
+          .upsert(
+            { email: email, persona: persona, source_page: sourcePage || null },
+            { onConflict: 'email,persona', ignoreDuplicates: false }
+          )
+          .then(function (res) {
+            // Non-blocking: show success regardless of insert outcome
+            showSuccess();
+          })
+          .catch(function () {
+            showSuccess(); // Still show success — don't punish user for DB issue
+          });
+      } catch (ex) {
+        showSuccess(); // Non-blocking
+      }
+    })();
+
+    // GA4 event
+    try { gtag('event', 'coming_soon_signup', { persona: persona, source_page: sourcePage }); } catch (e) {}
+  });
+
+  function showSuccess() {
+    form.style.display = 'none';
+    success.style.display = '';
+  }
+})();
+</script>
+</body>
+</html>

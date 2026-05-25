@@ -31,6 +31,25 @@ function formatDate(isoString: string): string {
   }
 }
 
+async function sendGA4Event(eventName: string, params: Record<string, unknown> = {}): Promise<void> {
+  const measurementId = Deno.env.get("GA4_MEASUREMENT_ID");
+  const apiSecret = Deno.env.get("GA4_API_SECRET");
+  if (!measurementId || !apiSecret) return;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: "server",
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (_) { /* non-fatal */ }
+}
+
 async function sendInvoiceEmail(
   contractorEmail: string,
   contractorName: string,
@@ -264,6 +283,13 @@ serve(async (req: Request) => {
       console.error("Activity log error:", logError);
       // Don't fail the function — email was sent, log is secondary
     }
+
+    await sendGA4Event("payment_completed", {
+      quote_id,
+      contractor_id,
+      platform_fee_amount: platformFeeAmount,
+      bid_amount: bidAmount,
+    });
 
     return new Response(
       JSON.stringify({

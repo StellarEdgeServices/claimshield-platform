@@ -7,10 +7,11 @@
  * Invoked by the apply_referral_commission() trigger via pg_net.http_post(),
  * or can be called manually/from process-payout-reminders for catch-up runs.
  *
- * Auth: No JWT required (invoked by service role from the DB trigger).
- *   The function accepts a service-role Authorization header and validates
- *   the payout_approval_id exists before sending. Input is treated as
- *   untrusted; only reads DB data to build the email body.
+ * Auth: verify_jwt = false (see supabase/config.toml). Invoked by the
+ *   apply_referral_commission() DB trigger via pg_net with service role bearer,
+ *   and by process-payout-reminders for catch-up runs. A CRON_SECRET gate is
+ *   deferred — requires Tier 3 SQL migration to update pg_net call in the trigger.
+ *   Idempotency (notification_sent_at) and rate limiting provide abuse defense.
  *
  * Rate limiting: checked against rate_limit_config 'notify-payout-pending'.
  *
