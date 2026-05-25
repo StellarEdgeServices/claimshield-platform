@@ -15,6 +15,13 @@
  *   Set SUPABASE_MGMT_TOKEN and SUPABASE_PROJECT_REF env vars to enable.
  *   Falls back to table-only mode when credentials are absent.
  *
+ * Enhancement (86e1g1vv0): pg_cron + Database Webhook caller tracking.
+ *   When SUPABASE_MGMT_TOKEN and SUPABASE_PROJECT_REF are set, also queries:
+ *   - cron.job for scheduled EF callers (cron_callers per EF)
+ *   - supabase_functions.hooks for database webhook callers (webhook_callers per EF)
+ *   Populates edge_functions section with per-EF caller inventory.
+ *   EFs with cron or webhook callers are NOT flagged as orphans.
+ *
  * EF call patterns detected:
  *   1. fetch(...) calls:     /functions/v1/<ef-name>
  *   2. invoke calls:         supabase.functions.invoke('<ef-name>')
@@ -115,14 +122,9 @@ function buildJsEfCache(jsDir) {
 }
 
 // ---------------------------------------------------------------------------
-// Supabase column-level schema fetch (86e1fwe5r)
+// Supabase Management API helper
 // ---------------------------------------------------------------------------
-/**
- * Fetch column metadata from Supabase via Management API.
- * Requires SUPABASE_MGMT_TOKEN and SUPABASE_PROJECT_REF env vars.
- * Returns { tableName: [{ column, type, nullable }] } or null on failure.
- */
-async function fetchColumnMetadata() {
+async function supabaseQuery(query) {
   const mgmtToken  = process.env.SUPABASE_MGMT_TOKEN;
   const projectRef = process.env.SUPABASE_PROJECT_REF;
   if (!mgmtToken || !projectRef) return null;
@@ -136,26 +138,39 @@ async function fetchColumnMetadata() {
         'Authorization': `Bearer ${mgmtToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        query: `SELECT table_name, column_name, data_type, is_nullable
-                FROM information_schema.columns
-                WHERE table_schema = 'public'
-                ORDER BY table_name, ordinal_position`,
-      }),
+      body: JSON.stringify({ query }),
     });
   } catch (err) {
-    console.warn(`[column-metadata] fetch failed: ${err.message}`);
-    return null;
+    return { error: err.message };
   }
 
   if (!res.ok) {
-    console.warn(`[column-metadata] API error ${res.status}: ${await res.text()}`);
+    return { error: `API ${res.status}: ${await res.text()}` };
+  }
+  return { rows: await res.json() };
+}
+
+// ---------------------------------------------------------------------------
+// Supabase column-level schema fetch (86e1fwe5r)
+// ---------------------------------------------------------------------------
+/**
+ * Fetch column metadata from Supabase via Management API.
+ * Returns { tableName: [{ column, type, nullable }] } or null on failure.
+ */
+async function fetchColumnMetadata() {
+  const result = await supabaseQuery(
+    `SELECT table_name, column_name, data_type, is_nullable
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+     ORDER BY table_name, ordinal_position`
+  );
+  if (!result || result.error) {
+    if (result) console.warn(`[column-metadata] ${result.error}`);
     return null;
   }
 
-  const rows = await res.json();
   const tableMap = {};
-  for (const row of rows) {
+  for (const row of result.rows) {
     if (!tableMap[row.table_name]) tableMap[row.table_name] = [];
     tableMap[row.table_name].push({
       column:   row.column_name,
@@ -164,6 +179,134 @@ async function fetchColumnMetadata() {
     });
   }
   return tableMap;
+}
+
+// ---------------------------------------------------------------------------
+// pg_cron caller fetch (86e1g1vv0)
+// ---------------------------------------------------------------------------
+/**
+ * Query cron.job and return a map of { efName: [{ jobname, schedule }] }.
+ * EF names are extracted from the cron command string using the same
+ * /functions/v1/<ef-name> pattern as the page scanner.
+ * Returns null when credentials are absent.
+ */
+async function fetchCronCallers() {
+  const result = await supabaseQuery(`SELECT jobname, schedule, command FROM cron.job`);
+  if (!result) return null; // no credentials
+  if (result.error) {
+    console.warn(`[cron-callers] ${result.error} — skipping pg_cron tracking`);
+    return null;
+  }
+
+  const cronCallers = {}; // efName -> [{ jobname, schedule }]
+  for (const row of result.rows) {
+    const efNames = extractEfNames(row.command || '');
+    for (const ef of efNames) {
+      if (!cronCallers[ef]) cronCallers[ef] = [];
+      cronCallers[ef].push({ jobname: row.jobname, schedule: row.schedule });
+    }
+  }
+  return cronCallers;
+}
+
+// ---------------------------------------------------------------------------
+// Database Webhook caller fetch (86e1g1vv0)
+// ---------------------------------------------------------------------------
+/**
+ * Query supabase_functions.hooks and return { efName: [{ hook_name, hook_table_id, hook_events }] }.
+ * EF name is extracted from the request_path column (e.g. /functions/v1/ef-name).
+ * Returns null when credentials are absent or the table doesn't exist.
+ */
+async function fetchWebhookCallers() {
+  const result = await supabaseQuery(
+    `SELECT hook_name, hook_table_id, hook_events, request_path
+     FROM supabase_functions.hooks`
+  );
+  if (!result) return null; // no credentials
+  if (result.error) {
+    // supabase_functions.hooks may not exist in all project tiers
+    console.warn(`[webhook-callers] ${result.error} — skipping database webhook tracking`);
+    return null;
+  }
+
+  const webhookCallers = {}; // efName -> [{ hook_name, hook_table_id, hook_events }]
+  for (const row of result.rows) {
+    const match = row.request_path &&
+      row.request_path.match(/\/functions\/v1\/([a-z0-9][a-z0-9_-]*[a-z0-9])/);
+    if (!match) continue;
+    const efName = match[1];
+    if (!webhookCallers[efName]) webhookCallers[efName] = [];
+    webhookCallers[efName].push({
+      hook_name:     row.hook_name,
+      hook_table_id: row.hook_table_id,
+      hook_events:   row.hook_events,
+    });
+  }
+  return webhookCallers;
+}
+
+// ---------------------------------------------------------------------------
+// Build edge_functions section (86e1g1vv0)
+// ---------------------------------------------------------------------------
+/**
+ * Build a per-EF caller inventory that inverts the page→EF mapping and
+ * merges in cron and webhook callers.
+ *
+ * An EF is only flagged is_orphan=true if it has ZERO callers across all
+ * three sources (pages, cron, webhooks).
+ *
+ * @param {Object} pages          — { htmlFile: { edge_function_refs: [ef] } }
+ * @param {string} efFunctionsDir — path to supabase/functions/ directory
+ * @param {Object|null} cronCallers    — from fetchCronCallers()
+ * @param {Object|null} webhookCallers — from fetchWebhookCallers()
+ * @returns {Object} efMap
+ */
+function buildEdgeFunctionsMap(pages, efFunctionsDir, cronCallers, webhookCallers) {
+  const efMap = {}; // efName -> { page_callers, cron_callers, webhook_callers, is_orphan, total_callers }
+
+  const ensureEf = (name) => {
+    if (!efMap[name]) efMap[name] = { page_callers: [], cron_callers: [], webhook_callers: [] };
+  };
+
+  // Invert page→EF into EF→pages
+  for (const [htmlFile, data] of Object.entries(pages)) {
+    for (const ef of data.edge_function_refs) {
+      ensureEf(ef);
+      efMap[ef].page_callers.push(htmlFile);
+    }
+  }
+
+  // Merge cron callers
+  if (cronCallers) {
+    for (const [ef, jobs] of Object.entries(cronCallers)) {
+      ensureEf(ef);
+      efMap[ef].cron_callers = jobs;
+    }
+  }
+
+  // Merge webhook callers
+  if (webhookCallers) {
+    for (const [ef, hooks] of Object.entries(webhookCallers)) {
+      ensureEf(ef);
+      efMap[ef].webhook_callers = hooks;
+    }
+  }
+
+  // Seed all deployed EFs (even those with zero callers)
+  if (fs.existsSync(efFunctionsDir)) {
+    for (const dir of fs.readdirSync(efFunctionsDir)) {
+      if (!fs.statSync(path.join(efFunctionsDir, dir)).isDirectory()) continue;
+      ensureEf(dir);
+    }
+  }
+
+  // Compute is_orphan and total_callers
+  for (const [, data] of Object.entries(efMap)) {
+    data.total_callers = data.page_callers.length + data.cron_callers.length + data.webhook_callers.length;
+    data.is_orphan     = data.total_callers === 0;
+  }
+
+  return efMap;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,6 +319,24 @@ async function run() {
     console.log(`✓ column-level schema fetched for ${Object.keys(columnSchema).length} tables`);
   } else {
     console.log('  column-level schema: skipped (set SUPABASE_MGMT_TOKEN + SUPABASE_PROJECT_REF to enable)');
+  }
+
+  // Fetch pg_cron callers (86e1g1vv0)
+  const cronCallers = await fetchCronCallers();
+  if (cronCallers) {
+    const efCount = Object.keys(cronCallers).length;
+    console.log(`✓ pg_cron callers fetched: ${efCount} EF(s) called via cron`);
+  } else {
+    console.log('  pg_cron callers: skipped (set SUPABASE_MGMT_TOKEN + SUPABASE_PROJECT_REF to enable)');
+  }
+
+  // Fetch database webhook callers (86e1g1vv0)
+  const webhookCallers = await fetchWebhookCallers();
+  if (webhookCallers) {
+    const efCount = Object.keys(webhookCallers).length;
+    console.log(`✓ database webhook callers fetched: ${efCount} EF(s) called via webhook`);
+  } else {
+    console.log('  database webhook callers: skipped (set SUPABASE_MGMT_TOKEN + SUPABASE_PROJECT_REF to enable)');
   }
 
   const jsDir  = path.join(REPO_ROOT, 'js');
@@ -227,6 +388,12 @@ async function run() {
       .length;
   }
 
+  // Build edge_functions caller map (86e1g1vv0)
+  const efMap = buildEdgeFunctionsMap(pages, efFunctionsDir, cronCallers, webhookCallers);
+  const orphanCount = Object.values(efMap).filter(d => d.is_orphan).length;
+  const cronEfCount    = cronCallers    ? Object.keys(cronCallers).length    : 0;
+  const webhookEfCount = webhookCallers ? Object.keys(webhookCallers).length : 0;
+
   // Build output
   const tableCount = columnSchema ? Object.keys(columnSchema).length : 46;
   const output = {
@@ -238,6 +405,9 @@ async function run() {
       edge_functions: deployedEfCount || referencedEfNames.size,
       sql_tables: tableCount,
       column_tracking: columnSchema !== null,
+      cron_tracking:    cronCallers !== null,
+      webhook_tracking: webhookCallers !== null,
+      orphan_efs: orphanCount,
       cross_references: {
         page_to_edge_function: totalPageToEf,
         edge_function_to_table: 131, // maintained manually — EF→table refs from supabase/functions
@@ -245,6 +415,7 @@ async function run() {
       },
     },
     pages,
+    edge_functions: efMap,
     ...(columnSchema && { sql_tables_schema: columnSchema }),
   };
 
@@ -256,8 +427,10 @@ async function run() {
   const md = buildMarkdown(output);
   fs.writeFileSync(path.join(DOCS_DIR, 'code-map.md'), md, 'utf8');
 
-  const columnMsg = columnSchema ? `, ${Object.keys(columnSchema).length} tables with column metadata` : '';
-  console.log(`✓ code-map generated: ${htmlFiles.length} pages, ${deployedEfCount} deployed EFs, ${referencedEfNames.size} referenced, ${totalPageToEf} page→EF refs${columnMsg}`);
+  const cronMsg    = cronCallers    ? `, ${cronEfCount} EF(s) with cron callers`    : '';
+  const webhookMsg = webhookCallers ? `, ${webhookEfCount} EF(s) with webhook callers` : '';
+  const columnMsg  = columnSchema   ? `, ${Object.keys(columnSchema).length} tables with column metadata` : '';
+  console.log(`✓ code-map generated: ${htmlFiles.length} pages, ${deployedEfCount} deployed EFs, ${referencedEfNames.size} referenced, ${totalPageToEf} page→EF refs${cronMsg}${webhookMsg}, ${orphanCount} orphan EFs${columnMsg}`);
   return output;
 }
 
@@ -265,7 +438,7 @@ async function run() {
 // Markdown renderer
 // ---------------------------------------------------------------------------
 function buildMarkdown(output) {
-  const { generated_date, repo, state, summary, pages } = output;
+  const { generated_date, repo, state, summary, pages, edge_functions } = output;
   const lines = [
     `# OtterQuote Code Map`,
     ``,
@@ -280,14 +453,36 @@ function buildMarkdown(output) {
     `| HTML Pages | ${summary.pages} |`,
     `| Edge Functions | ${summary.edge_functions} |`,
     `| SQL Tables (created) | ${summary.sql_tables} |`,
+    `| Orphan EFs (zero callers) | ${summary.orphan_efs} |`,
     `| Cross-refs: page→EF | ${summary.cross_references.page_to_edge_function} |`,
     `| Cross-refs: EF→table | ${summary.cross_references.edge_function_to_table} |`,
     `| Cross-refs total | ${summary.cross_references.total} |`,
     ``,
     `---`,
     ``,
-    `## HTML Pages`,
+    `## Edge Functions`,
+    ``,
+    `> EFs with only cron or webhook callers are NOT orphans. ` +
+    `Cron tracking: ${summary.cron_tracking ? '✅' : '⚠️ disabled'}. ` +
+    `Webhook tracking: ${summary.webhook_tracking ? '✅' : '⚠️ disabled'}.`,
+    ``,
+    `| EF Name | Page Callers | Cron Callers | Webhook Callers | Orphan? |`,
+    `|---|---|---|---|---|`,
   ];
+
+  if (edge_functions) {
+    for (const [efName, data] of Object.entries(edge_functions).sort()) {
+      lines.push(
+        `| \`${efName}\` ` +
+        `| ${data.page_callers.length} ` +
+        `| ${data.cron_callers.length} ` +
+        `| ${data.webhook_callers.length} ` +
+        `| ${data.is_orphan ? '⚠️ YES' : '✅ no'} |`
+      );
+    }
+  }
+
+  lines.push(``, `---`, ``, `## HTML Pages`);
 
   // Count external (CDN) vs local scripts
   for (const [htmlFile, data] of Object.entries(pages)) {
