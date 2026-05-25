@@ -19,6 +19,14 @@
         gtag('js', new Date());
         gtag('config', 'G-JNQ6XR3LX2');
     </script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwr7qlk8g5");
+</script>
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1846,8 +1854,8 @@
                 showUploadStatus('Please upload a PDF file.', 'error');
                 return;
             }
-            if (file.size > 3000000) {
-                showUploadStatus('File too large. DocuSign requires contract PDFs to be under 3 MB. Please compress or re-export the PDF and try again.', 'error');
+            if (file.size > 10 * 1024 * 1024) {
+                showUploadStatus('File too large. Maximum 10MB.', 'error');
                 return;
             }
 
@@ -2313,7 +2321,7 @@
             if (!inputElement.files.length) return;
             const file = inputElement.files[0];
             if (file.type !== 'application/pdf') { alert('Please upload a PDF file.'); return; }
-            if (file.size > 3000000) { alert('File too large. DocuSign requires contract PDFs to be under 3 MB. Please compress or re-export the PDF and try again.'); return; }
+            if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum 10MB.'); return; }
             if (!contractorRecord || !sb) { alert('Not connected to database.'); return; }
 
             try {
@@ -2560,8 +2568,8 @@
                 alert('Please upload a PDF file.');
                 return;
             }
-            if (file.size > 3000000) {
-                alert('File too large. DocuSign requires contract PDFs to be under 3 MB. Please compress or re-export the PDF and try again.');
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File too large. Maximum 10MB.');
                 return;
             }
 
