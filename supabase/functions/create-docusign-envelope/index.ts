@@ -69,6 +69,26 @@ function buildCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
+// ========== GA4 MEASUREMENT PROTOCOL ==========
+async function sendGA4Event(eventName: string, params: Record<string, unknown> = {}): Promise<void> {
+  const measurementId = Deno.env.get("GA4_MEASUREMENT_ID");
+  const apiSecret = Deno.env.get("GA4_API_SECRET");
+  if (!measurementId || !apiSecret) return;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: "server",
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (_) { /* non-fatal */ }
+}
+
 // ========== TOKEN CACHE ==========
 interface CachedToken {
   accessToken: string;
@@ -1832,6 +1852,7 @@ async function handleLegacyFlow(
   if (!envelopeId) throw new Error("No envelopeId returned from DocuSign");
 
   console.log(`Envelope created (${document_type}): ${envelopeId}`);
+  await sendGA4Event("envelope_sent", { document_type, envelope_id: envelopeId, claim_id });
 
   const defaultReturnUrl = document_type === "project_confirmation"
     ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`

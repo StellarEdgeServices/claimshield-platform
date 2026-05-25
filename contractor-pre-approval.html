@@ -810,6 +810,7 @@
                 );
                 if (coiError) throw new Error(`COI upload failed: ${coiError.message}`);
                 coi_file_url = coiFileName;
+                if (typeof gtag === 'function') gtag('event', 'artifact_uploaded', { artifact_type: 'coi' });
             }
 
             // Upload WC certificate or WCE-1 exemption document — 30s limit
@@ -823,6 +824,7 @@
                 );
                 if (wcError) throw new Error(`WC upload failed: ${wcError.message}`);
                 wc_cert_file_ref = wcFileName;
+                if (typeof gtag === 'function') gtag('event', 'artifact_uploaded', { artifact_type: 'wc_cert' });
 
                 const expiryInput = document.getElementById('wc-expiry');
                 if (expiryInput.value) {
@@ -837,6 +839,7 @@
                 );
                 if (wce1Error) throw new Error(`WCE-1 upload failed: ${wce1Error.message}`);
                 wc_cert_file_ref = wce1FileName;
+                if (typeof gtag === 'function') gtag('event', 'artifact_uploaded', { artifact_type: 'wc_cert' });
 
                 const wce1ExpiryInput = document.getElementById('wce1-expiry');
                 if (wce1ExpiryInput.value) {
@@ -891,7 +894,10 @@
                             sb.storage.from('contractor-documents').upload(path, entry.file, { upsert: true }),
                             30000, 'License doc upload'
                         ).catch(e => ({ error: e }));
-                        if (!licUploadResult.error) doc_url = path;
+                        if (!licUploadResult.error) {
+                            doc_url = path;
+                            if (typeof gtag === 'function') gtag('event', 'artifact_uploaded', { artifact_type: 'license' });
+                        }
                         // non-fatal: if upload fails, save row with doc_url = null
                     }
                     const { error: insErr } = await withTimeout(
