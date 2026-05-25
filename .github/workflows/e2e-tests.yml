@@ -23,6 +23,9 @@ jobs:
       - name: Spec file structural integrity check (Stage 5 prevention, 86e1cee4y)
         run: python3 scripts/check-spec-files-closed.py
 
+      - name: sb.auth.onAuthStateChange guard check (Stage 5 prevention, 86e1fratf)
+        run: python3 scripts/check-sb-auth-guards.py
+
       - name: Lint vanilla JS for syntax errors
         run: |
           echo "Running node --check on js/**/*.js ..."

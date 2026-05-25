@@ -6,6 +6,9 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
+<!-- GA4 — fires auth_success engagement event before redirect so sessions aren't counted as bounces -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-JNQ6XR3LX2');</script>
 <!-- D-208: Capture auth tokens before Supabase createClient() clears the URL -->
 <script>window._oq_has_auth_in_url = window.location.hash.includes('access_token') || window.location.search.includes('code=');</script>
 <meta charset="UTF-8">
@@ -127,6 +130,20 @@
     } catch (e) {}
   }
 
+  // Fire a GA4 engagement event before every redirect so the auth-callback
+  // session is never counted as a bounce (GA4 requires at least one engagement
+  // event within 10 s; the redirect fires faster than that without this).
+  function _oqTrackAuth(role, destination) {
+    try {
+      if (typeof gtag === 'function') {
+        gtag('event', 'auth_success', {
+          auth_role: role || 'unknown',
+          auth_destination: destination
+        });
+      }
+    } catch (e) {}
+  }
+
   function _oqGetIntent() {
     // URL query param wins (survives OAuth round-trip without storage).
     // localStorage is a backup for older callers that haven't been updated.
@@ -164,6 +181,7 @@
     // even if the user clicked the wrong login button, route them home.
     if (role === 'contractor') {
       _oqLog('routing -> /contractor-dashboard.html (DB says contractor)');
+      _oqTrackAuth('contractor', '/contractor-dashboard.html');
       window.location.href = '/contractor-dashboard.html';
       return;
     }
@@ -180,6 +198,7 @@
       // bounce loop ("create account, get link, back to start, repeat").
       _oqLog('routing -> /contractor-pre-approval.html (intent=contractor, no record yet)');
       localStorage.removeItem('cs_auth_role');
+      _oqTrackAuth('contractor_new', '/contractor-pre-approval.html');
       window.location.href = '/contractor-pre-approval.html';
       return;
     }
@@ -201,6 +220,7 @@
                  'error:', claimRes && claimRes.error && claimRes.error.message);
           if (claimRes && claimRes.data) {
             _oqLog('routing -> /dashboard.html');
+            _oqTrackAuth('homeowner', '/dashboard.html');
             window.location.href = '/dashboard.html';
             return;
           }
@@ -209,12 +229,14 @@
         _oqLog('claim check threw:', e && e.message);
       }
       _oqLog('routing -> /trade-selector.html (homeowner, no claim)');
+      _oqTrackAuth('homeowner_new', '/trade-selector.html');
       window.location.href = '/trade-selector.html';
       return;
     }
 
     // Brand new user, no signal at all — start the homeowner intake.
     _oqLog('routing -> /trade-selector.html (no signal at all, default)');
+    _oqTrackAuth('unknown_new', '/trade-selector.html');
     window.location.href = '/trade-selector.html';
   }
 

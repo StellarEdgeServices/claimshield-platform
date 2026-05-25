@@ -14,7 +14,8 @@
  *     "storage_path": "claim-documents/user_id/claim_id/filename.pdf"
  *   }
  *
- * Auth: --no-verify-jwt (consistent with all OtterQuote Edge Functions)
+ * Auth: verify_jwt = false (see supabase/config.toml). Called from frontend (user JWT)
+ *   and from other EFs (service role). JWT verification disabled to allow both callers.
  *
  * Rate limit: 10/day, 50/month per claim (via check_rate_limit RPC).
  *
