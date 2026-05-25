@@ -30,6 +30,28 @@
 <link rel="stylesheet" href="css/design-system.css">
 <link rel="stylesheet" href="css/nav.css">
 
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://otterquote.com"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Home Inspector Partner Program",
+      "item": "https://otterquote.com/partner-inspectors.html"
+    }
+  ]
+}
+</script>
+
 <style>
 /* ── Hero Section ── */
 .hero {
@@ -567,6 +589,26 @@
   }
 }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Otter Quotes",
+  "url": "https://otterquote.com",
+  "telephone": "844-875-3412",
+  "email": "info@otterquote.com",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "3410 N High School Rd, Ste G #102",
+    "addressLocality": "Indianapolis",
+    "addressRegion": "IN",
+    "postalCode": "46224",
+    "addressCountry": "US"
+  },
+  "description": "Otter Quotes helps homeowners get competing contractor bids for insurance claim repairs.",
+  "areaServed": "Indianapolis, IN and surrounding areas"
+}
+</script>
 </head>
 
 <body>
@@ -887,7 +929,7 @@
 </main>
 
 <!-- ── Footer ── -->
-<footer class="footer" id="footer"></footer>
+<footer class="footer" id="site-footer"></footer>
 
 <script src="js/cookie-storage.js"></script>
 <script src="js/config.js"></script>

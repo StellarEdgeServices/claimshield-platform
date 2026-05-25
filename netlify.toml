@@ -25,6 +25,12 @@
 [context.deploy-preview]
   publish = "."
 
+# Explicit Content-Type for .txt files (llms.txt, robots.txt, etc.)
+[[headers]]
+  for = "/*.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=UTF-8"
+
 # Force UTF-8 charset on all HTML responses.
 # Without this explicit header, some browsers fall back to Windows-1252 encoding
 # which garbles UTF-8 multi-byte characters (em dashes render as "â??", etc.).

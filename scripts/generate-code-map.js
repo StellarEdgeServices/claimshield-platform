@@ -4,14 +4,11 @@
  * OtterQuote code-map generator — scans HTML pages and their externally referenced
  * JS files to produce a complete edge-function reference map.
  *
- * Outputs:
- *   ../Docs/code-map.json   — machine-readable map
- *   ../Docs/code-map.md     — human-readable summary
+ * Outputs (always inside the repo, regardless of cwd):
+ *   <repo>/Docs/code-map.json   — machine-readable map
+ *   <repo>/Docs/code-map.md     — human-readable summary
  *
  * Usage: node scripts/generate-code-map.js [--repo-root <path>]
- *
- * Fix (86e1ewyvh): Now scans external JS files (src="js/*.js") in addition to
- * inline <script> blocks for EF fetch() and supabase.functions.invoke() calls.
  *
  * EF call patterns detected:
  *   1. fetch(...) calls:     /functions/v1/<ef-name>
@@ -29,7 +26,7 @@ const path = require('path');
 const args     = process.argv.slice(2);
 const rootIdx  = args.indexOf('--repo-root');
 const REPO_ROOT = rootIdx !== -1 ? args[rootIdx + 1] : path.resolve(__dirname, '..');
-const DOCS_DIR  = path.resolve(REPO_ROOT, '..', 'Docs');
+const DOCS_DIR  = path.resolve(REPO_ROOT, 'Docs');
 
 const TODAY = new Date().toISOString().slice(0, 10);
 

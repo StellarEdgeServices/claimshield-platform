@@ -35,6 +35,26 @@ function buildCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
+// ========== GA4 MEASUREMENT PROTOCOL ==========
+async function sendGA4Event(eventName: string, params: Record<string, unknown> = {}): Promise<void> {
+  const measurementId = Deno.env.get("GA4_MEASUREMENT_ID");
+  const apiSecret = Deno.env.get("GA4_API_SECRET");
+  if (!measurementId || !apiSecret) return;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: "server",
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (_) { /* non-fatal */ }
+}
+
 // ========== HMAC VERIFICATION ==========
 async function verifyHmacSignature(
   payload: string,
@@ -234,6 +254,7 @@ serve(async (req) => {
 
     if (status === "completed") {
       // Envelope fully signed by all parties
+      await sendGA4Event("envelope_signed", { envelope_id: envelopeId, claim_id: claim.id });
       if (isContract) {
         // ========== HANDLE PAYMENT CHARGING (D-127) ==========
         // Contract signed → charge contractor → release to contractor (if payment succeeds)
