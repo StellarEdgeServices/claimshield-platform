@@ -1,0 +1,12 @@
+-- v81: D-093 process-auto-bids pg_cron schedule
+-- Runs every 5 minutes; invokes process-auto-bids EF
+-- Auth: Bearer CRON_SECRET (same pattern as process-coi-reminders, process-dunning-cron)
+-- Companion rollback: sql/v81r-process-auto-bids-cron-rollback.sql
+-- Applied: 2026-05-26 via Supabase MCP execute_sql (wm-86e1fzwkz-f35d)
+-- Secret not stored in repo per GitHub secret-scanning policy.
+-- cron.schedule() is upsert-safe.
+
+-- Cron name: process-auto-bids
+-- Schedule:  */5 * * * *
+-- EF URL: https://yeszghaspzwwstvsrioa.supabase.co/functions/v1/process-auto-bids
+-- Headers: Content-Type: application/json, Authorization: Bearer <CRON_SECRET>
