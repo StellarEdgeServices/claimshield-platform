@@ -1,6 +1,7 @@
 # Secrets — never commit
 .env
 .env.*
+.deploy-secrets
 
 # OS junk
 .DS_Store
