@@ -7,13 +7,13 @@ Sentry.init({
   // Capture 100% of transactions in development; tune down in production
   tracesSampleRate: 1.0,
 
-  // Capture Replay for 10% of all sessions, 100% of sessions with errors
-  replaysSessionSampleRate: 0.1,
+  // Error-context-only replay per D-233: no ambient recording, capture on error only
+  replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
 
   // Only run in browser
   integrations: [
-    Sentry.replayIntegration(),
+    Sentry.replayIntegration({ maskAllInputs: true }),
   ],
 
   debug: false,
