@@ -555,7 +555,7 @@ async function expireBids(
           renewed_from_quote_id:    quote.id,
           expires_at:               newExpiresAt,
           bid_status:               "active",
-          trade_types:              quote.trade_types,
+          trade_type:               quote.trade_type,
           // value_adds and other JSON fields are intentionally not cloned here
           // to keep the renewal lightweight. A full clone can be added later if
           // needed — the contract template and pricing are the operative data.

@@ -154,15 +154,9 @@ export default function GetStartedPage() {
       // 1. Insert into leads table (non-fatal)
       try {
         await supabase.from('leads').insert({
-          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          name: `${firstName.trim()} ${lastName.trim()}`,
           email: emailTrimmed,
-          phone: phone.trim(),
           source: referralSource || 'web',
-          notes: JSON.stringify({
-            address: address.trim(),
-            referring_agent_name: refName.trim() || null,
-            referring_agent_email: refEmail.trim() || null,
-          }),
           created_at: new Date().toISOString(),
         });
       } catch (leadErr) {

@@ -999,7 +999,7 @@
             .from('notifications')
             .select('id')
             .eq('claim_id', this.claimId)
-            .eq('type', 'color_board_request')
+            .eq('notification_type', 'color_board_request')
             .maybeSingle();
 
           if (existing) {
@@ -1017,9 +1017,10 @@
             .from('notifications')
             .insert({
               claim_id: this.claimId,
-              contractor_id: this.contractorId,
-              type: 'color_board_request',
-              status: 'pending',
+              notification_type: 'color_board_request',
+              channel: 'dashboard',
+              recipient: '',
+              message_preview: 'Homeowner requesting a color board visit.',
               created_at: new Date().toISOString()
             });
 

@@ -433,9 +433,9 @@ serve(async (req) => {
       ? ` Survey reasons: [${surveyReasons.join(", ")}].${surveyNotes ? ` Notes: "${surveyNotes.slice(0, 200)}"` : ""}`
       : "";
     await sb.from("activity_log").insert({
-      claim_id:    claim_id,
       event_type:  "contractor_switched",
-      description: `Homeowner switched contractors. Original contractor: ${contractorName}. Refund: ${refundResult.success ? "issued" : "pending"}.${surveyDesc}`,
+      title:       `Homeowner switched contractors. Original contractor: ${contractorName}. Refund: ${refundResult.success ? "issued" : "pending"}.${surveyDesc}`,
+      metadata:    { claim_id },
       created_at:  new Date().toISOString(),
     }).catch(err => console.warn("[switch-contractor] Activity log insert failed (non-critical):", err));
 

@@ -135,7 +135,8 @@ async function rebateOne(
     // Log to activity_log for visibility; leave rebate_due=true for retry.
     try {
       await supabase.from("activity_log").insert({
-        action: "hover_rebate_failed",
+        event_type: "hover_rebate_failed",
+        title: "hover_rebate_failed",
         metadata: {
           hover_order_id: order.id,
           claim_id: order.claim_id,
@@ -163,7 +164,8 @@ async function rebateOne(
     // Refund already happened — log but do not fail the call (refund is real).
     try {
       await supabase.from("activity_log").insert({
-        action: "hover_rebate_db_update_failed",
+        event_type: "hover_rebate_db_update_failed",
+        title: "hover_rebate_db_update_failed",
         metadata: {
           hover_order_id: order.id,
           claim_id: order.claim_id,

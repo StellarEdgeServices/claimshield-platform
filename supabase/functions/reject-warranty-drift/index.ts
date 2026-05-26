@@ -103,7 +103,8 @@ Deno.serve(async (req: Request) => {
     // Log activity
     try {
       await sb.from("activity_log").insert({
-        action: `warranty_manifest_drift_${newStatus}`,
+        event_type: `warranty_manifest_drift_${newStatus}`,
+        title: `warranty_manifest_drift_${newStatus}`,
         metadata: {
           drift_id: driftId,
           manufacturer: drift.manufacturer,
