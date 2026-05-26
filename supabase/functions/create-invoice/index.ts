@@ -268,9 +268,10 @@ serve(async (req: Request) => {
 
     // Insert activity log entry
     const { error: logError } = await sb.from("activity_log").insert({
-      contractor_id,
       event_type: "invoice_created",
+      title: "invoice_created",
       metadata: {
+        contractor_id,
         quote_id,
         invoice_amount: platformFeeAmount,
         net_amount: contractorNet,

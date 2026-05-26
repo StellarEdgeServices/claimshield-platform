@@ -360,7 +360,6 @@ const Services = {
       .insert({
         claim_id,
         user_id,
-        address: address_line_1,
         status: 'pending',
         amount_charged,
         deliverable_type_id,
