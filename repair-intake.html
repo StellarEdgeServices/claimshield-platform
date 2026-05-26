@@ -1243,7 +1243,6 @@
                         .from('claims')
                         .insert({
                             user_id: user.id,
-                            homeowner_id: user.id,
                             job_type: 'repair',
                             funding_type: 'insurance',
                             status: 'draft',
@@ -1293,8 +1292,7 @@
 
                 // ── Mark claim as submitted ─────────────────────────────────
                 await sb.from('claims').update({
-                    status: 'submitted',
-                    submitted_at: new Date().toISOString()
+                    status: 'submitted'
                 }).eq('id', claimId).eq('user_id', user.id);
 
                 // ── GA4 ─────────────────────────────────────────────────────

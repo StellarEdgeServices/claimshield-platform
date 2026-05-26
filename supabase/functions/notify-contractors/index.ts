@@ -1416,8 +1416,8 @@ async function handleAgreementRequested(
       claim_id,
       channel: "dashboard",
       notification_type: "agreement_requested",
+      recipient: "",
       message_preview: `A homeowner is interested in your bid for ${displayLocation} — sign your agreement now to be selected`,
-      metadata: { quote_id, signing_link: signingLink },
     });
   } catch (err) {
     console.warn("Could not insert dashboard notification for agreement_requested:", err);

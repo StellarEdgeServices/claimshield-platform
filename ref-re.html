@@ -664,11 +664,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Record 'clicked' event in referrals table
     try {
       await sb.from('referrals').insert({
-        referral_code: refCode,
-        event_type: 'clicked',
         landing_page: 'ref-re',
-        user_agent: navigator.userAgent,
-        timestamp: new Date().toISOString(),
+        metadata:     { referral_code: refCode, event_type: 'clicked', user_agent: navigator.userAgent },
       });
     } catch (err) {
       console.error('Error recording referral click:', err);
@@ -760,12 +757,9 @@ async function handleFormSubmit(e) {
     // 3. Record the signup event
     try {
       await sb.from('referrals').insert({
-        referral_code: referralCode,
-        email,
-        event_type: 'signup',
-        landing_page: 'ref-re',
-        user_agent: navigator.userAgent,
-        timestamp: new Date().toISOString(),
+        homeowner_email: email,
+        landing_page:    'ref-re',
+        metadata:        { referral_code: referralCode, event_type: 'signup', user_agent: navigator.userAgent },
       });
     } catch (err) {
       console.error('Error recording signup event:', err);

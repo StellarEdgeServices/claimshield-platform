@@ -993,11 +993,11 @@ serve(async (req) => {
       if (contractor?.user_id) {
         await supabase.from("notifications").insert({
           user_id:           contractor.user_id,
+          claim_id,
           notification_type: "payment_failed",
           channel:           "dashboard",
-          title:             "Payment Declined",
-          message:           `Your payment of ${feeFormatted} for the ${projectDesc} was declined. Please update your payment method.`,
-          metadata: { quote_id, claim_id, failure_id: failureRecord.id, amount_cents },
+          recipient:         "",
+          message_preview:   `Your payment of ${feeFormatted} for the ${projectDesc} was declined. Please update your payment method.`,
         });
       }
 

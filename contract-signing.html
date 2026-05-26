@@ -1790,12 +1790,11 @@
         if (state.contractor?.user_id) {
           const { error: notifErr } = await sb.from('notifications').insert({
             user_id: state.contractor.user_id,
+            claim_id: state.claimId,
             notification_type: 'bid_renewal_requested',
             channel: 'dashboard',
-            title: 'Homeowner requesting updated bid',
-            message: `A homeowner is requesting an updated bid on ${state.claim?.property_address || 'their project'}.`,
+            recipient: '',
             message_preview: `A homeowner is requesting an updated bid on ${state.claim?.property_address || 'their project'}.`,
-            metadata: JSON.stringify({ quote_id: bidId, claim_id: state.claimId }),
           });
           if (!notifErr) notifOk = true;
           else console.warn('requestBidRenewal — notification insert error:', notifErr);
