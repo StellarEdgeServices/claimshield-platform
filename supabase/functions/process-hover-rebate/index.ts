@@ -108,6 +108,14 @@ async function rebateOne(
     return { ...base, detail: "No completed quote on claim yet; rebate not owed." };
   }
 
+  // Fetch claim owner for activity_log user_id
+  const { data: claimOwner } = await supabase
+    .from("claims")
+    .select("user_id")
+    .eq("id", order.claim_id)
+    .single();
+  const claimUserId = claimOwner?.user_id ?? null;
+
   // Stripe refund — idempotency key prevents double refund on retry.
   const basicAuth = btoa(`${stripeSecretKey}:`);
   const form = new URLSearchParams();
@@ -137,6 +145,7 @@ async function rebateOne(
       await supabase.from("activity_log").insert({
         event_type: "hover_rebate_failed",
         title: "hover_rebate_failed",
+        user_id: claimUserId,
         metadata: {
           hover_order_id: order.id,
           claim_id: order.claim_id,
@@ -166,6 +175,7 @@ async function rebateOne(
       await supabase.from("activity_log").insert({
         event_type: "hover_rebate_db_update_failed",
         title: "hover_rebate_db_update_failed",
+        user_id: claimUserId,
         metadata: {
           hover_order_id: order.id,
           claim_id: order.claim_id,

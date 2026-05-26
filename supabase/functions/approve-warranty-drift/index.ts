@@ -166,7 +166,7 @@ Deno.serve(async (req: Request) => {
           reviewed_at: now,
         }).eq("id", driftId);
 
-        await logActivity(sb, adminEmail, drift, "warranty_manifest_drift_skipped");
+        await logActivity(sb, user.id, adminEmail, drift, "warranty_manifest_drift_skipped");
 
         return new Response(
           JSON.stringify({ status: "skipped", drift_id: driftId }),
@@ -189,7 +189,7 @@ Deno.serve(async (req: Request) => {
     if (markErr) throw new Error(`Failed to mark drift row applied: ${markErr.message}`);
 
     // ── Log activity ──────────────────────────────────────────────────────
-    await logActivity(sb, adminEmail, drift, "warranty_manifest_drift_applied");
+    await logActivity(sb, user.id, adminEmail, drift, "warranty_manifest_drift_applied");
 
     return new Response(
       JSON.stringify({ status: "applied", drift_id: driftId }),
@@ -218,6 +218,7 @@ async function checkAdminRole(userId: string, email: string): Promise<boolean> {
 
 async function logActivity(
   sb: ReturnType<typeof createClient>,
+  userId: string,
   adminEmail: string,
   drift: Record<string, unknown>,
   action: string
@@ -226,6 +227,7 @@ async function logActivity(
     await sb.from("activity_log").insert({
       event_type: action,
       title: action,
+      user_id: userId,
       metadata: {
         drift_id: drift.id,
         manufacturer: drift.manufacturer,

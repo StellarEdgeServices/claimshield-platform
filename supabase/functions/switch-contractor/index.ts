@@ -435,6 +435,7 @@ serve(async (req) => {
     await sb.from("activity_log").insert({
       event_type:  "contractor_switched",
       title:       `Homeowner switched contractors. Original contractor: ${contractorName}. Refund: ${refundResult.success ? "issued" : "pending"}.${surveyDesc}`,
+      user_id:     user.id,
       metadata:    { claim_id },
       created_at:  new Date().toISOString(),
     }).catch(err => console.warn("[switch-contractor] Activity log insert failed (non-critical):", err));

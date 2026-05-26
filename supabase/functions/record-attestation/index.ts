@@ -280,6 +280,7 @@ serve(async (req) => {
   const { error: logError } = await supabase.from("activity_log").insert({
     event_type: "attestation_recorded",
     title: "attestation_recorded",
+    user_id: contractor.user_id,
     metadata: {
       contractor_id,
       attestation_type,
