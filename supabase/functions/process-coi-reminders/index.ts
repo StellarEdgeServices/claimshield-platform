@@ -1036,9 +1036,9 @@ async function processWCReminders(
           
           // Log to activity_log
           const { error: logError } = await supabase.from("activity_log").insert({
-            contractor_id: contractorId,
             event_type: "wc_cert_expiry_reminder_sent",
-            metadata: { days_until_expiry: days, expiry_date: wcExpiryDate },
+            title: "wc_cert_expiry_reminder_sent",
+            metadata: { contractor_id: contractorId, days_until_expiry: days, expiry_date: wcExpiryDate },
           });
           
           if (logError) {

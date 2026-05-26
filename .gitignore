@@ -18,10 +18,14 @@ supabase/.temp/
 *.py
 *.sh
 *.ipynb
+__pycache__/
 
 # Repo-level tooling (allowed)
 !scripts/
 !scripts/*
+!tools/
+!tools/*
+tools/__pycache__/
 
 # Sensitive local auth snapshots — never commit
 .stohler_auth_snapshot.json

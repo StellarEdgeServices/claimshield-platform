@@ -1297,15 +1297,9 @@
       const { error: leadError } = await sb
         .from('leads')
         .insert({
-          full_name: `${firstName} ${lastName}`,
+          name: `${firstName} ${lastName}`,
           email: email,
-          phone: phone,
           source: 're_agent',
-          notes: JSON.stringify({
-            brokerage,
-            service_area: serviceArea,
-            website: website || null,
-          }),
           created_at: new Date().toISOString(),
         });
 
