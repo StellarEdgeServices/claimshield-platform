@@ -1,0 +1,5315 @@
+{
+  "generated_date": "2026-05-23",
+  "repo": "otterquote-platform",
+  "state": "pre-D-211-static-site",
+  "summary": {
+    "pages": 57,
+    "edge_functions": 48,
+    "sql_tables": 53,
+    "column_tracking": true,
+    "cross_references": {
+      "page_to_edge_function": 66,
+      "edge_function_to_table": 131,
+      "total": 197
+    }
+  },
+  "pages": {
+    "admin-cert-verifications.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "admin-contractors.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "admin-cpa.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
+      ],
+      "stylesheets": [],
+      "edge_function_refs": [],
+      "direct_table_refs": ["cpa_versions", "contractors"]
+    },
+    "admin-fee-config.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
+      ],
+      "stylesheets": [],
+      "edge_function_refs": []
+    },
+    "admin-incomplete-profiles.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "admin-payouts.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "approve-payout",
+        "reject-payout",
+        "send-support-email"
+      ]
+    },
+    "admin-referrals.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "admin-template-review.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "admin-warranty-drift.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "auth-callback.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "bids.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js",
+        "js/services.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "get-hover-siding-data",
+        "send-support-email"
+      ]
+    },
+    "color-selection.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "coming-soon.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contract-signing.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-about.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-agreement.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-auto-bids.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-bid-form.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "get-hover-siding-data",
+        "send-support-email"
+      ]
+    },
+    "contractor-dashboard.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "mark-job-complete",
+        "record-warranty-upload",
+        "send-message-notification",
+        "send-support-email"
+      ]
+    },
+    "contractor-faq.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-how-it-works.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-join.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-login.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-onboarding.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-opportunities.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "contractor-pre-approval.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "create-hubspot-contact",
+        "send-support-email"
+      ]
+    },
+    "contractor-profile.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js",
+        "js/contract-template-validation.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email",
+        "validate-contract-template"
+      ]
+    },
+    "contractor-settings.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://js.stripe.com/v3/",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "dashboard.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "resend-hover-link",
+        "send-message-notification",
+        "send-support-email"
+      ]
+    },
+    "faq.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "get-started.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "create-hubspot-contact",
+        "send-support-email"
+      ]
+    },
+    "help-estimate.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js",
+        "js/services.js"
+      ],
+      "stylesheets": [
+        "css/design-system.css",
+        "css/nav.css",
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "help-materials.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "css/design-system.css",
+        "css/nav.css",
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "help-measurements.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://js.stripe.com/v3/",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js",
+        "js/services.js"
+      ],
+      "stylesheets": [
+        "css/design-system.css",
+        "css/nav.css",
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "how-it-works.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "index.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "inspector-landing.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "landing.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "login.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "onboarding-demo.html": {
+      "scripts": [
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "partner-dashboard.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email",
+        "submit-partner-w9"
+      ]
+    },
+    "partner-inspectors.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "partner-insurance.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "partner-re.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "privacy.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "project-confirmation.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "recruit.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "ref-inspector.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "ref-insurance.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "ref-re.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "ref.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js"
+      ],
+      "stylesheets": [
+        "css/design-system.css"
+      ],
+      "edge_function_refs": []
+    },
+    "refer-a-friend.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "js/config.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "repair-intake.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "schedule-inspection.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "stellar-edge.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap"
+      ],
+      "edge_function_refs": []
+    },
+    "terms.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    },
+    "trade-selector.html": {
+      "scripts": [
+        "https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js",
+        "https://www.googletagmanager.com/gtag/js?id=G-JNQ6XR3LX2",
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
+        "js/cookie-storage.js",
+        "js/config.js",
+        "js/auth.js",
+        "js/nav.js"
+      ],
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+        "css/design-system.css",
+        "css/nav.css"
+      ],
+      "edge_function_refs": [
+        "send-support-email"
+      ]
+    }
+  },
+  "sql_tables_schema": {
+    "activity_log": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "event_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "title",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "metadata",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "adjuster_email_requests": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "adjuster_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "to_email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "to_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "request_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "ingest_email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "response_received",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "response_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "followup_sent",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "followup_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "adjusters": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "adjuster_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "adjuster_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "adjuster_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "carrier_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "region",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "admin_contractor_last_logins": [
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "last_sign_in_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "admin_dispute_queue": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "dispute_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "stripe_dispute_id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "amount",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "stripe_dispute_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "clickup_task_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "clickup_task_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "resolved_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "carrier_profiles": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "carrier_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "claims_portal_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "claims_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "claims_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "typical_estimate_days",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "process_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "special_instructions",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "active",
+        "type": "boolean",
+        "nullable": false
+      }
+    ],
+    "cert_verification_quality": [
+      {
+        "column": "total_bids_post_d199",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "contractors_with_cert_claims",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "contractors_with_verified_cert",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "active_cert_required_tiers",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "ready_for_hard_filter_review",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "computed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "cert_verification_quality_by_manufacturer": [
+      {
+        "column": "manufacturer",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contractors_verified_count",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "bids_30d_count",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "bids_30d_with_verified_cert_count",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "verification_coverage_pct",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "last_successful_scrape_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "days_since_last_scrape",
+        "type": "integer",
+        "nullable": true
+      }
+    ],
+    "claim_trade_items": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "trade",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "scope",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "estimated_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "depreciation_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "sides_affected",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_decision",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "claims": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "carrier_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "adjuster_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "adjuster_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "adjuster_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "adjuster_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "ingest_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "material_category",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "shingle_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "impact_class",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "designer_product",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "designer_manufacturer",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "metal_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "metal_material",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "color_brand",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "color_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "color_selected_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "color_addendum_signed",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "hover_order_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hover_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hover_paid",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "hover_rebated",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "has_estimate",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "has_measurements",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "has_material_selection",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "ready_for_bids",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "bids_submitted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "selected_contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contract_signed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "docusign_envelope_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "deductible_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "deductible_collected",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "deductible_stripe_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "platform_fee_charged",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "platform_fee_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "platform_fee_stripe_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "estimate_filename",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "measurements_filename",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "date_of_loss",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "damage_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "job_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "rcv_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "acv_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "roof_squares",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "repair_squares",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "existing_shingle_brand",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "existing_shingle_product",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "existing_shingle_color",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "urgency",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "urgency_deadline",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "urgency_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referral_code",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referral_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "policy_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "funding_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "trades",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "repair_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "repair_description",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "repair_shingle_count",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "roof_age_years",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "material_id_method",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "material_id_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "itel_order_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "itel_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "ai_id_confidence",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "trade_intents",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "color_confirmation_envelope_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contract_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "contract_signed_by",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "selected_bid_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "deductible_collected_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contract_declined_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "contract_voided_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "color_confirmed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "property_address",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "ingest_email_address",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "parsed_line_items",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "contractor_scope_summary",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "loss_sheet_parsed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "project_confirmation",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "project_confirmation_envelope_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referral_source",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referral_agent_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_switched_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "contractor_switch_count",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "siding_bid_released_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "roofing_bid_released_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "gutters_bid_released_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "windows_bid_released_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "bid_window_expires_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "bid_window_notified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "property_state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "switch_reason_survey",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "completion_date",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "video_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "profile_prompt_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "coming_soon_waitlist": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "persona",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "source_page",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "contractor_cert_verifications": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "manufacturer",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "cert_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "source",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "source_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "evidence_storage_path",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "verified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "expires_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "reviewed_by_admin",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "contractor_certifications": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "certification_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "issuing_organization",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "certification_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "expiration_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "contractor_licenses": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "municipality",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "license_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "license_document_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "expiration_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "jurisdiction_level",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "verification_url",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "contractor_payment_methods": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "stripe_payment_method_id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "payment_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "last_four",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "brand",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "bank_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "is_default",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "contractor_templates": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "trade",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "funding_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "pdf_storage_path",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "validation_result",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "manual_overrides",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "admin_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "reviewed_by",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "reviewed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "contractors": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "company_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "contact_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "license_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "specialties",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "rating",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "review_count",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "has_payment_method",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "stripe_customer_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "no_license_required",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "about_us",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "why_choose_us",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "owner_photo_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "preferred_brands",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "trades",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "service_counties",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "service_area_description",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "google_reviews_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "bbb_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "angi_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "yelp_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "color_selection_enabled",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "notification_emails",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "notification_phones",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "notification_preferences",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contract_pdf_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "auto_bid_enabled",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "auto_bid_settings",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "contract_templates",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "address_line1",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_city",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_zip",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "website_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "num_employees",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "years_in_business",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "repairs_accepted",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "guarantee_accepted",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "has_workers_comp",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "has_general_liability",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "auto_bid_value_adds",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "stripe_payment_method_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "stripe_payment_method_last4",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "stripe_payment_method_brand",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "color_confirmation_template",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "agreement_accepted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "agreement_version",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "timezone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "gl_carrier",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "gl_policy_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "gl_coverage_amount",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "gl_expiration_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "wc_carrier",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "wc_policy_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "wc_coverage_amount",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "wc_expiration_date",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "gallery_photo_urls",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "admin_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "license_verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "license_verified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "insurance_verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "insurance_verified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "insurance_verification_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "insurance_verification_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "approved_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "rejected_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "rejection_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "pc_template_migration_pending",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "coi_file_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "coi_expires_at",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "coi_insurer",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "coi_policy_number",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "coi_uploaded_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "coi_reminder_30_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "coi_reminder_14_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "coi_reminder_7_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "coi_expired_notified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "ic_24511_attestation",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "attestation_accepted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "attestation_signer_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "attestation_signer_title",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "attestation_text_version",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "sms_consent_ts",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "default_auto_renew",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "cpa_version",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "cpa_accepted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "onboarding_step",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "partial_completion_email_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "template_review_role",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "cert_status",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "intro_video_path",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "wc_cert_file_ref",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "wc_cert_expiry",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "wc_cert_uploaded_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "license_path",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "license_document_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "license_attestation_signed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "legacy_pre_approval",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "wc_cert_reminder_30_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "needs_cpa_reattestation",
+        "type": "boolean",
+        "nullable": false
+      }
+    ],
+    "contribution_summary": [
+      {
+        "column": "contribution_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "member_count",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "cpa_versions": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "version_label",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "effective_date",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "column": "change_summary",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "is_current",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "cron_health": [
+      {
+        "column": "job_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "last_run_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "last_run_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "last_error",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "run_count",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "disputes": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "stripe_dispute_id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "stripe_charge_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "stripe_payment_intent_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "quote_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "amount",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "livemode",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "routing",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "evidence_submitted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "evidence_payload",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "auto_submit_result",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "auto_submit_error",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contractor_mark_complete_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_acknowledgment_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "stub_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "documents": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "file_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "file_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "file_size",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "column": "storage_path",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "doc_category",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "expansion_waitlist": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "opted_in",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "opted_in_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "notified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "feature_requests": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contractor_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "request_text",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "fee_acceptances": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "bid_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "fee_pct",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_basis",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "fee_amount",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_text_displayed",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "accepted_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "ip_address",
+        "type": "inet",
+        "nullable": true
+      },
+      {
+        "column": "user_agent",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "invoice_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "rescinded_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "rescission_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "home_profiles": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "homeowner_user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "year_built",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "square_footage",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "stories",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "future_projects",
+        "type": "ARRAY",
+        "nullable": false
+      },
+      {
+        "column": "roof_last_replaced",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "siding_material",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hvac_age_years",
+        "type": "smallint",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "hover_orders": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "hover_job_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hover_link",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "amount_charged",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "stripe_payment_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "rebated",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "rebate_stripe_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "report_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "capture_request_id",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "capture_request_identifier",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "capture_link",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "deliverable_type_id",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "model_id",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "capturing_user_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "capturing_user_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "measurements_json",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "resend_count",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "last_resend_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "material_list",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_charge_amount",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_stripe_payment_intent_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "rebate_due",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "rebate_paid_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "hover_tokens": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "access_token",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "refresh_token",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "token_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "expires_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "scope",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "owner_id",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "owner_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "account_label",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "imported_hover_jobs": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "hover_job_id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "hover_job_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "full_address",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_line1",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "city",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "zip",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contact_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contact_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contact_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hover_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hover_created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "hover_completed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "raw_metadata",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "outreach_status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "outreach_notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "imported_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "inspection_bookings": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "scheduled_date",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "column": "scheduled_time",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "inspection_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "inspection_fee",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_guarantee_paid",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "contractor_penalty_charged",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "job_assignments": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "quote_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "homeowner_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "quoted_price",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_percentage",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_amount",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "stripe_charge_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contract_signed",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "contract_signed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "leads": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "zip",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "source",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "material_catalog": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "category",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "subcategory",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "manufacturer",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "product_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "impact_class",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "description",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "price_tier",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "image_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "visualizer_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "active",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "sort_order",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "members": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "first_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "last_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "email_domain",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "organization",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "title",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "referred_by",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "contributions",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "top_concern",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "registered_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "verified",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "messages": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "sender_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "sender_role",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "body",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "read_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "notifications": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "channel",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "notification_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "recipient",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "message_preview",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "delivered",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "twilio_sid",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "mailgun_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "read_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "org_summary": [
+      {
+        "column": "organization",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "member_count",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "column": "states_represented",
+        "type": "ARRAY",
+        "nullable": true
+      }
+    ],
+    "payment_failures": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "quote_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "amount_cents",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "stripe_error",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "dunning_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "resolved_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "next_reminder_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "reminder_count",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "contractor_timezone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "warning_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_notify_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "payout_approvals": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "referral_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "payout_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "partner_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "partner_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "amount",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "trigger_event",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "rejection_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "auto_approve_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "approved_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "rejected_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "approved_by",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "reminder_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "notification_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "platform_alerts_log": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "alert_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "function_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "message",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "sent_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "acknowledged_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "platform_fee_config": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "trade",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "fee_pct",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_basis",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "effective_date",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "platform_settings": [
+      {
+        "column": "key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "value",
+        "type": "jsonb",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "profiles": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "full_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_street",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_city",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "address_zip",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referral_source",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referring_agent_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referring_agent_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "role",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "sms_consent_ts",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "is_test",
+        "type": "boolean",
+        "nullable": false
+      }
+    ],
+    "quotes": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "total_price",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "estimated_days",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "timeline_note",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "scope_summary",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "fee_percentage",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_amount",
+        "type": "numeric",
+        "nullable": false
+      },
+      {
+        "column": "fee_agreed",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "fee_agreed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "decking_price_per_sheet",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "full_redeck_price",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "supplement_acknowledged",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "trade_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "is_bundled_bid",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "bundled_trades",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "per_trade_breakdown",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "value_adds",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "payment_intent_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "payment_status",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "docusign_envelope_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contractor_signed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_signed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "is_auto_bid",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "payment_method_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "payment_method_type",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "card_fee_cents",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "cancelled_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "cancellation_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "expires_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "auto_renew",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "renewed_from_quote_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "expired_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "bid_status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "warranty_option_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "warranty_snapshot",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "material_selection",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "workmanship_warranty_years",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "warranty_document_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "warranty_uploaded_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "platform_fee_pct",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "platform_fee_basis",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "fee_accepted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "rate_limit_config": [
+      {
+        "column": "function_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "max_per_hour",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "max_per_day",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "max_per_month",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "column": "enabled",
+        "type": "boolean",
+        "nullable": true
+      },
+      {
+        "column": "monthly_cost_estimate",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "monthly_budget_cap",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "alert_sent_month",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "notes_alert",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "rate_limits": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "function_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "called_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "caller_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "metadata",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "blocked",
+        "type": "boolean",
+        "nullable": true
+      }
+    ],
+    "referral_agents": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "agent_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "first_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "last_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "company",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "photo_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "bio",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "website",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "service_area",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "unique_code",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "onboarded_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "total_referrals",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "total_commission_earned",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "total_commission_paid",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "metadata",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "recruit_code",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "recruited_by_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "recruited_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "recruit_earnings",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "referred_by_note",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "w9_file_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "w9_submitted_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "w9_verified_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "payments_blocked",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "w9_notification_sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "referral_network": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "member_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "organization",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "referred_by",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "contributions",
+        "type": "ARRAY",
+        "nullable": true
+      },
+      {
+        "column": "registered_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "people_referred",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "referrals": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "referral_agent_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_name",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_email",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "homeowner_phone",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "job_value",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "commission_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "commission_paid_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "landing_page",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "utm_source",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "utm_medium",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "utm_campaign",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "metadata",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "recruit_commission_amount",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "recruit_paid_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      }
+    ],
+    "state_summary": [
+      {
+        "column": "state",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "member_count",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "support_tickets": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "source",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "mailgun_message_id",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "from_name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "from_email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "subject",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "body",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "raw_email",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "user_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "claim_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "contractor_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "priority",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "ai_draft",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "ai_draft_created_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "ai_classification",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "ai_confidence",
+        "type": "numeric",
+        "nullable": true
+      },
+      {
+        "column": "sent_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "resolved_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "resolution_notes",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "warranty_manifest_drift": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "refresh_run_id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "detected_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "manufacturer",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "tier",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "warranty_option_id",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "column": "current_value",
+        "type": "jsonb",
+        "nullable": false
+      },
+      {
+        "column": "proposed_value",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "column": "change_type",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "source_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "rejection_reason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "reviewed_by",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "reviewed_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "applied_at",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "warranty_options": [
+      {
+        "column": "id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "column": "manufacturer",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "tier",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "material_years",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "labor_years",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "labor_note",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "tearoff_years",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "wind_mph",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "column": "wind_note",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "hail_class",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "cert_required",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "cert_lookup_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "display_string",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "column": "active",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "column": "source_url",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "last_verified",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "next_review",
+        "type": "date",
+        "nullable": true
+      },
+      {
+        "column": "notes",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "column": "created_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "column": "updated_at",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ]
+  }
+}
