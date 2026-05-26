@@ -469,8 +469,7 @@ export default function TradeSelectorPage() {
           await supabase.from('profiles').upsert({
             id: user.id,
             role: 'homeowner',
-            first_name: (csSignup.first_name as string) || null,
-            last_name: (csSignup.last_name as string) || null,
+            full_name: [(csSignup.first_name as string || '').trim(), (csSignup.last_name as string || '').trim()].filter(Boolean).join(' ') || null,
             phone: (csSignup.phone as string) || null,
             address_street: addressParts[0] || null,
             address_city: addressParts[1] || null,

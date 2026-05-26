@@ -2944,7 +2944,7 @@
           if (!CONFIG.DEMO_MODE && sb && currentClaim.id) {
             const { error } = await sb
               .from('claims')
-              .update({ status: 'active', submitted_at: new Date().toISOString() })
+              .update({ status: 'active' })
               .eq('id', currentClaim.id);
 
             if (error) throw error;

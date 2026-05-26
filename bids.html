@@ -1794,12 +1794,11 @@
         if (c.user_id) {
           const { error: notifErr } = await sb.from('notifications').insert({
             user_id: c.user_id,
+            claim_id: currentClaim ? currentClaim.id : null,
             notification_type: 'bid_renewal_requested',
             channel: 'dashboard',
-            title: 'Homeowner requesting updated bid',
-            message: `A homeowner is requesting an updated bid on ${currentClaim ? (currentClaim.property_address || 'their project') : 'their project'}.`,
+            recipient: '',
             message_preview: `A homeowner is requesting an updated bid on ${currentClaim ? (currentClaim.property_address || 'their project') : 'their project'}.`,
-            metadata: JSON.stringify({ quote_id: bidId, claim_id: currentClaim ? currentClaim.id : null }),
           });
           if (!notifErr) notifOk = true;
           else console.warn('requestBidRenewal — notification insert error:', notifErr);
@@ -1926,11 +1925,11 @@
             if (contractorPM && contractorPM.user_id) {
               await sb.from('notifications').insert({
                 user_id: contractorPM.user_id,
+                claim_id: currentClaim.id,
                 notification_type: 'payment_method_needed',
                 channel: 'dashboard',
-                title: 'Payment Method Required',
-                message: 'A homeowner wants to select you, but you don\'t have a payment method on file. Please add one in Settings.',
-                metadata: { claim_id: currentClaim.id, quote_id: bidId },
+                recipient: '',
+                message_preview: 'A homeowner wants to select you, but you don\'t have a payment method on file. Please add one in Settings.',
               });
             }
           } catch (notifErr) {

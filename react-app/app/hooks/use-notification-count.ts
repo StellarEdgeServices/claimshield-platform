@@ -38,7 +38,7 @@ export function useNotificationCount(userId: string | null): UseNotificationCoun
           .from('notifications')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('read', false);
+          .is('read_at', null);
 
         if (!isMounted) return;
 
@@ -64,7 +64,7 @@ export function useNotificationCount(userId: string | null): UseNotificationCoun
               filter: `user_id=eq.${userId}`,
             },
             (payload) => {
-              if (isMounted && !(payload.new as any).read) {
+              if (isMounted && !(payload.new as any).read_at) {
                 setCount((prev) => prev + 1);
               }
             }
@@ -79,8 +79,8 @@ export function useNotificationCount(userId: string | null): UseNotificationCoun
             },
             (payload) => {
               if (isMounted) {
-                const wasRead = (payload.old as any).read;
-                const isRead = (payload.new as any).read;
+                const wasRead = !!(payload.old as any).read_at;
+                const isRead = !!(payload.new as any).read_at;
                 // If transition from unread to read, decrement
                 if (!wasRead && isRead) {
                   setCount((prev) => Math.max(0, prev - 1));
@@ -101,7 +101,7 @@ export function useNotificationCount(userId: string | null): UseNotificationCoun
               filter: `user_id=eq.${userId}`,
             },
             (payload) => {
-              if (isMounted && !(payload.old as any).read) {
+              if (isMounted && !(payload.old as any).read_at) {
                 setCount((prev) => Math.max(0, prev - 1));
               }
             }
@@ -135,7 +135,7 @@ export function useNotificationCount(userId: string | null): UseNotificationCoun
 
   const markRead = async (notificationId: string) => {
     try {
-      await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
+      await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId);
       // Optimistic decrement
       setCount((prev) => Math.max(0, prev - 1));
     } catch (err) {

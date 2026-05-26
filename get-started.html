@@ -558,15 +558,9 @@
       const { error: profileError } = await sb
         .from('leads')
         .insert({
-          full_name: `${firstName} ${lastName}`,
+          name: `${firstName} ${lastName}`,
           email: email,
-          phone: phone,
           source: referralSource || 'web',
-          notes: JSON.stringify({
-            address,
-            referring_agent_name: refName || null,
-            referring_agent_email: refEmail || null,
-          }),
           created_at: new Date().toISOString(),
         });
 

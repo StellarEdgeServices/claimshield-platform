@@ -224,7 +224,8 @@ async function logActivity(
 ) {
   try {
     await sb.from("activity_log").insert({
-      action,
+      event_type: action,
+      title: action,
       metadata: {
         drift_id: drift.id,
         manufacturer: drift.manufacturer,
