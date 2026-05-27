@@ -57,7 +57,10 @@
       ],
       "stylesheets": [],
       "edge_function_refs": [],
-      "direct_table_refs": ["cpa_versions", "contractors"]
+      "direct_table_refs": [
+        "cpa_versions",
+        "contractors"
+      ]
     },
     "admin-fee-config.html": {
       "scripts": [
@@ -1428,58 +1431,6 @@
       {
         "column": "days_since_last_scrape",
         "type": "integer",
-        "nullable": true
-      }
-    ],
-    "claim_trade_items": [
-      {
-        "column": "id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "claim_id",
-        "type": "uuid",
-        "nullable": true
-      },
-      {
-        "column": "trade",
-        "type": "text",
-        "nullable": false
-      },
-      {
-        "column": "scope",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "estimated_amount",
-        "type": "numeric",
-        "nullable": true
-      },
-      {
-        "column": "depreciation_amount",
-        "type": "numeric",
-        "nullable": true
-      },
-      {
-        "column": "sides_affected",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "homeowner_decision",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "notes",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "created_at",
-        "type": "timestamp with time zone",
         "nullable": true
       }
     ],
@@ -3037,53 +2988,6 @@
         "nullable": false
       }
     ],
-    "documents": [
-      {
-        "column": "id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "claim_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "user_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "file_name",
-        "type": "text",
-        "nullable": false
-      },
-      {
-        "column": "file_type",
-        "type": "text",
-        "nullable": false
-      },
-      {
-        "column": "file_size",
-        "type": "bigint",
-        "nullable": false
-      },
-      {
-        "column": "storage_path",
-        "type": "text",
-        "nullable": false
-      },
-      {
-        "column": "doc_category",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "created_at",
-        "type": "timestamp with time zone",
-        "nullable": true
-      }
-    ],
     "expansion_waitlist": [
       {
         "column": "id",
@@ -3591,155 +3495,6 @@
         "column": "created_at",
         "type": "timestamp with time zone",
         "nullable": false
-      }
-    ],
-    "inspection_bookings": [
-      {
-        "column": "id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "claim_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "contractor_id",
-        "type": "uuid",
-        "nullable": true
-      },
-      {
-        "column": "homeowner_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "scheduled_date",
-        "type": "date",
-        "nullable": false
-      },
-      {
-        "column": "scheduled_time",
-        "type": "text",
-        "nullable": false
-      },
-      {
-        "column": "status",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "inspection_type",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "inspection_fee",
-        "type": "numeric",
-        "nullable": true
-      },
-      {
-        "column": "homeowner_guarantee_paid",
-        "type": "boolean",
-        "nullable": true
-      },
-      {
-        "column": "contractor_penalty_charged",
-        "type": "boolean",
-        "nullable": true
-      },
-      {
-        "column": "notes",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "created_at",
-        "type": "timestamp with time zone",
-        "nullable": true
-      },
-      {
-        "column": "updated_at",
-        "type": "timestamp with time zone",
-        "nullable": true
-      }
-    ],
-    "job_assignments": [
-      {
-        "column": "id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "claim_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "quote_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "contractor_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "homeowner_id",
-        "type": "uuid",
-        "nullable": false
-      },
-      {
-        "column": "quoted_price",
-        "type": "numeric",
-        "nullable": false
-      },
-      {
-        "column": "fee_percentage",
-        "type": "numeric",
-        "nullable": false
-      },
-      {
-        "column": "fee_amount",
-        "type": "numeric",
-        "nullable": false
-      },
-      {
-        "column": "fee_status",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "stripe_charge_id",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "contract_signed",
-        "type": "boolean",
-        "nullable": true
-      },
-      {
-        "column": "contract_signed_at",
-        "type": "timestamp with time zone",
-        "nullable": true
-      },
-      {
-        "column": "status",
-        "type": "text",
-        "nullable": true
-      },
-      {
-        "column": "created_at",
-        "type": "timestamp with time zone",
-        "nullable": true
-      },
-      {
-        "column": "updated_at",
-        "type": "timestamp with time zone",
-        "nullable": true
       }
     ],
     "leads": [
