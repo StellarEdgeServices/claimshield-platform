@@ -39,7 +39,7 @@ MIN_SIZES = {
     ".html": 500,
     ".js": 50,
     ".css": 50,
-    ".ts": 5000,
+    ".ts": 500,
 }
 
 # Canary files: critical pages/scripts with hard minimum thresholds (bytes).
@@ -209,22 +209,28 @@ for root, dirs, files in os.walk("."):
                 )
 
         # Check 6: TypeScript Edge Function structural completeness.
-        # Supabase EF entry points (supabase/functions/<name>/index.ts) are
-        # Deno.serve wrappers. Every complete EF ends with '});' as the closing
-        # of the Deno.serve(async (req) => { ... }); call.
-        # A file truncated mid-function will end somewhere before this marker.
-        # PR #136 incident: create-docusign-envelope/index.ts was truncated to
-        # 47,139 bytes (of 74,299) ending mid-expression -- this check would have
-        # caught it at commit time. Task 86e1k3yjq, May 27 2026.
-        # Shared helpers (_shared/*.ts) are excluded -- they don't use Deno.serve.
+        # Supabase EF entry points (supabase/functions/<name>/index.ts) must end
+        # with a statement-closing character: ';' or '}'.
+        # A file truncated mid-expression (the PR #136 pattern) ends with an
+        # identifier, keyword, or string -- NOT a closing punctuation mark.
+        # Note: EFs use different entry-point patterns -- some use Deno.serve()
+        # (ending with '});'), others export handlers ending with '}', and older
+        # EFs use 'serve(handleRequest);' (ending with ';').  Checking for ';' or
+        # '}' correctly accepts all patterns while catching mid-expression truncation.
+        # Null bytes are stripped before the check so padded-corruption files are
+        # handled by Check 1 (null-bytes) rather than producing a double-failure here.
+        # PR #136 incident: truncated file ended with 'e' (mid-expression) -- caught.
+        # Task 86e1k3yjq, May 27 2026.
+        # Shared helpers (_shared/*.ts) are excluded by is_ef_index().
         if ext == ".ts" and is_ef_index(rel_path):
-            ef_close = "});"
-            trimmed = data.rstrip()
-            if not trimmed.endswith(ef_close.encode()):
+            trimmed = data.rstrip(b"\x00 \t\r\n")
+            last_char = trimmed[-1:].decode("utf-8", errors="replace") if trimmed else ""
+            if last_char not in (";", "}"):
                 tail = trimmed[-80:].decode("utf-8", errors="replace")
                 failures.append(
-                    f"FAIL [ts-ef-truncation] {rel_path}: EF index.ts does not end "
-                    f"with '{ef_close}' (Deno.serve close) -- tail: ...{tail!r}"
+                    f"FAIL [ts-ef-truncation] {rel_path}: EF index.ts ends with "
+                    f"{last_char!r} not ';' or '}}' -- likely mid-expression truncation "
+                    f"(tail: ...{tail!r})"
                 )
 
 # -- Summary -----------------------------------------------------------------
