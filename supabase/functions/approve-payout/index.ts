@@ -366,4 +366,3 @@ ${ctaButton("View Your Dashboard →", PARTNER_DASH_URL)}
     });
   }
 });
-  
