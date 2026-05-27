@@ -25,12 +25,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      # WARN-ONLY MODE: Initial rollout — violations exist in the codebase backlog.
-      # See ClickUp task [to be filed] for the violation list and remediation plan.
-      # Switch to fail-hard by removing the `|| true` once backlog is cleared.
-      - name: Run schema column linter (warn-only)
+      # FAIL-HARD MODE: All violations cleared in PR #148 (2026-05-26).
+      # Any new FAIL line will block the PR. See ADR-010 for column contract rules.
+      - name: Run schema column linter
         run: |
           python3 scripts/schema-column-lint.py \
             --root . \
-            --schema sql/schema-snapshot.json || true
-          echo "::notice::Schema linter ran in warn-only mode. FAIL lines above are real violations to fix. See ADR-010 for remediation plan."
+            --schema sql/schema-snapshot.json
