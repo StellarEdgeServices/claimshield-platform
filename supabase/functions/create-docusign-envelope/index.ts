@@ -31,9 +31,19 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.0";
-import { getTemplateFromStorage, fetchTemplateFromUrl, getPcTemplateFromStorage, selectPcTemplateSlot, base64EncodeBinary, generateComplianceAddendumPdf, generateRetailScopeOfWorkPdf } from "./../_shared/pdf-helpers.ts";
 
 const FUNCTION_NAME = "create-docusign-envelope";
+
+const PDF_MAX_BYTES = 3_000_000;
+
+class DocumentTooLargeError extends Error {
+  readonly statusCode = 400;
+  readonly code = "DOCUMENT_TOO_LARGE";
+  constructor(fileName: string, bytes: number) {
+    super(`PDF "${fileName}" is ${(bytes / 1_000_000).toFixed(1)} MB — exceeds the 3 MB limit. Upload a smaller file.`);
+    this.name = "DocumentTooLargeError";
+  }
+}
 
 // CORS tightened Apr 15, 2026 (Session 195): sensitive function (contract
 // envelope creation + DocuSign signing URL generation) — origin allowlisted
@@ -57,6 +67,26 @@ function buildCorsHeaders(req: Request): Record<string, string> {
       "authorization, x-client-info, apikey, content-type",
     "Vary": "Origin",
   };
+}
+
+// ========== GA4 MEASUREMENT PROTOCOL ==========
+async function sendGA4Event(eventName: string, params: Record<string, unknown> = {}): Promise<void> {
+  const measurementId = Deno.env.get("GA4_MEASUREMENT_ID");
+  const apiSecret = Deno.env.get("GA4_API_SECRET");
+  if (!measurementId || !apiSecret) return;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: "server",
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (_) { /* non-fatal */ }
 }
 
 // ========== TOKEN CACHE ==========
@@ -86,78 +116,19 @@ function base64urlDecode(str: string): Uint8Array {
 }
 
 async function importRsaPrivateKey(pemBase64: string): Promise<CryptoKey> {
-  // The secret may be stored as:
-  //   (a) a raw base64-encoded DER key (no PEM headers), or
-  //   (b) a full PEM string with -----BEGIN/END PRIVATE KEY----- headers
-  //       (possibly as a single line with no real newlines, or with \n newlines).
-  // Strategy: use a regex to extract the base64 body between PEM delimiters.
-  // If no PEM delimiters exist, treat the whole value as raw base64 DER.
   let b64 = pemBase64.trim();
   if (b64.includes("-----BEGIN")) {
-    // Regex captures everything between the header and footer, regardless of
-    // whether newlines are real \n or whether the whole thing is on one line.
     const match = b64.match(/-----BEGIN[^-]+-----([A-Za-z0-9+/=\s]+)-----END[^-]+-----/);
     if (match) {
       b64 = match[1];
     } else {
-      // Fallback: strip any -----...------ blocks and take what's left.
       b64 = b64.replace(/-----[^-]+-----/g, "");
     }
   }
-  // Strip all remaining whitespace (newlines, spaces, carriage returns).
   b64 = b64.replace(/\s+/g, "");
 
   const pemBinary = atob(b64);
-  let pemBytes = new Uint8Array(pemBinary.split("").map((c) => c.charCodeAt(0)));
-
-  // Detect PKCS#1 format: RSAPrivateKey starts with SEQUENCE (0x30), then after the
-  // 2-4 byte length field comes INTEGER (0x02) for the version field.
-  // PKCS#8 PrivateKeyInfo instead has SEQUENCE → INTEGER 0 → SEQUENCE (AlgorithmIdentifier).
-  // We detect PKCS#1 by checking that byte[4] == 0x02 (the outer SEQUENCE uses a 2-byte
-  // length encoding 0x82 nn nn for typical 1024-4096 bit keys, so the payload starts at byte 4).
-  // PKCS#8 PrivateKeyInfo ::= SEQUENCE { version INTEGER, privateKeyAlgorithm AlgorithmIdentifier, privateKey OCTET STRING }
-  const isPkcs1 = pemBytes[0] === 0x30 && pemBytes[4] === 0x02;
-  if (isPkcs1) {
-    // Helper: encode a DER length
-    function derLen(n: number): number[] {
-      if (n < 0x80) return [n];
-      if (n < 0x100) return [0x81, n];
-      return [0x82, (n >> 8) & 0xff, n & 0xff];
-    }
-    function derTLV(tag: number, valueBytes: Uint8Array): Uint8Array {
-      const lenBytes = derLen(valueBytes.length);
-      const out = new Uint8Array(1 + lenBytes.length + valueBytes.length);
-      out[0] = tag;
-      out.set(lenBytes, 1);
-      out.set(valueBytes, 1 + lenBytes.length);
-      return out;
-    }
-    function concatBytes(...arrays: Uint8Array[]): Uint8Array {
-      const total = arrays.reduce((s, a) => s + a.length, 0);
-      const out = new Uint8Array(total);
-      let off = 0;
-      for (const a of arrays) { out.set(a, off); off += a.length; }
-      return out;
-    }
-
-    // version INTEGER ::= 0
-    const version = new Uint8Array([0x02, 0x01, 0x00]);
-
-    // AlgorithmIdentifier SEQUENCE { OID rsaEncryption, NULL }
-    const algorithmIdentifier = new Uint8Array([
-      0x30, 0x0d,
-      0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
-      0x05, 0x00,
-    ]);
-
-    // privateKey OCTET STRING containing the PKCS#1 DER
-    const privateKeyOctet = derTLV(0x04, pemBytes);
-
-    // Outer SEQUENCE
-    const inner = concatBytes(version, algorithmIdentifier, privateKeyOctet);
-    pemBytes = derTLV(0x30, inner);
-  }
-
+  const pemBytes = new Uint8Array(pemBinary.split("").map((c) => c.charCodeAt(0)));
   return await crypto.subtle.importKey(
     "pkcs8",
     pemBytes,
@@ -173,9 +144,8 @@ async function createJwtAssertion(
   baseUrl: string
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + 3600; // 1 hour
+  const exp = now + 3600;
 
-  // Determine audience based on baseUrl (sandbox vs production)
   const aud = baseUrl.includes("demo") || baseUrl.includes("account-d")
     ? "account-d.docusign.com"
     : "account.docusign.com";
@@ -216,7 +186,6 @@ async function createJwtAssertion(
 async function getAccessToken(baseUrl: string): Promise<CachedToken> {
   const now = Date.now();
 
-  // Return cached token if valid (with 5-minute buffer)
   if (cachedToken && cachedToken.expiresAt > now + 300000) {
     console.log("Using cached DocuSign access token");
     return cachedToken;
@@ -235,7 +204,6 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
 
   const jwtAssertion = await createJwtAssertion(integrationKey, userId, baseUrl);
 
-  // Determine OAuth endpoint based on baseUrl
   const oauthHost = baseUrl.includes("demo") || baseUrl.includes("account-d")
     ? "https://account-d.docusign.com"
     : "https://account.docusign.com";
@@ -259,7 +227,6 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
     throw new Error("No access_token in DocuSign response");
   }
 
-  // Fetch account info from /oauth/userinfo to get the correct account ID and base URI.
   console.log("Fetching DocuSign account info via /oauth/userinfo");
   const userInfoResponse = await fetch(`${oauthHost}/oauth/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -277,11 +244,9 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
     throw new Error(`Could not determine DocuSign account ID from userinfo: ${JSON.stringify(userInfo)}`);
   }
 
-  // base_uri from userinfo is the REST API base (e.g. https://demo.docusign.net)
   const resolvedBaseUri = account.base_uri || baseUrl;
   console.log(`DocuSign account ID: ${account.account_id}, base_uri: ${resolvedBaseUri}`);
 
-  // Cache token (valid for 1 hour, cache with 5-minute buffer)
   cachedToken = {
     accessToken,
     accountId: account.account_id,
@@ -292,6 +257,754 @@ async function getAccessToken(baseUrl: string): Promise<CachedToken> {
   return cachedToken;
 }
 
+// ========== PDF RETRIEVAL ==========
+async function getTemplateFromStorage(
+  supabase: any,
+  contractorId: string,
+  documentType: string
+): Promise<string> {
+  const bucketName = "contractor-templates";
+  const filePath = `${contractorId}/${documentType}.pdf`;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .download(filePath);
+
+    if (error) {
+      throw new Error(`Storage error: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error("No data returned from storage");
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    const fileBytes = new Uint8Array(arrayBuffer);
+    if (fileBytes.length > PDF_MAX_BYTES) {
+      throw new DocumentTooLargeError(filePath, fileBytes.length);
+    }
+    return base64EncodeBinary(fileBytes);
+  } catch (err) {
+    if (err instanceof DocumentTooLargeError) throw err;
+    throw new Error(
+      `Failed to retrieve template PDF (${bucketName}/${filePath}): ${err.message}`
+    );
+  }
+}
+
+async function fetchTemplateFromUrl(url: string): Promise<string> {
+  console.log(`Fetching template PDF from URL: ${url}`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch template from URL (${response.status} ${response.statusText}): ${url}`
+    );
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return base64EncodeBinary(new Uint8Array(arrayBuffer));
+}
+
+async function getPcTemplateFromStorage(supabase: any, fileUrl: string): Promise<string> {
+  let storagePath: string;
+  const pathMatch = fileUrl.match(/contractor-templates\/(.+?)(\?|$)/);
+  if (pathMatch) {
+    storagePath = decodeURIComponent(pathMatch[1]);
+  } else {
+    storagePath = fileUrl;
+  }
+
+  console.log(`Fetching PC template from storage: contractor-templates/${storagePath}`);
+  const { data, error } = await supabase.storage
+    .from("contractor-templates")
+    .download(storagePath);
+
+  if (error) {
+    throw new Error(`PC template storage error (${storagePath}): ${error.message}`);
+  }
+  if (!data) {
+    throw new Error(`No data returned from storage for PC template: ${storagePath}`);
+  }
+
+  const arrayBuffer = await data.arrayBuffer();
+  const fileBytes = new Uint8Array(arrayBuffer);
+  if (fileBytes.length > PDF_MAX_BYTES) {
+    throw new DocumentTooLargeError(storagePath, fileBytes.length);
+  }
+  return base64EncodeBinary(fileBytes);
+}
+
+function selectPcTemplateSlot(
+  pcTemplateJsonb: Record<string, any> | null | undefined,
+  trade: string,
+  fundingType: string
+): { file_url: string; uploaded_at: string } | null {
+  if (!pcTemplateJsonb || typeof pcTemplateJsonb !== "object") return null;
+
+  const primaryKey  = `${trade.toLowerCase()}/${fundingType.toLowerCase()}`;
+  const fallbackKey = "roofing/insurance";
+
+  const primary  = pcTemplateJsonb[primaryKey];
+  if (primary?.file_url) {
+    console.log(`PC template: using slot ${primaryKey}`);
+    return primary;
+  }
+
+  const fallback = pcTemplateJsonb[fallbackKey];
+  if (fallback?.file_url) {
+    console.warn(`PC template: slot ${primaryKey} missing — falling back to ${fallbackKey}`);
+    return fallback;
+  }
+
+  console.warn(`PC template: no usable slot found (tried ${primaryKey} and ${fallbackKey})`);
+  return null;
+}
+
+function base64EncodeBinary(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// ========== IC 24-5-11 COMPLIANCE ADDENDUM PDF ==========
+function generateComplianceAddendumPdf(contractorName: string, homeownerName: string, contractDate: string): string {
+  const lines: string[] = [];
+  const objects: { offset: number }[] = [];
+  let currentOffset = 0;
+
+  function write(s: string) {
+    lines.push(s);
+    currentOffset += s.length + 1;
+  }
+
+  function startObject(num: number) {
+    objects[num] = { offset: currentOffset };
+    write(`${num} 0 obj`);
+  }
+
+  const signDate = new Date(contractDate || new Date().toISOString());
+  let businessDays = 0;
+  const cancelDate = new Date(signDate);
+  while (businessDays < 3) {
+    cancelDate.setDate(cancelDate.getDate() + 1);
+    const dow = cancelDate.getDay();
+    if (dow !== 0 && dow !== 6) businessDays++;
+  }
+  const cancelDateStr = cancelDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const contentLines: string[] = [];
+
+  function addText(x: number, y: number, fontSize: number, font: string, text: string) {
+    const escaped = text.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${escaped}) Tj ET`);
+  }
+
+  function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
+    const charWidth = fontSize * 0.5;
+    const maxChars = Math.floor(maxWidth / charWidth);
+    const words = text.split(" ");
+    let currentLine = "";
+    let y = startY;
+    const lineSpacing = fontSize * 1.4;
+
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 > maxChars) {
+        addText(x, y, fontSize, font, currentLine.trim());
+        y -= lineSpacing;
+        currentLine = word + " ";
+      } else {
+        currentLine += word + " ";
+      }
+    }
+    if (currentLine.trim()) {
+      addText(x, y, fontSize, font, currentLine.trim());
+      y -= lineSpacing;
+    }
+    return y;
+  }
+
+  let y = 750;
+
+  addText(50, y, 14, "F2", "INDIANA HOME IMPROVEMENT CONTRACT ACT ADDENDUM");
+  y -= 20;
+  addText(50, y, 10, "F1", `IC 24-5-11 Compliance Addendum — Contract Date: ${contractDate || new Date().toLocaleDateString("en-US")}`);
+  y -= 10;
+
+  contentLines.push(`50 ${y} m 562 ${y} l S`);
+  y -= 20;
+
+  addText(50, y, 12, "F2", "STATEMENT OF RIGHT TO CANCEL");
+  y -= 20;
+
+  const statementText = `You may cancel this contract at any time before midnight on the third business day after the later of the following: (A) The date this contract is signed by you and ${contractorName}. (B) If applicable, the date you receive written notification from your insurance company of a final determination as to whether all or any part of your claim or this contract is a covered loss under your insurance policy. See attached notice of cancellation form for an explanation of this right.`;
+
+  y = addWrappedText(50, y, 10, "F2", statementText, 512);
+  y -= 15;
+
+  contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
+  y -= 15;
+
+  addText(50, y, 12, "F2", "NOTICE OF CANCELLATION");
+  y -= 20;
+
+  addText(50, y, 10, "F2", `Contract Date: ${contractDate || "_______________"}`);
+  y -= 16;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `You may CANCEL this transaction, without any penalty or obligation, within THREE (3) BUSINESS DAYS from the above date, or if applicable, within three (3) business days from the date you receive written notification from your insurance company of a final determination as to whether all or any part of your claim or this contract is a covered loss under your insurance policy.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `If you cancel, any property traded in, any payments made by you under the contract, and any negotiable instrument executed by you will be returned within TEN (10) BUSINESS DAYS following receipt by the contractor of your cancellation notice, and any security interest arising out of the transaction will be cancelled.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F2",
+    `If you cancel, you must make available to the contractor at your residence, in substantially as good condition as when received, any goods delivered to you under this contract. Or you may, if you wish, comply with the instructions of the contractor regarding the return shipment of the goods at the contractor's expense and risk.`,
+    512);
+  y -= 10;
+
+  y = addWrappedText(50, y, 10, "F1",
+    `To cancel this transaction, mail, deliver, or email a signed and dated copy of this cancellation notice, or any other written notice to:`,
+    512);
+  y -= 5;
+
+  addText(70, y, 10, "F2", contractorName);
+  y -= 14;
+  addText(70, y, 10, "F1", "(Contractor name and contact information as provided in this contract)");
+  y -= 20;
+
+  addText(50, y, 10, "F2", "I HEREBY CANCEL THIS TRANSACTION.");
+  y -= 25;
+
+  addText(50, y, 10, "F1", "Homeowner Signature: ___________________________________    Date: ________________");
+  y -= 20;
+  addText(50, y, 10, "F1", `Homeowner Name (printed): ${homeownerName}`);
+  y -= 30;
+
+  contentLines.push(`50 ${y + 5} m 562 ${y + 5} l S`);
+  y -= 15;
+
+  addText(50, y, 12, "F2", "PLATFORM DISCLOSURE");
+  y -= 20;
+
+  y = addWrappedText(50, y, 10, "F1",
+    `OtterQuote is a technology platform that facilitates connections between homeowners and contractors. OtterQuote is NOT a party to this contract and assumes no liability for work performed under this agreement. This contract is between the homeowner and the contractor named above.`,
+    512);
+  y -= 10;
+
+  addText(50, y, 10, "F1", `Down payment may not exceed $1,000 or 10% of contract price, whichever is less (IC 24-5-11-12).`);
+  y -= 30;
+
+  addText(50, y, 8, "F1", "This addendum is generated by OtterQuote to comply with Indiana Code IC 24-5-11 (Home Improvement Contract Act).");
+  y -= 12;
+  addText(50, y, 8, "F1", `Generated: ${new Date().toISOString()}`);
+
+  const contentStream = contentLines.join("\n");
+  const contentBytes = new TextEncoder().encode(contentStream);
+
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) {
+    pdfLines.push(s);
+    byteOffset += s.length + 1;
+  }
+
+  function pdfStartObj(n: number) {
+    pdfObjects[n] = byteOffset;
+    pdfWrite(`${n} 0 obj`);
+  }
+
+  pdfWrite("%PDF-1.4");
+
+  pdfStartObj(1);
+  pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(2);
+  pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(3);
+  pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(4);
+  pdfWrite(`<< /Length ${contentStream.length} >>`);
+  pdfWrite("stream");
+  pdfWrite(contentStream);
+  pdfWrite("endstream");
+  pdfWrite("endobj");
+
+  pdfStartObj(5);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(6);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  pdfWrite("endobj");
+
+  const xrefOffset = byteOffset;
+  pdfWrite("xref");
+  pdfWrite(`0 7`);
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) {
+    pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  }
+
+  pdfWrite("trailer");
+  pdfWrite(`<< /Size 7 /Root 1 0 R >>`);
+  pdfWrite("startxref");
+  pdfWrite(String(xrefOffset));
+  pdfWrite("%%EOF");
+
+  const pdfContent = pdfLines.join("\n");
+  const pdfBytes = new TextEncoder().encode(pdfContent);
+  return base64EncodeBinary(pdfBytes);
+}
+
+// ========== HOVER MEASUREMENTS FETCH ==========
+async function fetchHoverMeasurements(supabase: any, claimId: string): Promise<{
+  roofSqFt: number | null;
+  wallSqFt: number | null;
+  perimeterFt: number | null;
+  pitch: string | null;
+} | null> {
+  try {
+    const { data: order } = await supabase
+      .from("hover_orders")
+      .select("hover_job_id, measurements_json")
+      .eq("claim_id", claimId)
+      .eq("status", "complete")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!order?.measurements_json) return null;
+
+    const mj = order.measurements_json;
+
+    const roofSqFtRaw =
+      mj?.structures?.[0]?.areas?.roof ??
+      mj?.total_sq_ft ??
+      mj?.total_area_sq_ft ??
+      mj?.roof_area_sq_ft ??
+      mj?.measurements?.total_area ??
+      null;
+
+    const wallSqFtRaw =
+      mj?.structures?.[0]?.areas?.wall ??
+      mj?.wall_area_sq_ft ??
+      mj?.measurements?.wall_area ??
+      null;
+
+    const perimeterFtRaw =
+      mj?.structures?.[0]?.eaves ??
+      mj?.eaves_length ??
+      mj?.perimeter_ft ??
+      mj?.measurements?.perimeter ??
+      null;
+
+    const pitchRaw =
+      mj?.structures?.[0]?.pitch ??
+      mj?.primary_pitch ??
+      mj?.pitch ??
+      null;
+
+    if (!roofSqFtRaw && !wallSqFtRaw && !perimeterFtRaw) return null;
+
+    return {
+      roofSqFt: roofSqFtRaw ? Math.round(Number(roofSqFtRaw)) : null,
+      wallSqFt: wallSqFtRaw ? Math.round(Number(wallSqFtRaw)) : null,
+      perimeterFt: perimeterFtRaw ? Math.round(Number(perimeterFtRaw)) : null,
+      pitch: pitchRaw ? String(pitchRaw) : null,
+    };
+  } catch (err) {
+    console.warn("fetchHoverMeasurements: non-fatal error:", err);
+    return null;
+  }
+}
+
+// ========== RETAIL SCOPE OF WORK PDF ==========
+function generateRetailScopeOfWorkPdf(params: {
+  homeownerName: string;
+  contractorName: string;
+  propertyAddress: string;
+  claimId: string;
+  trades: string[];
+  contractPrice: number | null;
+  estimatedStartDate: string | null;
+  valueAdds: any;
+  bidBrand: string | null;
+  deckingPricePerSheet: number | null;
+  fullRedeckPrice: number | null;
+  messageToHomeowner: string | null;
+  homeownerNotes: string | null;
+  projectConfirmation: any;
+  measurements: { roofSqFt: number | null; wallSqFt: number | null; perimeterFt: number | null; pitch: string | null } | null;
+  contractDate: string;
+}): string {
+  const {
+    homeownerName, contractorName, propertyAddress, claimId,
+    trades, contractPrice, estimatedStartDate, valueAdds,
+    bidBrand, deckingPricePerSheet, fullRedeckPrice,
+    messageToHomeowner, homeownerNotes, projectConfirmation,
+    measurements, contractDate,
+  } = params;
+
+  const va = valueAdds || {};
+  const pc = projectConfirmation || null;
+
+  const pdfLines: string[] = [];
+  const pdfObjects: number[] = [];
+  let byteOffset = 0;
+
+  function pdfWrite(s: string) {
+    pdfLines.push(s);
+    byteOffset += s.length + 1;
+  }
+
+  function pdfStartObj(n: number) {
+    pdfObjects[n] = byteOffset;
+    pdfWrite(`${n} 0 obj`);
+  }
+
+  const contentLines: string[] = [];
+
+  function esc(text: string): string {
+    return String(text || "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  }
+
+  function addText(x: number, y: number, fontSize: number, font: string, text: string) {
+    contentLines.push(`BT /${font} ${fontSize} Tf ${x} ${y} Td (${esc(text)}) Tj ET`);
+  }
+
+  // [D-225 Phase 2B / D-186] Render text in a chosen non-stroking gray (1.0 = white = invisible
+  // on white paper). Used to embed DocuSign anchor strings without making them visible.
+  function addTextColored(x: number, y: number, fontSize: number, font: string, text: string, gray: number) {
+    contentLines.push(`BT ${gray} g /${font} ${fontSize} Tf ${x} ${y} Td (${esc(text)}) Tj ET 0 g`);
+  }
+
+  function addWrappedText(x: number, startY: number, fontSize: number, font: string, text: string, maxWidth: number): number {
+    const charWidth = fontSize * 0.5;
+    const maxChars = Math.floor(maxWidth / charWidth);
+    const words = String(text || "").split(" ");
+    let line = "";
+    let y = startY;
+    const ls = fontSize * 1.4;
+    for (const word of words) {
+      if (line.length + word.length + 1 > maxChars) {
+        addText(x, y, fontSize, font, line.trim());
+        y -= ls;
+        line = word + " ";
+      } else {
+        line += word + " ";
+      }
+    }
+    if (line.trim()) { addText(x, y, fontSize, font, line.trim()); y -= ls; }
+    return y;
+  }
+
+  function hLine(y: number) {
+    contentLines.push(`50 ${y} m 562 ${y} l S`);
+  }
+
+  function fmt$(val: number | null | undefined): string {
+    if (val == null) return "TBD";
+    return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  let y = 750;
+
+  addText(50, y, 16, "F2", "SCOPE OF WORK");
+  y -= 18;
+  addText(50, y, 9, "F1", `Prepared by Otter Quotes on behalf of ${esc(contractorName)}`);
+  y -= 10;
+  hLine(y); y -= 16;
+
+  addText(50, y, 10, "F2", "PROJECT:");   addText(160, y, 10, "F1", esc(propertyAddress)); y -= 14;
+  addText(50, y, 10, "F2", "HOMEOWNER:"); addText(160, y, 10, "F1", esc(homeownerName)); y -= 14;
+  addText(50, y, 10, "F2", "CONTRACTOR:"); addText(160, y, 10, "F1", esc(contractorName)); y -= 14;
+  addText(50, y, 10, "F2", "DATE:");      addText(160, y, 10, "F1", esc(contractDate)); y -= 14;
+  addText(50, y, 10, "F2", "JOB REF:");   addText(160, y, 10, "F1", claimId.slice(0, 8).toUpperCase()); y -= 20;
+  hLine(y); y -= 16;
+
+  addText(50, y, 12, "F2", "CONTRACT SUMMARY"); y -= 16;
+  const tradeLabel = (trades || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(", ") || "See below";
+  addText(50, y, 10, "F2", "Trade(s):"); addText(160, y, 10, "F1", esc(tradeLabel)); y -= 14;
+  addText(50, y, 10, "F2", "Financing:"); addText(160, y, 10, "F1", "Retail / Homeowner-Financed"); y -= 14;
+  addText(50, y, 10, "F2", "Contract Price:"); addText(160, y, 10, "F1", contractPrice ? fmt$(contractPrice) : "Per contractor agreement"); y -= 14;
+  addText(50, y, 10, "F2", "Est. Start:"); addText(160, y, 10, "F1", esc(estimatedStartDate || "To be scheduled")); y -= 20;
+  hLine(y); y -= 16;
+
+  // D-186/D-203 — Verbatim measurement disclaimer (required at top of every retail Exhibit A)
+  addText(50, y, 10, "F2", "MEASUREMENT DISCLAIMER"); y -= 14;
+  y = addWrappedText(50, y, 9, "F1",
+    "The measurements contained in this Statement of Work were provided to Contractor on behalf of Customer. Both parties have relied upon the accuracy of this information in negotiating the terms of this Agreement. Prior to starting the work set forth in this agreement, either party shall have the right to perform his or her own measurements to verify the measurements contained herein. If any measurement in this statement of work is off by more than 10%, either party shall have the right to: (1) negotiate a change order to adjust the compensation due under the Agreement; (2) cancel the Agreement; or (3) proceed under the terms set forth in the Agreement.",
+    512);
+  y -= 12; hLine(y); y -= 16;
+
+  if (measurements && (measurements.roofSqFt || measurements.wallSqFt || measurements.perimeterFt)) {
+    addText(50, y, 12, "F2", "HOVER AERIAL MEASUREMENTS"); y -= 16;
+    if (measurements.roofSqFt) {
+      addText(50, y, 10, "F2", "Roof Area:");
+      addText(160, y, 10, "F1", `${measurements.roofSqFt.toLocaleString()} sq ft (${(measurements.roofSqFt / 100).toFixed(1)} squares)`);
+      y -= 14;
+    }
+    if (measurements.wallSqFt) {
+      addText(50, y, 10, "F2", "Wall Area:");
+      addText(160, y, 10, "F1", `${measurements.wallSqFt.toLocaleString()} sq ft (${(measurements.wallSqFt / 100).toFixed(1)} squares)`);
+      y -= 14;
+    }
+    if (measurements.perimeterFt) {
+      addText(50, y, 10, "F2", "Perimeter:");
+      addText(160, y, 10, "F1", `${measurements.perimeterFt.toLocaleString()} linear ft`);
+      y -= 14;
+    }
+    if (measurements.pitch) {
+      addText(50, y, 10, "F2", "Primary Pitch:");
+      addText(160, y, 10, "F1", esc(measurements.pitch));
+      y -= 14;
+    }
+    y -= 6; hLine(y); y -= 16;
+  }
+
+  addText(50, y, 12, "F2", "SCOPE OF WORK DETAILS"); y -= 16;
+
+  const hasRoofing = (trades || []).some(t => t.toLowerCase().includes("roof"));
+  const hasSiding  = (trades || []).some(t => t.toLowerCase().includes("siding"));
+  const hasGutters = (trades || []).some(t => t.toLowerCase().includes("gutter"));
+  const hasWindows = (trades || []).some(t => t.toLowerCase().includes("window"));
+
+  if (hasRoofing) {
+    addText(50, y, 11, "F2", "ROOFING"); y -= 14;
+
+    if (bidBrand) {
+      addText(60, y, 10, "F2", "Materials:"); addText(160, y, 10, "F1", esc(bidBrand)); y -= 14;
+    }
+    if (pc?.shingleManufacturer || pc?.shingleColor) {
+      const shingleStr = [pc.shingleManufacturer, pc.shingleColor].filter(Boolean).join(" — ");
+      addText(60, y, 10, "F2", "Shingle:"); addText(160, y, 10, "F1", esc(shingleStr)); y -= 14;
+    }
+    if (pc?.dripEdgeColor) {
+      addText(60, y, 10, "F2", "Drip Edge Color:"); addText(160, y, 10, "F1", esc(pc.dripEdgeColor)); y -= 14;
+    }
+    if (va.underlayment?.type) {
+      addText(60, y, 10, "F2", "Underlayment:");
+      addText(160, y, 10, "F1", va.underlayment.type === "synthetic" ? "Synthetic" : "Felt");
+      y -= 14;
+    }
+    if (va.starter_strip) {
+      const ssMap: Record<string, string> = { rakes: "Rakes only", eaves: "Eaves only", rakes_and_eaves: "Rakes and Eaves", neither: "None" };
+      addText(60, y, 10, "F2", "Starter Strip:"); addText(160, y, 10, "F1", ssMap[va.starter_strip] || esc(va.starter_strip)); y -= 14;
+    }
+    if (va.ventilation) {
+      const ventDesc = va.ventilation.ridge_vent_included
+        ? "Ridge Vent — Included"
+        : va.ventilation.ridge_vent_oop
+        ? `Ridge Vent — OOP ${fmt$(va.ventilation.ridge_vent_oop)}`
+        : null;
+      if (ventDesc) { addText(60, y, 10, "F2", "Ventilation:"); addText(160, y, 10, "F1", ventDesc); y -= 14; }
+    }
+    if (deckingPricePerSheet) {
+      const redeckTxt = fullRedeckPrice
+        ? `${fmt$(deckingPricePerSheet)}/sheet if needed; Full redeck: ${fmt$(fullRedeckPrice)}`
+        : `${fmt$(deckingPricePerSheet)}/sheet if needed`;
+      addText(60, y, 10, "F2", "Decking:");
+      y = addWrappedText(160, y, 10, "F1", redeckTxt, 380);
+    }
+    if (va.chimney_flashing?.option && va.chimney_flashing.option !== "na") {
+      const cfMap: Record<string, string> = { reuse: "Reuse existing", replace: "Replace — Included", replace_oop: `Replace OOP ${fmt$(va.chimney_flashing.oop_price)}` };
+      addText(60, y, 10, "F2", "Chimney Flashing:"); addText(160, y, 10, "F1", cfMap[va.chimney_flashing.option] || esc(va.chimney_flashing.option)); y -= 14;
+    }
+    if (va.skylights && va.skylights !== "na") {
+      addText(60, y, 10, "F2", "Skylights:"); addText(160, y, 10, "F1", va.skylights === "reflash" ? "Reflash" : "Replace"); y -= 14;
+    }
+    if (pc?.valleyType) {
+      addText(60, y, 10, "F2", "Valleys:"); addText(160, y, 10, "F1", pc.valleyType === "closed" ? "Closed Cut" : "Open / Metal"); y -= 14;
+    }
+    if (pc?.gutterGuards) {
+      addText(60, y, 10, "F2", "Gutter Guards:"); addText(160, y, 10, "F1", esc(pc.gutterGuards)); y -= 14;
+    }
+    if (pc?.satelliteDish && pc.satelliteDish !== "NONE") {
+      const satMap: Record<string, string> = { "REMOVE-TRASH": "Remove & discard", "REMOVE-RESET": "Remove & reset after install" };
+      addText(60, y, 10, "F2", "Satellite Dish:"); addText(160, y, 10, "F1", satMap[pc.satelliteDish] || esc(pc.satelliteDish)); y -= 14;
+    }
+    y -= 8;
+  }
+
+  const slc = va?.secondLayerContingency;
+  if (hasRoofing && slc) {
+    const slcAmount = (slc.method === "flat_fee" && slc.flatFeeAlternative != null)
+      ? slc.flatFeeAlternative
+      : slc.pricePerSquare;
+    if (slcAmount != null) {
+      const slcPhrase = slc.method === "flat_fee" ? "flat fee" : "per square";
+      const slcDisclaimer =
+        `If the existing roof is found to contain more than one layer of shingles, the contract price will increase by ${fmt$(slcAmount)} ${slcPhrase}. ` +
+        `Customer will be notified before work proceeds and has the right to accept the change order or cancel the Agreement per the Change Order Disclaimer.`;
+      addText(50, y, 11, "F2", "SECOND-LAYER TEAR-OFF CONTINGENCY"); y -= 14;
+      y = addWrappedText(60, y, 10, "F1", slcDisclaimer, 480);
+      y -= 8;
+    }
+  }
+
+  if (hasGutters) {
+    addText(50, y, 11, "F2", "GUTTERS"); y -= 14;
+
+    if (va.gutters?.option) {
+      const go = va.gutters.option;
+      let gutterDesc = esc(go);
+      if (go === "5inch_included" || go === "5inch") gutterDesc = '5" Gutters — Included';
+      else if (go === "6inch_included" || go === "6inch") gutterDesc = '6" Gutters — Included';
+      else if (go.includes("5inch") && go.includes("additional")) gutterDesc = `5" Gutters — OOP ${fmt$(va.gutters.additional_cost_5inch)}`;
+      else if (go.includes("6inch") && go.includes("additional")) gutterDesc = `6" Gutters — OOP ${fmt$(va.gutters.additional_cost_6inch)}`;
+      else if (go === "none") gutterDesc = "No gutter work included";
+      addText(60, y, 10, "F2", "Gutters:"); addText(160, y, 10, "F1", gutterDesc); y -= 14;
+    }
+
+    if (va.gutter_guards) {
+      const gg = va.gutter_guards;
+      if (gg.pricing_on_request) {
+        addText(60, y, 10, "F2", "Gutter Guards:"); addText(160, y, 10, "F1", "Available — pricing on request"); y -= 14;
+      } else if (gg.mesh_oop || gg.screw_in_oop) {
+        const parts: string[] = [];
+        if (gg.mesh_oop) parts.push(`Mesh OOP ${fmt$(gg.mesh_oop)}`);
+        if (gg.screw_in_oop) parts.push(`Screw-in OOP ${fmt$(gg.screw_in_oop)}`);
+        addText(60, y, 10, "F2", "Gutter Guards:"); addText(160, y, 10, "F1", parts.join("; ")); y -= 14;
+      }
+    }
+    y -= 8;
+  }
+
+  if (hasSiding) {
+    addText(50, y, 11, "F2", "SIDING"); y -= 14;
+    addText(60, y, 10, "F1", "Scope per contractor bid and Hover design specifications."); y -= 14;
+    if (measurements?.wallSqFt) {
+      addText(60, y, 10, "F2", "Wall Area:"); addText(160, y, 10, "F1", `${(measurements.wallSqFt / 100).toFixed(1)} squares`); y -= 14;
+    }
+    y -= 8;
+  }
+
+  if (hasWindows) {
+    addText(50, y, 11, "F2", "WINDOWS"); y -= 14;
+    addText(60, y, 10, "F1", "Scope per contractor bid."); y -= 14;
+    y -= 8;
+  }
+
+  if (Array.isArray(va.warranties) && va.warranties.length > 0) {
+    hLine(y + 4); y -= 12;
+    addText(50, y, 12, "F2", "WARRANTIES"); y -= 14;
+    for (const w of va.warranties) {
+      if (!w.name) continue;
+      addText(60, y, 10, "F2", esc(w.name)); y -= 12;
+      if (w.material_defects?.years) { addText(70, y, 9, "F1", `Material Defects: ${w.material_defects.years} yrs`); y -= 11; }
+      if (w.labor?.years) { addText(70, y, 9, "F1", `Labor: ${w.labor.years} yrs`); y -= 11; }
+      if (w.wind_damage?.years) { addText(70, y, 9, "F1", `Wind: ${w.wind_damage.years} yrs`); y -= 11; }
+      if (w.hail_damage?.years) { addText(70, y, 9, "F1", `Hail: ${w.hail_damage.years} yrs`); y -= 11; }
+      y -= 4;
+    }
+  }
+
+  const hasNotes = homeownerNotes || messageToHomeowner || va.other_offers ||
+                   (pc?.workNotBeingDone) || (pc?.homeownerNotes);
+  if (hasNotes) {
+    hLine(y + 4); y -= 12;
+    addText(50, y, 12, "F2", "NOTES"); y -= 14;
+    if (homeownerNotes) {
+      addText(50, y, 10, "F2", "Homeowner Notes:"); y -= 12;
+      y = addWrappedText(60, y, 9, "F1", homeownerNotes, 500); y -= 4;
+    }
+    if (messageToHomeowner) {
+      addText(50, y, 10, "F2", "Message from Contractor:"); y -= 12;
+      y = addWrappedText(60, y, 9, "F1", messageToHomeowner, 500); y -= 4;
+    }
+    if (va.other_offers) {
+      addText(50, y, 10, "F2", "Special Offers:"); y -= 12;
+      y = addWrappedText(60, y, 9, "F1", va.other_offers, 500); y -= 4;
+    }
+    if (pc?.workNotBeingDone) {
+      addText(50, y, 10, "F2", "Exclusions:"); y -= 12;
+      y = addWrappedText(60, y, 9, "F1", pc.workNotBeingDone, 500); y -= 4;
+    }
+    if (pc?.homeownerNotes) {
+      addText(50, y, 10, "F2", "Project Notes:"); y -= 12;
+      y = addWrappedText(60, y, 9, "F1", pc.homeownerNotes, 500);
+    }
+  }
+
+  // [D-225 Phase 2B / D-186] Dual-party initials anchor row.
+  // The labels (Contractor Initial: ___ / Homeowner Initial: ___) are visible to humans;
+  // the /ContractorInitial/ and /HomeownerInitial/ anchor strings are drawn in white at the
+  // same x-position so they are invisible on the rendered page but findable by DocuSign's
+  // text-extraction anchor parser. DocuSign overlays each party's initials at the anchor.
+  y -= 18; hLine(y + 4); y -= 16;
+  addText(50,  y, 10, "F2", "Initials:");
+  addText(115, y, 10, "F1", "Contractor:");
+  addText(180, y, 10, "F1", "_________");
+  addTextColored(180, y, 10, "F1", "/ContractorInitial/", 1.0);
+  addText(320, y, 10, "F1", "Homeowner:");
+  addText(390, y, 10, "F1", "_________");
+  addTextColored(390, y, 10, "F1", "/HomeownerInitial/", 1.0);
+  y -= 4;
+
+  y -= 12; hLine(y + 4); y -= 12;
+  y = addWrappedText(50, y, 8, "F1",
+    "This Scope of Work is a reference document generated by Otter Quotes. The contractor's signed agreement is the binding contract. Scope details are based on the contractor's bid submission and may be supplemented by on-site assessment.",
+    512);
+  addText(50, y, 8, "F1", `Generated by Otter Quotes on ${esc(contractDate)} — Job Ref ${claimId.slice(0, 8).toUpperCase()}`);
+
+  const contentStream = contentLines.join("\n");
+
+  pdfWrite("%PDF-1.4");
+
+  pdfStartObj(1);
+  pdfWrite("<< /Type /Catalog /Pages 2 0 R >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(2);
+  pdfWrite("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(3);
+  pdfWrite("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(4);
+  pdfWrite(`<< /Length ${contentStream.length} >>`);
+  pdfWrite("stream");
+  pdfWrite(contentStream);
+  pdfWrite("endstream");
+  pdfWrite("endobj");
+
+  pdfStartObj(5);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  pdfWrite("endobj");
+
+  pdfStartObj(6);
+  pdfWrite("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  pdfWrite("endobj");
+
+  const xrefOffset = byteOffset;
+  pdfWrite("xref");
+  pdfWrite("0 7");
+  pdfWrite("0000000000 65535 f ");
+  for (let i = 1; i <= 6; i++) {
+    pdfWrite(String(pdfObjects[i]).padStart(10, "0") + " 00000 n ");
+  }
+  pdfWrite("trailer");
+  pdfWrite("<< /Size 7 /Root 1 0 R >>");
+  pdfWrite("startxref");
+  pdfWrite(String(xrefOffset));
+  pdfWrite("%%EOF");
+
+  return base64EncodeBinary(new TextEncoder().encode(pdfLines.join("\n")));
+}
 
 // ========== TAB BUILDERS ==========
 interface TextTab {
@@ -331,19 +1044,15 @@ function buildTextTabs(
   documentId: string,
   documentType: string
 ): TextTab[] {
-  // Mapping of field names to anchor strings found in contractor PDFs
   const fieldAnchors: { [key: string]: string } = {
-    // Homeowner / property fields
     customer_name: "Name",
     customer_address: "Address:",
     customer_city_zip: "City/Zip:",
     customer_phone: "Phone",
     customer_email: "Email:",
-    // Insurance fields
     insurance_company: "Insurance Co",
     claim_number: "Claim #",
     deductible: "DEDUCTIBLE:",
-    // Contract / job fields
     contract_date: "Date:",
     job_description: "Description:",
     material_type: "Material:",
@@ -352,13 +1061,11 @@ function buildTextTabs(
     estimated_start: "Start Date:",
     decking_per_sheet: "Decking/Sheet:",
     full_redeck_price: "Full Redeck:",
-    // Contractor fields
     contractor_name: "Contractor:",
     contractor_phone: "Contractor Phone:",
     contractor_email: "Contractor Email:",
     contractor_address: "Contractor Address:",
     contractor_license: "License #:",
-    // Color / project confirmation fields
     shingle_manufacturer: "Single Manufacture",
     shingle_type: "Shingle Type:",
     shingle_color: "Shingle Color:",
@@ -366,7 +1073,6 @@ function buildTextTabs(
     vents: "Vents",
     satellite: "Satellite",
     skylights: "Skylights",
-    // Project confirmation extended fields
     num_structures: "Structures:",
     structure_names: "Structure Names:",
     valley_type: "Valley Type:",
@@ -382,7 +1088,6 @@ function buildTextTabs(
   for (const [fieldName, fieldValue] of Object.entries(fields)) {
     const anchor = fieldAnchors[fieldName];
     if (!anchor) {
-      // Skip unmapped fields
       continue;
     }
 
@@ -428,13 +1133,31 @@ function buildSignerTabs(documentId: string, signerType: "homeowner" | "contract
   };
 }
 
+// [D-225 Phase 2B / D-186] SOW initials tab builder. Binds /ContractorInitial/ or
+// /HomeownerInitial/ initialHere tab on the generated retail Exhibit A (documentId = sowDocId).
+// Routing order is inherited from the parent envelope: contractor recipient is order 1,
+// homeowner recipient is order 2 — consistent with D-152 + D-186.
+function buildSowInitialTabs(sowDocId: string, signerType: "homeowner" | "contractor") {
+  const anchor = signerType === "homeowner" ? "/HomeownerInitial/" : "/ContractorInitial/";
+  return {
+    initialHereTabs: [
+      {
+        anchorString: anchor,
+        anchorAllowWhiteSpaceInCharacters: "true",
+        anchorUnits: "pixels",
+        anchorXOffset: "0",
+        anchorYOffset: "-2",
+        documentId: sowDocId,
+      },
+    ],
+  };
+}
+
 // ========== ADDENDUM SIGNER TABS ==========
-// These are positioned on the compliance addendum for the homeowner's
-// acknowledgment signature and optional cancellation notice signature.
 function buildAddendumTabs(documentId: string) {
   return {
     // D-123: signHere tab replaces prior checkboxTab for otterquote_acknowledgment.
-    // checkboxTab with required: "true" is unreliable in DocuSign embedded signing —
+    // checkboxTab with required: "true" is unreliable in DocuSign embedded signing --
     // the "Finish" button can fire before required-checkbox validation triggers.
     // signHere is the only tab type DocuSign reliably enforces before completion.
     // Approved: Dustin Stohler, 2026-05-25, task 86e1frafj.
@@ -449,7 +1172,7 @@ function buildAddendumTabs(documentId: string) {
         optional: "true",
         documentId,
       },
-      // D-123 platform disclosure acknowledgment — homeowner signs to confirm
+      // D-123 platform disclosure acknowledgment -- homeowner signs to confirm
       // OtterQuote is not a party to the homeowner-contractor agreement.
       {
         anchorString: "PLATFORM DISCLOSURE",
@@ -504,20 +1227,25 @@ async function autoPopulateFields(
     .eq("contractor_id", contractorId)
     .single();
 
+  const { data: homeownerProfile } = claimData?.user_id
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", claimData.user_id)
+        .single()
+    : { data: null };
+
   const fields: TextTabFields = {};
 
   if (claimData) {
-    // Homeowner info
-    fields.customer_name = signerName || "";
+    fields.customer_name = homeownerProfile?.full_name || "";
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
     fields.customer_email = signerEmail || "";
-    // Insurance info
     fields.insurance_company = claimData.insurance_carrier || "";
     fields.claim_number = claimData.claim_number || "";
     fields.deductible = claimData.deductible_amount ? `$${Number(claimData.deductible_amount).toLocaleString()}` : "";
-    // Job info
     fields.contract_date = new Date().toLocaleDateString("en-US");
     fields.job_description = claimData.damage_type ? `Roof ${claimData.damage_type}` : "Roof Replacement";
     fields.material_type = claimData.material_product || bidData?.brand || "";
@@ -540,7 +1268,6 @@ async function autoPopulateFields(
       : "";
     fields.contractor_license = "";
 
-    // Get contractor license info
     const { data: licenseData } = await supabase
       .from("contractor_licenses")
       .select("license_number, municipality")
@@ -551,7 +1278,6 @@ async function autoPopulateFields(
     }
   }
 
-  // Project Confirmation: merge scope/material fields from project_confirmation JSONB
   if (documentType === "project_confirmation" && claimData?.project_confirmation) {
     const pc = claimData.project_confirmation;
     Object.assign(fields, {
@@ -584,7 +1310,6 @@ async function handleContractorSign(
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, fields: providedFields, return_url, quote_id } = requestBody;
 
-  // Auto-populate fields if not provided
   let autoFields = providedFields || {};
   let claimData: any = null;
   let contractorData: any = null;
@@ -601,7 +1326,6 @@ async function handleContractorSign(
     contractorData = c;
     const { data: cl } = await supabase.from("claims").select("*").eq("id", claim_id).single();
     claimData = cl;
-    // Fetch bid data for SOW generation — needed even when caller provides their own fields
     const { data: bd } = await supabase
       .from("quotes")
       .select("*")
@@ -611,8 +1335,6 @@ async function handleContractorSign(
     bidData = bd;
   }
 
-  // Fetch contractor's contract template from storage
-  // Determine trade + funding type to select the right template
   const trades = claimData?.selected_trades || [];
   const trade = trades.length ? trades[0].toLowerCase() : "roofing";
   let fundingType = "insurance";
@@ -622,7 +1344,6 @@ async function handleContractorSign(
     fundingType = "retail";
   }
 
-  // Look up template from contractor's contract_templates JSONB
   const templates = contractorData?.contract_templates || [];
   let matchingTemplate = templates.find((t: any) =>
     t.trade && t.trade.toLowerCase() === trade &&
@@ -637,33 +1358,56 @@ async function handleContractorSign(
 
   let templateBase64: string;
   if (matchingTemplate?.file_url && matchingTemplate.file_url.includes("contractor-templates")) {
-    // Extract storage path from URL and download
     const pathMatch = matchingTemplate.file_url.match(/contractor-templates\/(.+)$/);
     if (pathMatch) {
       const storagePath = decodeURIComponent(pathMatch[1]);
       const { data: blob, error } = await supabase.storage.from("contractor-templates").download(storagePath);
       if (error) throw new Error(`Template download error: ${error.message}`);
       const ab = await blob.arrayBuffer();
-      templateBase64 = base64EncodeBinary(new Uint8Array(ab));
+      const templateBytes = new Uint8Array(ab);
+      if (templateBytes.length > PDF_MAX_BYTES) {
+        throw new DocumentTooLargeError(storagePath, templateBytes.length);
+      }
+      templateBase64 = base64EncodeBinary(templateBytes);
     } else {
       templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
     }
   } else if (matchingTemplate?.file_url) {
     templateBase64 = await fetchTemplateFromUrl(matchingTemplate.file_url);
   } else {
-    // Fallback: try standard path convention
     templateBase64 = await getTemplateFromStorage(supabase, contractor_id, "contract");
   }
 
-  // Generate IC 24-5-11 compliance addendum
   const contractDate = new Date().toLocaleDateString("en-US");
   const contractorName = contractorData?.company_name || signer.name || "Contractor";
-  const homeownerName = autoFields.customer_name || "Homeowner";
+
+  // Resolve homeowner identity from profiles before PDF generation.
+  // autoFields.customer_name is set from signer.name (contractor) in autoPopulateFields,
+  // so it must NOT be used as the homeowner name — doing so causes UNKNOWN_ENVELOPE_RECIPIENT
+  // when handleHomeownerSign tries to create the recipient view (PFW canary 2026-05-20).
+  let homeownerEmail = "homeowner@placeholder.otterquote.com";
+  let homeownerFullName = "Homeowner";
+  if (claimData?.user_id) {
+    const { data: hwProfileData } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", claimData.user_id)
+      .single();
+    if (hwProfileData) {
+      homeownerEmail = hwProfileData.email || homeownerEmail;
+      homeownerFullName = hwProfileData.full_name || "Homeowner";
+    }
+  }
+  if (homeownerFullName === contractorName || homeownerFullName.trim().length === 0) {
+    console.error(
+      `[create-docusign-envelope] homeowner name mismatch: homeownerFullName="${homeownerFullName}", ` +
+      `contractorName="${contractorName}", claim_id=${claim_id} — falling back to "Homeowner"`
+    );
+    homeownerFullName = "Homeowner";
+  }
+  const homeownerName = homeownerFullName;
   const addendumBase64 = generateComplianceAddendumPdf(contractorName, homeownerName, contractDate);
 
-  // For retail (non-insurance) jobs: generate a Scope of Work PDF and attach it as
-  // document 2. The IC 24-5-11 compliance addendum shifts to document 3.
-  // For insurance jobs the loss sheet serves as the scope reference — no SOW generated.
   const isRetail = fundingType !== "insurance";
   let scopeOfWorkBase64: string | null = null;
   if (isRetail) {
@@ -689,7 +1433,6 @@ async function handleContractorSign(
       });
       console.log(`Retail Scope of Work PDF generated for claim ${claim_id}`);
     } catch (sowErr) {
-      // Non-fatal: proceed without SOW if generation fails for any reason
       console.error("Retail SOW PDF generation failed (non-fatal, continuing without SOW):", sowErr);
       scopeOfWorkBase64 = null;
     }
@@ -697,29 +1440,11 @@ async function handleContractorSign(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Document IDs:
-  //   Insurance:  doc 1 = contractor agreement, doc 2 = IC 24-5-11 addendum
-  //   Retail:     doc 1 = contractor agreement, doc 2 = Scope of Work, doc 3 = IC 24-5-11 addendum
   const documentId = "1";
-  const sowDocId    = "2"; // retail only
+  const sowDocId    = "2";
   const addendumDocId = isRetail && scopeOfWorkBase64 ? "3" : "2";
   const textTabs = buildTextTabs(autoFields, documentId, "contractor_sign");
   const contractorTabs = buildSignerTabs(documentId, "contractor");
-
-  // Resolve homeowner email for placeholder recipient (from profiles table)
-  let homeownerEmail = "homeowner@placeholder.otterquote.com";
-  let homeownerFullName = homeownerName;
-  if (claimData?.user_id) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", claimData.user_id)
-      .single();
-    if (profileData) {
-      homeownerEmail = profileData.email || homeownerEmail;
-      homeownerFullName = profileData.full_name || homeownerFullName;
-    }
-  }
 
   const docLabel = getDocumentLabel("contractor_sign");
 
@@ -732,7 +1457,6 @@ async function handleContractorSign(
         fileExtension: "pdf",
         documentId,
       },
-      // Scope of Work — retail jobs only (doc 2). Shifts addendum to doc 3.
       ...(scopeOfWorkBase64 ? [{
         documentBase64: scopeOfWorkBase64,
         name: "Scope of Work",
@@ -757,10 +1481,12 @@ async function handleContractorSign(
           tabs: {
             textTabs,
             ...contractorTabs,
+            // [D-225 Phase 2B / D-186] Contractor initial on the generated retail Exhibit A.
+            // Bound only when isRetail AND SOW generation succeeded (scopeOfWorkBase64 truthy);
+            // insurance envelopes have no Exhibit A per D-201, so no initials.
+            ...(scopeOfWorkBase64 ? buildSowInitialTabs(sowDocId, "contractor") : {}),
           },
         },
-        // Homeowner is signer 2 — not yet active (will use createRecipient later)
-        // Placeholder with routingOrder 2 so DocuSign knows the signing order
         {
           email: homeownerEmail,
           name: homeownerFullName,
@@ -770,11 +1496,13 @@ async function handleContractorSign(
           tabs: {
             ...buildSignerTabs(documentId, "homeowner"),
             ...buildAddendumTabs(addendumDocId),
+            // [D-225 Phase 2B / D-186] Homeowner initial on the generated retail Exhibit A.
+            ...(scopeOfWorkBase64 ? buildSowInitialTabs(sowDocId, "homeowner") : {}),
           },
         },
       ],
     },
-    status: "sent", // "sent" starts the signing workflow
+    status: "sent",
   };
 
   console.log("Creating DocuSign envelope (contractor_sign)");
@@ -802,7 +1530,6 @@ async function handleContractorSign(
 
   console.log(`Envelope created (contractor_sign): ${envelopeId}`);
 
-  // Generate embedded signing URL for contractor
   const defaultReturnUrl = return_url || `https://otterquote.com/contractor-bid-form.html?claim_id=${claim_id}&signed=contractor`;
   const recipientViewResponse = await fetch(
     `${baseUri}/restapi/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
@@ -831,7 +1558,6 @@ async function handleContractorSign(
   const signingUrl = recipientViewData.url;
   if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
 
-  // Store envelope ID on the quote record
   const quoteUpdateFilter = quote_id
     ? supabase.from("quotes").update({ docusign_envelope_id: envelopeId }).eq("id", quote_id)
     : supabase.from("quotes").update({ docusign_envelope_id: envelopeId })
@@ -843,7 +1569,6 @@ async function handleContractorSign(
     console.error("Failed to update quote with envelope ID:", quoteUpdateError);
   }
 
-  // Also update claim with the latest envelope
   await supabase.from("claims").update({
     contract_sent_at: new Date().toISOString(),
     docusign_envelope_id: envelopeId,
@@ -871,7 +1596,6 @@ async function handleHomeownerSign(
 ): Promise<Response> {
   const { claim_id, contractor_id, signer, return_url, quote_id } = requestBody;
 
-  // Look up existing envelope from the quote
   let envelopeId: string | null = null;
 
   if (quote_id) {
@@ -884,7 +1608,6 @@ async function handleHomeownerSign(
   }
 
   if (!envelopeId) {
-    // Fallback: look up by claim_id + contractor_id
     const { data: quoteData } = await supabase
       .from("quotes")
       .select("docusign_envelope_id, contractor_signed_at")
@@ -904,7 +1627,6 @@ async function handleHomeownerSign(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Generate embedded signing URL for the homeowner (recipient 2, already in the envelope)
   const defaultReturnUrl = return_url || `https://otterquote.com/contract-signing.html?claim_id=${claim_id}&signed=true`;
 
   console.log(`Generating homeowner signing URL for envelope ${envelopeId}`);
@@ -968,7 +1690,6 @@ async function handleLegacyFlow(
     return_url,
   } = requestBody;
 
-  // Auto-populate fields if not provided
   let autoFields = providedFields || {};
   let claimData: any = null;
   let contractorData: any = null;
@@ -996,11 +1717,9 @@ async function handleLegacyFlow(
     }
   }
 
-  // Fetch template PDF
   let templateBase64: string;
 
   if (document_type === "project_confirmation") {
-    // Ensure contractor data with JSONB PC template column is loaded
     const templateContractor = contractorData || await (async () => {
       const { data } = await supabase
         .from("contractors")
@@ -1010,7 +1729,6 @@ async function handleLegacyFlow(
       return data;
     })();
 
-    // Resolve trade + funding type from claim data
     const trade: string = (
       claimData?.selected_trades?.[0] ||
       (autoFields?.trade_type as string | undefined)
@@ -1022,10 +1740,8 @@ async function handleLegacyFlow(
       (autoFields?.funding_type as string | undefined) ||
       ""
     ).toLowerCase();
-    // Normalize: anything containing "insurance" → "insurance", else "retail"
     const fundingType: string = rawFunding.includes("insurance") ? "insurance" : "retail";
 
-    // Select the best-matching PC template slot
     const slot = selectPcTemplateSlot(
       templateContractor?.color_confirmation_template,
       trade,
@@ -1033,8 +1749,6 @@ async function handleLegacyFlow(
     );
 
     if (!slot) {
-      // No PC template available — log a warning and omit the PC document.
-      // The envelope still generates (non-fatal per D-161 spec).
       console.warn(
         `[D-161] No project confirmation template found for contractor ${contractor_id} ` +
         `(trade=${trade}, fundingType=${fundingType}). Omitting PC document from envelope.`
@@ -1052,7 +1766,6 @@ async function handleLegacyFlow(
 
   const { accessToken, accountId, baseUri } = tokenInfo;
 
-  // Build envelope definition
   const documentId = "1";
   const textTabs = buildTextTabs(autoFields, documentId, document_type);
   const homeownerTabs = buildSignerTabs(documentId, "homeowner");
@@ -1063,7 +1776,6 @@ async function handleLegacyFlow(
 
   const docLabel = getDocumentLabel(document_type);
 
-  // For contract type, also generate the compliance addendum
   const documents: any[] = [
     {
       documentBase64: templateBase64,
@@ -1144,8 +1856,8 @@ async function handleLegacyFlow(
   if (!envelopeId) throw new Error("No envelopeId returned from DocuSign");
 
   console.log(`Envelope created (${document_type}): ${envelopeId}`);
+  await sendGA4Event("envelope_sent", { document_type, envelope_id: envelopeId, claim_id });
 
-  // Generate embedded signing URL
   const defaultReturnUrl = document_type === "project_confirmation"
     ? `https://otterquote.com/project-confirmation.html?claim_id=${claim_id}&signed=true`
     : "https://otterquote.com/contract-signing.html?signed=true";
@@ -1178,7 +1890,6 @@ async function handleLegacyFlow(
   const signingUrl = recipientViewData.url;
   if (!signingUrl) throw new Error("No URL returned from DocuSign recipient view endpoint");
 
-  // Update claim in Supabase
   const updateData: any = {
     contract_sent_at: new Date().toISOString(),
   };
@@ -1233,7 +1944,6 @@ serve(async (req) => {
       signer,
     } = requestBody;
 
-    // ========== INPUT VALIDATION ==========
     if (!claim_id || !document_type || !contractor_id || !signer?.email || !signer?.name) {
       return new Response(
         JSON.stringify({
@@ -1254,8 +1964,6 @@ serve(async (req) => {
       );
     }
 
-    // ========== RATE LIMIT CHECK ==========
-    // Skip rate limit for homeowner_sign (no new envelope created)
     if (document_type !== "homeowner_sign") {
       const { data: rateLimitResult, error: rlError } = await supabase.rpc("check_rate_limit", {
         p_function_name: FUNCTION_NAME,
@@ -1286,7 +1994,6 @@ serve(async (req) => {
       }
     }
 
-    // ========== DOCUSIGN CONFIG ==========
     const REST_API_BASE = Deno.env.get("DOCUSIGN_BASE_URI") || Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net";
 
     const INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY");
@@ -1294,11 +2001,9 @@ serve(async (req) => {
       throw new Error("DocuSign credentials not configured. Set DOCUSIGN_INTEGRATION_KEY.");
     }
 
-    // ========== GET ACCESS TOKEN + ACCOUNT INFO ==========
     console.log("Acquiring DocuSign access token");
     const tokenInfo = await getAccessToken(REST_API_BASE);
 
-    // ========== ROUTE BY DOCUMENT TYPE ==========
     switch (document_type) {
       case "contractor_sign":
         return await handleContractorSign(supabase, requestBody, tokenInfo, corsHeaders);
@@ -1318,5 +2023,23 @@ serve(async (req) => {
   } catch (error) {
     console.error("create-docusign-envelope error:", error);
 
+    if (error instanceof DocumentTooLargeError) {
+      return new Response(
+        JSON.stringify({ error: error.code, message: error.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const message =
-      e
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred";
+
+    return new Response(
+      JSON.stringify({
+        error: message,
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
