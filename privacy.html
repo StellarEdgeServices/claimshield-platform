@@ -6,13 +6,6 @@
   src="https://js.sentry-cdn.com/49b5839b50adc240398d822c46d4a86e.min.js"
   crossorigin="anonymous"
 ></script>
-<script>
-  Sentry.onLoad(function() {
-    Sentry.init({
-      environment: window.location.hostname.includes("staging") ? "staging" : "production"
-    });
-  });
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/img/brand-assets/favicon.png">
@@ -86,7 +79,7 @@
         <section class="page-hero">
             <h1>Privacy Policy</h1>
             <p>How Otter Quotes Collects, Uses, and Protects Your Data</p>
-            <p><strong>Effective Date: March 16, 2026</strong></p>
+            <p><strong>Effective Date: May 26, 2026</strong></p>
         </section>
 
         <!-- Legal Content -->
@@ -173,6 +166,7 @@
                     <li><strong>Google Analytics (GA4):</strong> Usage analytics and performance monitoring</li>
                     <li><strong>Stripe:</strong> Payment processing and billing services, including processing of the $150 Hover Measurement Fee and any associated rebate (see Section 8.5 of our <a href="terms.html">Terms of Service</a>). When you purchase a measurement report through the Platform, Stripe receives the payment data (card number, billing details) directly under its own privacy policy; we receive only a payment reference, the charge amount, and the charge status.</li>
                     <li><strong>Hover:</strong> Aerial and photo-based measurement report generation. When you order a measurement report, we share your property address and contact information with Hover, Inc. so they can generate and deliver the report. Hover's handling of your information is governed by Hover's own privacy policy.</li>
+                    <li><strong>Sentry:</strong> Error monitoring and session replay service for debugging technical issues; all form inputs are masked and no personally identifiable form data is captured or transmitted (see Section 5.3)</li>
                 </ul>
 
                 <h3>4.3 Legal Requests and Obligations</h3>
@@ -204,10 +198,13 @@
                 <h3>5.2 Google Analytics (GA4)</h3>
                 <p>We use Google Analytics to understand how visitors use our platform. GA4 collects data such as page views, session duration, user demographics, and device information. This data helps us improve our services and understand user behavior patterns. GA4 may set cookies on your device and may combine data from multiple sources. For more information about how Google uses data, please visit the <a href="https://support.google.com/analytics">Google Analytics Support Center</a>.</p>
 
-                <h3>5.3 Disabling Cookies</h3>
+                <h3>5.3 Error Monitoring and Session Replay (Sentry)</h3>
+                <p>We use Sentry, provided by Functional Software, Inc. ("Sentry"), for error monitoring and debugging. When a technical error occurs during your session, Sentry may capture a replay of the page interactions that preceded that error to help our engineering team diagnose and resolve the issue. <strong>Session replays are triggered only when an error is detected</strong> — Sentry does not record normal browsing sessions. All form input fields (text boxes, password fields, and other data-entry elements) are <strong>masked before transmission</strong> and are never visible in the replay. No personally identifiable information entered into any form is captured or sent to Sentry. Error data, including any associated session replay, is retained for up to 90 days. For more information, see Sentry's Privacy Policy at <a href="https://sentry.io/privacy/" target="_blank" rel="noopener">https://sentry.io/privacy/</a>.</p>
+
+                <h3>5.4 Disabling Cookies</h3>
                 <p>You can control cookie settings through your browser. Most browsers allow you to refuse cookies or alert you when cookies are being sent. Disabling cookies may affect your ability to use certain features of our platform.</p>
 
-                <h3>5.4 Do Not Track</h3>
+                <h3>5.5 Do Not Track</h3>
                 <p>Some browsers include a "Do Not Track" feature. Currently, there is no industry standard for recognizing DNT signals. If you enable DNT in your browser, our platform may not respond to these signals, but you can still manage cookies through your browser settings.</p>
             </section>
 
@@ -363,6 +360,14 @@
                     <li>Privacy Policy: <a href="https://policies.google.com/privacy">https://policies.google.com/privacy</a></li>
                 </ul>
 
+                <p><strong>Sentry</strong> (Error Monitoring &amp; Session Replay)</p>
+                <ul>
+                    <li>Captures a replay of page interactions when a technical error occurs, to help diagnose and fix the issue</li>
+                    <li>All form inputs are masked; no personally identifiable information entered in forms is captured or transmitted</li>
+                    <li>Session replays are triggered by errors only — normal browsing sessions are not recorded</li>
+                    <li>Privacy Policy: <a href="https://sentry.io/privacy/" target="_blank" rel="noopener">https://sentry.io/privacy/</a></li>
+                </ul>
+
                 <h3>10.3 Data Processing Agreements</h3>
                 <p>We have Data Processing Agreements (DPAs) in place with our service providers to ensure they process your information in compliance with applicable privacy laws.</p>
             </section>
@@ -421,30 +426,4 @@
             <section>
                 <h2>16. Summary of Privacy Practices</h2>
 
-                <h3>What We Collect</h3>
-                <p>We collect information you provide directly (name, email, property details, insurance documents), information collected automatically (usage data, device information, IP address), and information from third-party service providers.</p>
-
-                <h3>Who We Share With</h3>
-                <p>We share information with contractors (when you request matching), service providers (Supabase, Netlify, GA4, Stripe), and as required by law. We do not sell your personal information to third parties, and we do not use your data to serve targeted advertising outside of our own platform.</p>
-
-                <h3>Your Rights</h3>
-                <p>You have the right to access, correct, or delete your personal information. Indiana residents have additional rights under state law, including the right to know what data we hold about you. Contact us at <a href="mailto:support@otterquote.com">support@otterquote.com</a> to exercise these rights.</p>
-
-                <h3>How We Protect Your Data</h3>
-                <p>We use industry-standard encryption (TLS in transit, AES-256 at rest), role-based access controls, row-level security in our database, and regular security audits. We store only the minimum data necessary to provide our services.</p>
-
-                <h3>Your Choices</h3>
-                <p>You can update or delete your account at any time by contacting us. You can opt out of non-essential communications at any time. We will always send service-related notifications (such as magic link authentication emails) regardless of communication preferences.</p>
-            </section>
-
-        </div><!-- /.privacy-content -->
-    </main>
-
-    <footer id="site-footer"></footer>
-
-    <script src="js/cookie-storage.js"></script>
-<script src="js/config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/nav.js"></script>
-</body>
-</html>
+          
