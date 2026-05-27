@@ -352,4 +352,3 @@ ${ctaButton("Review in Admin →", ADMIN_PAYOUTS_URL)}
     });
   }
 });
-  
