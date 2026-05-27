@@ -256,6 +256,10 @@
   }
 
   // D-208 F-007d pattern: wait for PKCE exchange if code is in URL
+  if (!sb) {
+    showError();
+    return;
+  }
   sb.auth.onAuthStateChange(async function(event, session) {
     if (event === 'SIGNED_IN' && session) {
       await handle(session);
