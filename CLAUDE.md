@@ -78,7 +78,8 @@ Tier system (D-182):
 
 Before any git push: check Netlify deploy state (R-012). If state == 'error' → halt.
 
-PAT expires August 10, 2026. Rotate by August 3.
+Classic deploy PAT (ghp_a0QgK6...): expires August 11, 2026. Rotate by August 3.
+Fine-grained PAT (For Claude - Branch Protection): expires May 26, 2027. Stored in Windows GITHUB_PERSONAL_ACCESS_TOKEN env var. Rotate by May 19, 2027.
 
 ---
 
