@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-CI File Integrity Check — null-byte, size sanity, and JS syntax gate.
+CI File Integrity Check — null-byte, size sanity, JS syntax, and TS structure gate.
 
 Catches FUSE/bindfs mount truncation before corrupt files reach production.
-Root cause: May 3, 2026 production outage — login.html and contractor-join.html
+Root cause (original): May 3, 2026 production outage — login.html and contractor-join.html
 were silently truncated by bindfs write corruption, causing a 9.5-hour outage.
+Root cause (extended): May 25, 2026 — PR #136 committed a truncated
+create-docusign-envelope/index.ts (47,139 bytes; complete is 74,299 bytes), causing
+an 8-day EF redeploy block and a D-123 compliance gap. TypeScript EF files
+were not scanned by this script at the time. Task 86e1k3yjq.
 
-Detects five violation classes:
-  1. Null-byte padding  -- file is full-size but filled with \x00 after real content
-  2. Size-floor failure -- file is shorter than any legitimate page could be
-  3. Canary minimums   -- critical pages must exceed known-good thresholds
-  4. HTML truncation   -- HTML files must end with </html>
-  5. JS parse error    -- node --check catches syntax errors including clean truncation
+Detects six violation classes:
+  1. Null-byte padding    -- file is full-size but filled with \x00 after real content
+  2. Size-floor failure  -- file is shorter than any legitimate page could be
+  3. Canary minimums     -- critical pages/EFs must exceed known-good thresholds
+  4. HTML truncation     -- HTML files must end with </html>
+  5. JS parse error      -- node --check catches syntax errors including clean truncation
+  6. TS EF truncation    -- Supabase Edge Function index.ts files must end with });
+                            (Deno.serve wrapper close) -- catches mid-function truncation
 
 Canary matching rules:
   - Keys with no "/" are ROOT-ANCHORED: only match at repo root (e.g. "index.html"
@@ -24,14 +30,16 @@ import subprocess
 import sys
 
 # Extensions to scan
-EXTENSIONS = {".html", ".js", ".css"}
+EXTENSIONS = {".html", ".js", ".css", ".ts"}
 
 # Minimum size floors per extension (bytes)
 # A legitimate HTML page cannot be < 500 bytes; a real JS module cannot be < 50 bytes
+# Supabase Edge Function index.ts files are typically 5,000-75,000 bytes
 MIN_SIZES = {
     ".html": 500,
     ".js": 50,
     ".css": 50,
+    ".ts": 500,
 }
 
 # Canary files: critical pages/scripts with hard minimum thresholds (bytes).
@@ -39,17 +47,30 @@ MIN_SIZES = {
 # Values are conservative (~30-50% of actual file size as of May 2026).
 # Root-anchored (no slash): only matches at repo root level.
 # Path canaries (contains slash): matches exact path or suffix.
+#
+# EF canaries: Supabase Edge Function files. Thresholds at ~80% of current
+# known-good size (May 27, 2026). PR #136 incident: file dropped from 74,299 to
+# 47,139 bytes (-36%) -- well below an 80% canary. Task 86e1k3yjq.
 CANARY_FILES = {
-    "login.html":                  3000,   # root-anchored
-    "contractor-join.html":        4000,   # root-anchored
-    "contractor-login.html":       2000,   # root-anchored
-    "index.html":                  5000,   # root-anchored (NOT blog/index.html)
-    "get-started.html":            4000,   # root-anchored
-    "contractor-dashboard.html":   5000,   # root-anchored
-    "dashboard.html":              5000,   # root-anchored
-    "auth-callback.html":          7000,   # root-anchored -- bumped 2000->7000 (current well-formed size 9338 bytes, May 19 2026)
-    "js/auth.js":                  8000,   # path canary
-    "js/config.js":                 200,   # path canary
+    # Frontend critical pages (root-anchored)
+    "login.html":                  3000,
+    "contractor-join.html":        4000,
+    "contractor-login.html":       2000,
+    "index.html":                  5000,   # NOT blog/index.html
+    "get-started.html":            4000,
+    "contractor-dashboard.html":   5000,
+    "dashboard.html":              5000,
+    "auth-callback.html":          7000,   # bumped 2000->7000 (current ~9338 bytes, May 19 2026)
+    # Frontend critical scripts (path canaries)
+    "js/auth.js":                  8000,
+    "js/config.js":                 200,
+    # Supabase Edge Function canaries (path canaries, ~80% of known-good size)
+    "supabase/functions/create-docusign-envelope/index.ts": 59000,  # known-good 74,299 bytes
+    "supabase/functions/notify-contractors/index.ts":        48000,  # known-good 61,138 bytes
+    "supabase/functions/process-dunning/index.ts":           43000,  # known-good 53,989 bytes
+    "supabase/functions/process-coi-reminders/index.ts":     32000,  # known-good 40,948 bytes
+    "supabase/functions/process-bid-expirations/index.ts":   29000,  # known-good 36,794 bytes
+    "supabase/functions/docusign-webhook/index.ts":          24000,  # known-good 30,263 bytes
 }
 
 # Directories to skip entirely
@@ -66,6 +87,22 @@ def canary_matches(rel_path, canary_key):
     else:
         # Root-anchored: exact match only (no subdirectory matches)
         return rel_path == canary_key
+
+def is_ef_index(rel_path):
+    """Return True if rel_path is a Supabase Edge Function index.ts file.
+
+    Matches supabase/functions/<name>/index.ts -- exactly four path segments
+    with the first two being supabase/functions. This ensures we apply the
+    Deno.serve structural check only to EF entry points, not shared helpers
+    (_shared/*.ts) or other TypeScript files.
+    """
+    parts = rel_path.split("/")
+    return (
+        len(parts) == 4
+        and parts[0] == "supabase"
+        and parts[1] == "functions"
+        and parts[3] == "index.ts"
+    )
 
 for root, dirs, files in os.walk("."):
     # Prune excluded dirs in-place (modifies dirs so os.walk won't descend)
@@ -171,6 +208,31 @@ for root, dirs, files in os.walk("."):
                     f"cannot syntax-check JS files"
                 )
 
+        # Check 6: TypeScript Edge Function structural completeness.
+        # Supabase EF entry points (supabase/functions/<name>/index.ts) must end
+        # with a statement-closing character: ';' or '}'.
+        # A file truncated mid-expression (the PR #136 pattern) ends with an
+        # identifier, keyword, or string -- NOT a closing punctuation mark.
+        # Note: EFs use different entry-point patterns -- some use Deno.serve()
+        # (ending with '});'), others export handlers ending with '}', and older
+        # EFs use 'serve(handleRequest);' (ending with ';').  Checking for ';' or
+        # '}' correctly accepts all patterns while catching mid-expression truncation.
+        # Null bytes are stripped before the check so padded-corruption files are
+        # handled by Check 1 (null-bytes) rather than producing a double-failure here.
+        # PR #136 incident: truncated file ended with 'e' (mid-expression) -- caught.
+        # Task 86e1k3yjq, May 27 2026.
+        # Shared helpers (_shared/*.ts) are excluded by is_ef_index().
+        if ext == ".ts" and is_ef_index(rel_path):
+            trimmed = data.rstrip(b"\x00 \t\r\n")
+            last_char = trimmed[-1:].decode("utf-8", errors="replace") if trimmed else ""
+            if last_char not in (";", "}"):
+                tail = trimmed[-80:].decode("utf-8", errors="replace")
+                failures.append(
+                    f"FAIL [ts-ef-truncation] {rel_path}: EF index.ts ends with "
+                    f"{last_char!r} not ';' or '}}' -- likely mid-expression truncation "
+                    f"(tail: ...{tail!r})"
+                )
+
 # -- Summary -----------------------------------------------------------------
 print(f"Scanned {checked} files ({', '.join(sorted(EXTENSIONS))})")
 print()
@@ -184,5 +246,5 @@ if failures:
     print("Check the commit source -- do not deploy until all violations are resolved.")
     sys.exit(1)
 else:
-    print(f"All {checked} files passed null-byte, size, HTML structure, and JS syntax checks.")
+    print(f"All {checked} files passed null-byte, size, HTML structure, JS syntax, and TS EF structure checks.")
     sys.exit(0)

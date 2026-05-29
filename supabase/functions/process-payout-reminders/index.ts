@@ -506,4 +506,3 @@ ${ctaButton("View Full History →", ADMIN_PAYOUTS_URL)}
     });
   }
 });
-  
