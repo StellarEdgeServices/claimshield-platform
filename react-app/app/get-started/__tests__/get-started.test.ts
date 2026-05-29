@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatPhoneValue, isValidEmail } from '../page';
+import { formatPhoneValue, isValidEmail } from '../utils';
 
 describe('formatPhoneValue', () => {
   it('formats a 10-digit number', () => {
