@@ -122,17 +122,22 @@ async function loginAsContractor(
     },
     { timeout: 15_000 }
   );
+  // Allow pending XHR/fetch calls to settle so Auth.getSession() fast-path
+  // finds the session token before contractor-pre-approval.html's init() runs.
+  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
 }
 
 // --- Tests ---
 
 test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
   let state: TestState;
-  let originalSnapshot: ContractorStatusSnapshot;
 
   test.beforeAll(async () => {
     state = getTestState();
-    originalSnapshot = await getContractorSnapshot(state.contractorId);
+    const snap = await getContractorSnapshot(state.contractorId);
+    console.log(
+      `  Contractor ${state.contractorId} entering D-210 tests with status=${snap.status} onboarding_step=${snap.onboarding_step}`
+    );
     await setContractorState(state.contractorId, {
       status: 'pending_approval',
       onboarding_step: 2,
@@ -142,10 +147,14 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     );
   });
 
+  // Always restore to seed state (active/4) — never restore to whatever state
+  // we found on entry, which may itself be contaminated (e.g. pending_approval
+  // left over from a previous failed run). Retail-siding tests that follow
+  // require status=active to pass.
   test.afterAll(async () => {
-    await setContractorState(state.contractorId, originalSnapshot);
+    await setContractorState(state.contractorId, { status: 'active', onboarding_step: 4 });
     console.log(
-      `  Contractor ${state.contractorId} restored to status=${originalSnapshot.status}`
+      `  Contractor ${state.contractorId} restored to status=active onboarding_step=4 (seed state)`
     );
   });
 
