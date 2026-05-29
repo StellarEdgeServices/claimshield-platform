@@ -61,7 +61,7 @@ function fireHubSpotContact(data: {
 
 // ─── Phone formatter (handles typing, paste, and autofill) ───────────────────
 
-export function formatPhoneValue(raw: string): string {
+function formatPhoneValue(raw: string): string {
   let v = raw.replace(/\D/g, '');
   // Strip leading country code (1 or 01) if autofill included it
   if (v.length === 11 && v.startsWith('1')) v = v.slice(1);
@@ -74,7 +74,7 @@ export function formatPhoneValue(raw: string): string {
 
 // ─── Email validator ──────────────────────────────────────────────────────────
 
-export function isValidEmail(email: string): boolean {
+function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
