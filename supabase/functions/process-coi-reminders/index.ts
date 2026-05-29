@@ -929,7 +929,7 @@ async function processWCReminders(
   let query = supabase
     .from("contractors")
     .select(
-      `id, contact_name, email, notification_emails,
+      `id, user_id, contact_name, email, notification_emails,
        wc_cert_expiry, wc_cert_file_ref,
        wc_cert_reminder_30_sent_at`
     )
@@ -1038,6 +1038,7 @@ async function processWCReminders(
           const { error: logError } = await supabase.from("activity_log").insert({
             event_type: "wc_cert_expiry_reminder_sent",
             title: "wc_cert_expiry_reminder_sent",
+            user_id: contractor.user_id,
             metadata: { contractor_id: contractorId, days_until_expiry: days, expiry_date: wcExpiryDate },
           });
           

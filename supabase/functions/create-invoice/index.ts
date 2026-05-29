@@ -235,7 +235,7 @@ serve(async (req: Request) => {
     // Fetch contractor email
     const { data: contractor, error: contractorError } = await sb
       .from("contractors")
-      .select("contact_name, email")
+      .select("contact_name, email, user_id")
       .eq("id", contractor_id)
       .single();
 
@@ -270,6 +270,7 @@ serve(async (req: Request) => {
     const { error: logError } = await sb.from("activity_log").insert({
       event_type: "invoice_created",
       title: "invoice_created",
+      user_id: contractor.user_id,
       metadata: {
         contractor_id,
         quote_id,

@@ -400,11 +400,18 @@ serve(async (req) => {
     }
 
     // ── Log to activity_log ────────────────────────────────────────
+    const { data: claimOwner } = await supabase
+      .from("claims")
+      .select("user_id")
+      .eq("id", claim_id)
+      .single();
+
     const { error: logError } = await supabase
       .from("activity_log")
       .insert({
         event_type: "loss_sheet_parsed",
         title: `Loss sheet parsed via ${FUNCTION_NAME}. Carrier: ${parsed.carrier_name || "unknown"}. Format: ${parsed.format_detected || "unknown"}. RCV: ${parsed.summary?.rcv ? "$" + parsed.summary.rcv.toLocaleString() : "n/a"}. Sections: ${parsed.sections?.length ?? 0}.`,
+        user_id: claimOwner?.user_id ?? null,
         metadata: { claim_id },
         created_at: new Date().toISOString(),
       });
