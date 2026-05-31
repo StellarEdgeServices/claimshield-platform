@@ -138,9 +138,13 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     console.log(
       `  Contractor ${state.contractorId} entering D-210 tests with status=${snap.status} onboarding_step=${snap.onboarding_step}`
     );
+    // onboarding_step is the LAST COMPLETED step: contractor-pre-approval.html
+    // resumes at Math.max(2, onboarding_step + 1). A pending contractor still
+    // filling out the step-2 doc cards has completed only step 1, so seed it to
+    // 1 — seeding 2 resumes the wizard at step 3 and hides every step-2 card.
     await setContractorState(state.contractorId, {
       status: 'pending_approval',
-      onboarding_step: 2,
+      onboarding_step: 1,
     });
     console.log(
       `  Contractor ${state.contractorId} set to pending_approval for D-210 tests`
@@ -232,7 +236,7 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     } finally {
       await setContractorState(state.contractorId, {
         status: 'pending_approval',
-        onboarding_step: 2,
+        onboarding_step: 1,
       });
     }
   });
@@ -258,7 +262,7 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     } finally {
       await setContractorState(state.contractorId, {
         status: 'pending_approval',
-        onboarding_step: 2,
+        onboarding_step: 1,
       });
     }
   });
@@ -387,7 +391,7 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     } finally {
       await setContractorState(state.contractorId, {
         status: 'pending_approval',
-        onboarding_step: 2,
+        onboarding_step: 1,
       });
     }
   });
