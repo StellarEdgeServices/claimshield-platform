@@ -406,7 +406,9 @@ test.describe('Flow E -- D-210 Document Gate (Contractor Pre-Approval)', () => {
     const noLicenseLabel = page.locator('#license-no-license-label');
     if (await noLicenseLabel.isVisible({ timeout: 3_000 }).catch(() => false)) {
       const labelText = await noLicenseLabel.textContent();
-      expect((labelText || '').toLowerCase()).toMatch(/no license|not required|exempt/);
+      // Shipped copy is "I don't have a license for this work" (.? matches a
+      // straight or curly apostrophe); accept that alongside other phrasings.
+      expect((labelText || '').toLowerCase()).toMatch(/no license|not required|exempt|don.?t have a license/);
     }
     console.log('  E16 pass: license card contains "No license required" checkbox');
   });
