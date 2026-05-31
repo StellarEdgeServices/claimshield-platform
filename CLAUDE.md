@@ -134,16 +134,16 @@ Budget: runs until queue is empty or two consecutive zero-completion waves.
 
 Lane 1 autonomous task executor. Registered as a custom slash command at `.claude/commands/wingman.md`.
 
-When invoked, reads and follows `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\wingman-code-SKILL.md` exactly.
+When invoked, reads and follows the tier SKILL.md under `Claude's Memories\Skills\` exactly.
 
 Variant routing:
-- `/wingman F-35` — Opus model tasks only
-- `/wingman F-22` — Sonnet model tasks (default)
-- `/wingman F-18` — Haiku model tasks only
+- `/wingman F-35` — Opus model tasks → `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Claude's Memories\Skills\wingman-code\SKILL.md`
+- `/wingman F-22` — Sonnet model tasks (default) → `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Claude's Memories\Skills\wingman-code\SKILL.md`
+- `/wingman F-18` — Haiku model tasks → `C:\Users\Dustin Stohler\Downloads\Claude Downloads\Claude's Memories\Skills\wingman-f18-code\SKILL.md`
 - `/wingman` — defaults to F-22 (Sonnet)
 
 If slash command is not recognized (first run before restart), paste this prompt manually:
-`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Skills Output\wingman-code-SKILL.md and follow it exactly. Variant: F-22.`
+`Read C:\Users\Dustin Stohler\Downloads\Claude Downloads\Claude's Memories\Skills\wingman-code\SKILL.md and follow it exactly. Variant: F-22.`
 
 Pull eligible Tier 1 tasks from ClickUp list 901711730553 matching the trigger tier. Execute autonomously within Tier A/B authority. Write heartbeat every 10 min, done files on completion, shift log shard and handoff file at session end.
 
