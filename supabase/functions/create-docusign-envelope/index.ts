@@ -31,6 +31,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.0";
+import { getHomeownerName } from "../_shared/getHomeownerName.ts";
 
 const FUNCTION_NAME = "create-docusign-envelope";
 
@@ -1227,18 +1228,12 @@ async function autoPopulateFields(
     .eq("contractor_id", contractorId)
     .single();
 
-  const { data: homeownerProfile } = claimData?.user_id
-    ? await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", claimData.user_id)
-        .single()
-    : { data: null };
+  const homeownerProfile = await getHomeownerName(supabase, claimId);
 
   const fields: TextTabFields = {};
 
   if (claimData) {
-    fields.customer_name = homeownerProfile?.full_name || "";
+    fields.customer_name = homeownerProfile.fullName;
     fields.customer_address = claimData.property_address || claimData.address_line1 || "";
     fields.customer_city_zip = `${claimData.address_city || ""}, ${claimData.address_state || ""} ${claimData.address_zip || ""}`.trim();
     fields.customer_phone = claimData.phone || "";
@@ -1385,19 +1380,9 @@ async function handleContractorSign(
   // autoFields.customer_name is set from signer.name (contractor) in autoPopulateFields,
   // so it must NOT be used as the homeowner name — doing so causes UNKNOWN_ENVELOPE_RECIPIENT
   // when handleHomeownerSign tries to create the recipient view (PFW canary 2026-05-20).
-  let homeownerEmail = "homeowner@placeholder.otterquote.com";
-  let homeownerFullName = "Homeowner";
-  if (claimData?.user_id) {
-    const { data: hwProfileData } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", claimData.user_id)
-      .single();
-    if (hwProfileData) {
-      homeownerEmail = hwProfileData.email || homeownerEmail;
-      homeownerFullName = hwProfileData.full_name || "Homeowner";
-    }
-  }
+  const resolvedHomeowner = await getHomeownerName(supabase, claim_id);
+  let homeownerEmail = resolvedHomeowner.email || "homeowner@placeholder.otterquote.com";
+  let homeownerFullName = resolvedHomeowner.fullName || "Homeowner";
   if (homeownerFullName === contractorName || homeownerFullName.trim().length === 0) {
     console.error(
       `[create-docusign-envelope] homeowner name mismatch: homeownerFullName="${homeownerFullName}", ` +
