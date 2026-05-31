@@ -59,7 +59,7 @@ async function getValidAccessToken(supabase: any, clientId: string, clientSecret
     .order("created_at", { ascending: false })
     .limit(1);
   if (error || !tokens || tokens.length === 0) {
-    throw new Error("No Hover OAuth tokens found. Connect Hover first via hover-oauth-init.");
+    throw new Error("No Hover OAuth tokens found. Re-authorize Hover via the admin settings panel.");
   }
   const token = tokens[0];
   const expiresAt = new Date(token.expires_at);
@@ -79,7 +79,7 @@ async function getValidAccessToken(supabase: any, clientId: string, clientSecret
   if (!refreshResponse.ok) {
     const errText = await refreshResponse.text();
     console.error("Token refresh failed:", refreshResponse.status, errText);
-    throw new Error(`Hover token refresh failed (HTTP ${refreshResponse.status}). Re-authorize via hover-oauth-init.`);
+    throw new Error(`Hover token refresh failed (HTTP ${refreshResponse.status}). Re-authorize Hover via the admin settings panel.`);
   }
   const newTokenData = await refreshResponse.json();
   const newExpiresAt = new Date(Date.now() + (newTokenData.expires_in || 7200) * 1000).toISOString();
