@@ -139,8 +139,8 @@ export default function GetStartedPage() {
         email: emailTrimmed,
         source: referralSource || 'web',
         created_at: new Date().toISOString(),
-      }).catch((leadErr: unknown) => {
-        console.warn('[get-started] leads insert failed (non-fatal):', leadErr);
+      }).then(({ error: leadErr }) => {
+        if (leadErr) console.warn('[get-started] leads insert failed (non-fatal):', leadErr);
       });
 
       // 2. Persist referral attribution from storage
